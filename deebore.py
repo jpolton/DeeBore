@@ -51,6 +51,7 @@ class Controller(object):
         plt.ylabel('Arrival time (mins before Liv HT)')
         plt.xlabel('Liv (Gladstone Dock) HT height (m)')
         plt.show()
+        plt.savefig('figs/SaltneyArrivalLag_vs_LivHeight.png')
 
     def run_interface(self):
         """
