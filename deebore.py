@@ -50,7 +50,7 @@ class Controller(object):
         plt.title('Bore arrival time at Saltney Ferry')
         plt.ylabel('Arrival time (mins before Liv HT)')
         plt.xlabel('Liv (Gladstone Dock) HT height (m)')
-        plt.show()
+        #plt.show()
         plt.savefig('figs/SaltneyArrivalLag_vs_LivHeight.png')
 
     def run_interface(self):
