@@ -53,6 +53,18 @@ class Controller(object):
         #plt.show()
         plt.savefig('figs/SaltneyArrivalLag_vs_LivHeight.png')
 
+    def predict(self):
+        """ Predict bore timings for 2020 """
+        data =  pd.read_csv('data/Liverpool_2015_2020_HLW_test.txt',delimiter='\s\s\s\s')
+        data.rename(columns={'LIVERPOOL (GLADSTONE DOCK)':'time'}, inplace=True)
+        data.rename(columns={'TZ: UT(GMT)/BST':'height'}, inplace=True)
+        data.drop(columns=[' Units: METRES','Datum: Chart Datum'], inplace=True)
+
+
+        data['datetime'] = data['time'].apply(lambda x: datetime.datetime.strptime( x,"%d/%m/%Y  %H:%M") )
+
+
+
     def run_interface(self):
         """
         Application's main loop
@@ -83,6 +95,10 @@ class Controller(object):
                 print('plot data')
                 self.plot_data()
 
+            elif command == "4":
+                print('plot data')
+                self.predict()
+
             else:
                 template = "run_interface: I don't recognise (%s)"
                 print(template%command)
@@ -101,6 +117,8 @@ if __name__ == "__main__":
     1       load dataframe
     2       show dataframe
     3       plot data
+
+    4       predict 2020
 
     i       to show these instructions
     q       to quit
