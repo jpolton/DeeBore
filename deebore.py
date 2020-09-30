@@ -2,6 +2,8 @@
 Read in a process Dee Bore data
 Author: jpolton
 Date: 26 Sept 2020
+
+Currently developing in coast_env
 """
 
 import os
@@ -86,34 +88,83 @@ class Controller(object):
                 self.plot_data()
 
             elif command == "4":
-                print('plot data')
-                self.predict()
+                print('load and plot HLW data')
+                filnam = 'data/Liverpool_2015_2020_HLW.txt'
+                date_start = datetime.datetime(2020,1,1)
+                date_end = datetime.datetime(2020,12,31)
+                tg = TIDEGAUGE(filnam, date_start, date_end)
+                # Exaple plot
+                tg.dataset.plot.scatter(x="time", y="sea_level")
 
             else:
                 template = "run_interface: I don't recognise (%s)"
                 print(template%command)
 
-
-if __name__ == "__main__":
-
-    #### Initialise logging
-    now_str = datetime.datetime.now().strftime("%d%b%y %H:%M")
-    logging.info(f"-----{now_str}-----")
-
-    #### Constants
-    INSTRUCTIONS = """
-
-    Choose Action:
-    1       load dataframe
-    2       show dataframe
-    3       plot data
-
-    4       predict 2020
-
-    i       to show these instructions
-    q       to quit
+class TIDEGAUGE(object):
     """
+    This is where the main things happen.
+    Where user input is managed and methods are launched
+    """
+    def __init__(self, file_path = None, date_start=None, date_end=None):
+        '''
+        Initialise TIDEGAUGE object either as empty (no arguments) or by
+        reading GESLA data from a directory between two datetime objects.
 
+        # Read tide gauge data for 2020
+        filnam = 'data/Liverpool_2015_2020_HLW.txt'
+        date_start = datetime.datetime(2020,1,1)
+        date_end = datetime.datetime(2020,12,31)
+        tg = TIDEGAUGE(filnam, date_start, date_end)
+
+        # Access the data
+        tg.dataset
+
+        # Exaple plot
+        tg.dataset.plot.scatter(x="time", y="sea_level")
+
+        '''
+        # If file list is supplied, read files from directory
+        if file_path is None:
+            self.dataset = None
+        else:
+            self.dataset = self.read_HLW_to_xarray(file_path,
+                                                        date_start, date_end)
+        return
+
+    @classmethod
+    def read_HLW_to_xarray(cls, filnam, date_start=None, date_end=None):
+        '''
+
+        Parameters
+        ----------
+        filnam (str) : path to gesla tide gauge file
+        date_start (datetime) : start date for returning data
+        date_end (datetime) : end date for returning data
+
+        Returns
+        -------
+        xarray.Dataset object.
+        '''
+        try:
+            header_dict = cls.read_HLW_header(filnam)
+            dataset = cls.read_HLW_data(filnam, header_dict, date_start, date_end)
+            if header_dict['field'] == 'TZ:UT(GMT)/BST':
+                print('Assign BST as timezone')
+                #assignBST = lambda t: t.astimezone()
+                #dataset.time = [assignBST(i) for i in dataset.time]
+
+            else:
+                print("Not expecting that timezone")
+
+        except:
+            raise Exception('Problem reading HLW file: ' + filnam)
+
+        dataset.attrs = header_dict
+
+        return dataset
+
+
+    @staticmethod
     def read_HLW_header(filnam):
         '''
         Reads header from a HWL file.
@@ -150,7 +201,8 @@ if __name__ == "__main__":
                        'units':units, 'datum':datum}
         return header_dict
 
-    def read_HLW_data(filnam, date_start=None, date_end=None,
+    @staticmethod
+    def read_HLW_data(filnam, header_dict, date_start=None, date_end=None,
                            header_length:int=1):
         '''
         Reads observation data from a GESLA file (format version 3.0).
@@ -171,6 +223,14 @@ if __name__ == "__main__":
         dataset = xr.Dataset()
         time = []
         sea_level = []
+
+        if header_dict['field'] == 'TZ:UT(GMT)/BST':
+            localtime_flag = True
+            if date_start is not None: date_start = date_start.astimezone()
+            if date_end is not None: date_end = date_end.astimezone()
+        else:
+            localtime_flag = False
+
         # Open file and loop until EOF
         with open(filnam) as file:
             line_count = 0
@@ -180,7 +240,11 @@ if __name__ == "__main__":
                     working_line = line.split()
                     if working_line[0] != '#':
                         time_str = working_line[0] + ' ' + working_line[1]
-                        time.append( datetime.datetime.strptime( time_str , '%d/%m/%Y %H:%M'))
+                        datetime_obj = datetime.datetime.strptime( time_str , '%d/%m/%Y %H:%M')
+                        if localtime_flag == True:
+                            time.append( datetime_obj.astimezone() )
+                        else:
+                            time.append( datetime_obj )
                         sea_level.append(float(working_line[2]))
 
                 line_count = line_count + 1
@@ -190,11 +254,9 @@ if __name__ == "__main__":
         start_index = 0
         end_index = len(time)
         if date_start is not None:
-            date_start = np.datetime64(date_start)
-            start_index = np.argmax(time>=date_start)
+            start_index = nearest_datetime_ind(time, date_start)
         if date_end is not None:
-            date_end = np.datetime64(date_end)
-            end_index = np.argmax(time>date_end)
+            end_index = nearest_datetime_ind(time, date_end)
         time = time[start_index:end_index]
         sea_level = sea_level[start_index:end_index]
 
@@ -205,12 +267,30 @@ if __name__ == "__main__":
         # Assign local dataset to object-scope dataset
         return dataset
 
-    filnam = 'data/Liverpool_2015_2020_HLW.txt'
-    date_start = datetime.datetime(2020,1,1)
-    date_end = datetime.datetime(2020,12,31)
-    header_dict = read_HLW_header(filnam)
-    dataset = read_HLW_data(filnam, date_start, date_end)
-    dataset.plot.scatter(x="time", y="sea_level")
+def nearest_datetime_ind(items, pivot):
+    time_diff = np.abs([date - pivot for date in items])
+    return time_diff.argmin(0)
+
+if __name__ == "__main__":
+
+    #### Initialise logging
+    now_str = datetime.datetime.now().strftime("%d%b%y %H:%M")
+    logging.info(f"-----{now_str}-----")
+
+    #### Constants
+    INSTRUCTIONS = """
+
+    Choose Action:
+    1       load bore dataframe
+    2       show bore dataframe
+    3       plot bore data
+
+    4       load and plot HLW data
+
+    i       to show these instructions
+    q       to quit
+    """
+
 
     ## Do the main program
     c = Controller()
