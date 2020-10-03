@@ -158,7 +158,10 @@ class Controller(object):
                 #%% Load and plot raw data
                 print('load dataframe')
                 self.load()
-                self.linearfit()
+                self.get_Glad_data()
+                self.compare_Glad_HLW()
+                self.calc_Glad_Saltney_time_diff()
+                #self.linearfit()
 
             elif command == "2":
                 print('show dataframe')
