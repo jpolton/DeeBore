@@ -189,6 +189,19 @@ class Controller(object):
                 y2 = self.df['linfit_lag'].values
                 print(f"stats: root mean sq err {np.sqrt(metrics.mean_squared_error(y1,y2 ))}")
 
+            elif command == "6":
+                print('Bore predictions:')
+                date_start = datetime.datetime(2020,1,1)
+                date_end = datetime.datetime(2020,12,31)
+                tg = TIDETABLE(filnam, date_start, date_end)
+
+                HT = tg.dataset['sea_level'].where( tg.dataset['sea_level'] > 7, drop=True)
+                plt.plot( HT.time, HT,'.' );plt.show()
+                self.lag_pred = self.linfit(HT)
+
+                Saltney_time_pred = [HT.time[i] + datetime.timedelta(minutes=lag_pred[i]) for i in range(len(lag_pred))]
+                #plt.scatter( Saltney_time_pred, HT ,'.');plt.show()
+                # problem with time stamp
 
             else:
                 template = "run_interface: I don't recognise (%s)"
@@ -210,7 +223,8 @@ if __name__ == "__main__":
 
     4       load and plot HLW data
 
-    5       polyfit rmse
+    5       polyfit rmse.
+    6       Predict bore.
 
     i       to show these instructions
     q       to quit
