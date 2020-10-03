@@ -37,36 +37,98 @@ class Controller(object):
         logging.info("run interface")
         self.run_interface()
 
+    def load_old(self):
+        """
+        Load pickle file from the standard file save
+        """
+        self.df =  pd.read_csv('data/data_26Sep20.csv')
+        self.df.drop(columns=['Unnamed: 1','Unnamed: 2'], inplace=True)
+        self.df.dropna( inplace=True).set_index(['GMT time'])
+        #self.df.dropna( inplace=True).set_index(['GMT time'])
+        #self.bore = self.df.to_xarray()
+
     def load(self):
         """
         Load pickle file from the standard file save
         """
-        self.df =  pd.read_csv('data/data.csv')
-        self.df.drop(columns=['Unnamed: 1','Unnamed: 2'], inplace=True)
-        self.df.dropna( inplace=True)
+        df =  pd.read_csv('data/master-Table 1.csv')
+        df.drop(columns=['date + logged time','Unnamed: 2','Unnamed: 11', \
+                                'Unnamed: 12','Unnamed: 13', 'Unnamed: 15'], \
+                                 inplace=True)
+        df.rename(columns={"date + logged time (GMT)":"time"}, inplace=True)
+        df['time'] = pd.to_datetime(df['time'], utc=True, format="%d/%m/%Y %H:%M")
+        df.set_index(['time'], inplace=True)
+
+        self.bore = xr.Dataset()
+        self.bore = df.to_xarray()
+
+
+    def add_tidetable_data(self):
+        """
+        Add tide table HT and LT data to xr.DataSet
+        Though these can (and in most historical cases have) be looked up, here
+        it is automated.
+        WIP
+        """
+        self.bore['HT_t'] = []
+        self.bore['HT_h'] = []
+        self.bore['LT_t'] = []
+        self.bore['LT_h'] = []
+        HT_h = []
+        HT_t = []
+        for i in range(len(self.bore.time)):
+            try:
+                HLW = None
+                HLW = self.get_tidetabletimes(self.bore.time[i].values)
+                print(f"HLW {HLW.dataset['sea_level']}")
+                HT_h.append( float( HLW.dataset.sea_level[HLW.dataset['sea_level'].argmax()].values ) )
+                HT_t.append( HLW.dataset.time[HLW.dataset['sea_level'].argmax()].values.item() )
+                #self.bore['LT_h'][i] = HLW.dataset.sea_level[HLW.dataset['sea_level'].argmin()]
+                #self.bore['LT_t'][i] = HLW.dataset.time[HLW.dataset['sea_level'].argmin()]
+            except:
+                print('Issue with appening HLW data')
+
+            print('HT_h:',HT_h)
+
+            print('THE NEXT STEP IS TO ADD THESE HT_h  and HT_t VALUES TO xr.BORE')
+
+    def get_Glad_data(self):
+        """ Get Gladstone HLW data from external file """
+        print("WIP: Get Gladstone HLW data from external file")
+        pass
+
+    def compare_Glad_HLW(self):
+        """ Compare Glad HLW from external file with bore tabilated data"""
+        print("Compare Glad HLW from external file with bore tabilated data")
+        pass
+
+    def calc_Glad_Saltney_time_diff(self):
+        """ Compute lag (-ve) for arrival at Saltney relative to Glastone HT """
+        print('WIP: calc_Glad_Saltney_time_diff')
+        pass
 
     def linearfit(self):
         """ Linear regression """
         weights = np.polyfit( \
-                        self.df['Liv (Gladstone Dock) HT height (m)'], \
-                        self.df['Time difference: Glad-Saltney (mins)'], 1)
-        linfit = np.poly1d(weights)
-        self.df['linfit_lag'] = linfit(self.df['Liv (Gladstone Dock) HT height (m)'])
+                        self.bore['Liv (Gladstone Dock) HT height (m)'], \
+                        self.bore['Time difference: Glad-Saltney (mins)'], 1)
+        self.linfit = np.poly1d(weights)
+        self.bore['linfit_lag'] = self.linfit(self.bore['Liv (Gladstone Dock) HT height (m)'])
 
     def show(self):
         """ Show dataframe """
-        print( self.df )
+        print( self.bore )
 
 
     def plot_data(self):
         """ plot dataframe """
-        s = plt.scatter( self.df['Liv (Gladstone Dock) HT height (m)'], \
-            self.df['Time difference: Glad-Saltney (mins)'], \
-            c=self.df['Chester Weir height: CHESTER WEIR 15 MIN SG'] )
+        s = plt.scatter( self.bore['Liv (Gladstone Dock) HT height (m)'], \
+            self.bore['Time difference: Glad-Saltney (mins)'], \
+            c=self.bore['Chester Weir height: CHESTER WEIR 15 MIN SG'] )
         cbar = plt.colorbar(s)
         # Linear fit
-        x = self.df['Liv (Gladstone Dock) HT height (m)']
-        plt.plot( x, self.df['linfit_lag'], '-' )
+        #x = self.df['Liv (Gladstone Dock) HT height (m)']
+        #plt.plot( x, self.df['linfit_lag'], '-' )
         cbar.set_label('River height at weir (m)')
         plt.title('Bore arrival time at Saltney Ferry')
         plt.ylabel('Arrival time (mins before Liv HT)')
