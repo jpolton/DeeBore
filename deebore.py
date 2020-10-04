@@ -14,11 +14,12 @@ import numpy as np
 import matplotlib.pyplot as plt
 import xarray as xr
 import sklearn.metrics as metrics
+import pytz
 
 
 coastdir = os.path.dirname('/Users/jeff/GitHub/COAsT/coast')
 sys.path.insert(0,coastdir)
-from coast.TIDETABLE import TIDETABLE
+from coast.TIDETABLE import TIDETABLE, npdatetime64_2_datetime
 
 import logging
 logging.basicConfig(filename='bore.log', filemode='w+', level=logging.INFO)
@@ -56,12 +57,36 @@ class Controller(object):
                                 'Unnamed: 12','Unnamed: 13', 'Unnamed: 15'], \
                                  inplace=True)
         df.rename(columns={"date + logged time (GMT)":"time"}, inplace=True)
-        df['time'] = pd.to_datetime(df['time'], utc=True, format="%d/%m/%Y %H:%M")
-        df.set_index(['time'], inplace=True)
+        df['time'] = pd.to_datetime(df['time'], format="%d/%m/%Y %H:%M")
+        #df['time'] = pd.to_datetime(df['time'], utc=True, format="%d/%m/%Y %H:%M")
+        #df.set_index(['time'], inplace=True)
+        if(0):
+            for index, row in df.iterrows():
+                df.loc[index,'time'] = np.datetime64( df.at[index,'time'] )
+            # Create new reduced df with essential variables
+            df_new = df[['logger','Chester Weir height: CHESTER WEIR 15 MIN SG']]
+            df_new.rename(columns={"Chester Weir height: CHESTER WEIR 15 MIN SG":"weir_height"}, inplace=True)
 
-        self.bore = xr.Dataset()
-        self.bore = df.to_xarray()
 
+            bore = xr.Dataset()
+            bore = df_new.to_xarray()
+            nt = len(bore.weir_height)
+            tmp = np.array([datetime.datetime(2000,1,1) for i in range(nt) ])
+            #bore['time3'] = bore['time']*np.NaN
+            #bore['time3'] = [npdatetime64_2_datetime(bore.time[i].item()) for i in range(nt)]
+
+            for i in range(nt):
+                tmp[i] = npdatetime64_2_datetime(df.time[i].item())
+                print( 'output',type(tmp[i] ) )
+                #print( 'output', type(bore.time3[i] ) )
+            bore['time2'] = tmp
+        else:
+            for index, row in df.iterrows():
+                df.loc[index,'time'] = np.datetime64( df.at[index,'time'] ) # numpy.datetime64 in UTC
+            bore = xr.Dataset()
+            bore = df.to_xarray()
+
+        self.bore = bore
 
     def add_tidetable_data(self):
         """
@@ -95,17 +120,37 @@ class Controller(object):
     def get_Glad_data(self):
         """ Get Gladstone HLW data from external file """
         print("WIP: Get Gladstone HLW data from external file")
-        pass
+        HT_h = []
+        HT_t = []
+        # load tidetable
+        filnam = '/Users/jeff/GitHub/DeeBore/data/Liverpool_2015_2020_HLW.txt'
+        tg = TIDETABLE(filnam, self.bore.time.min().values, self.bore.time.max().values )
+        for i in range(len(self.bore.time)):
+            try:
+                HLW = None
+                HLW = tg.get_tidetabletimes(self.bore.time[i].values)
+                print(f"HLW: {HLW}")
+                HT_h.append( HLW[0][0] )
+                print('len(HT_h)', len(HT_h))
+                HT_t.append( HLW[1][0] )
+                print('len(HT_t)', len(HT_t))
+                #self.bore['LT_h'][i] = HLW.dataset.sea_level[HLW.dataset['sea_level'].argmin()]
+                #self.bore['LT_t'][i] = HLW.dataset.time[HLW.dataset['sea_level'].argmin()]
+            except:
+                print('Issue with appening HLW data')
+        self.bore['glad_height'] = HT_h
+        self.bore['glad_time'] = HT_t
+
 
     def compare_Glad_HLW(self):
         """ Compare Glad HLW from external file with bore tabilated data"""
-        print("Compare Glad HLW from external file with bore tabilated data")
+        print("WIP: Compare Glad HLW from external file with bore tabilated data")
         pass
 
     def calc_Glad_Saltney_time_diff(self):
         """ Compute lag (-ve) for arrival at Saltney relative to Glastone HT """
         print('WIP: calc_Glad_Saltney_time_diff')
-        pass
+        self.bore['Saltney_lag'] = (self.bore['glad_time'] - self.bore['time']).astype('timedelta64[m]')
 
     def linearfit(self):
         """ Linear regression """
@@ -122,9 +167,9 @@ class Controller(object):
 
     def plot_data(self):
         """ plot dataframe """
-        s = plt.scatter( self.bore['Liv (Gladstone Dock) HT height (m)'], \
-            self.bore['Time difference: Glad-Saltney (mins)'], \
-            c=self.bore['Chester Weir height: CHESTER WEIR 15 MIN SG'] )
+        s = plt.scatter( self.bore['glad_height'], \
+            self.bore['Saltney_lag'])  #, \
+            #c=self.bore['Chester Weir height: CHESTER WEIR 15 MIN SG'] )
         cbar = plt.colorbar(s)
         # Linear fit
         #x = self.df['Liv (Gladstone Dock) HT height (m)']
@@ -159,7 +204,7 @@ class Controller(object):
                 print('load dataframe')
                 self.load()
                 self.get_Glad_data()
-                self.compare_Glad_HLW()
+                #self.compare_Glad_HLW()
                 self.calc_Glad_Saltney_time_diff()
                 #self.linearfit()
 
@@ -232,4 +277,7 @@ if __name__ == "__main__":
 
 
     ## Do the main program
+
+
+
     c = Controller()
