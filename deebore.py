@@ -123,34 +123,61 @@ class Controller(object):
         HT_h = []
         HT_t = []
         # load tidetable
-        filnam = '/Users/jeff/GitHub/DeeBore/data/Liverpool_2015_2020_HLW.txt'
-        tg = TIDETABLE(filnam, self.bore.time.min().values, self.bore.time.max().values )
+        filnam1 = '/Users/jeff/GitHub/DeeBore/data/Liverpool_2005_2014_HLW.txt'
+        filnam2 = '/Users/jeff/GitHub/DeeBore/data/Liverpool_2015_2020_HLW.txt'
+        tg  = TIDETABLE(filnam1)
+        tg1 = TIDETABLE(filnam1, self.bore.time.min().values, self.bore.time.max().values )
+        tg2 = TIDETABLE(filnam2, self.bore.time.min().values, self.bore.time.max().values )
+        tg.dataset = xr.concat([ tg1.dataset, tg2.dataset], dim='t_dim')
+        self.tg = tg
         for i in range(len(self.bore.time)):
             try:
                 HLW = None
                 HLW = tg.get_tidetabletimes(self.bore.time[i].values)
-                print(f"HLW: {HLW}")
-                HT_h.append( HLW[0][0] )
-                print('len(HT_h)', len(HT_h))
-                HT_t.append( HLW[1][0] )
-                print('len(HT_t)', len(HT_t))
+                #print(f"HLW: {HLW}")
+                ind = np.argmax(HLW[0]) # pick out HT from HT & LT
+                HT_h.append( HLW[0][ind] )
+                #print('len(HT_h)', len(HT_h))
+                HT_t.append( HLW[1][ind] )
+                #print('len(HT_t)', len(HT_t))
                 #self.bore['LT_h'][i] = HLW.dataset.sea_level[HLW.dataset['sea_level'].argmin()]
                 #self.bore['LT_t'][i] = HLW.dataset.time[HLW.dataset['sea_level'].argmin()]
             except:
                 print('Issue with appening HLW data')
-        self.bore['glad_height'] = HT_h
-        self.bore['glad_time'] = HT_t
+        self.bore['glad_height'] = np.array(HT_h)
+        self.bore['glad_time'] = np.array(HT_t)
 
+        self.bore.plot.scatter(x='glad_time', y='glad_height'); plt.show()
+        print('len(self.bore.glad_time)', len(self.bore.glad_time))
+        #print('type(HT_t):', type(HT_t))
+        #print('type(HT_h):', type(HT_h))
+
+        print('log time, orig tide table, new tide table lookup')
+        for i in range(len(self.bore.time)):
+            print( self.bore.time[i].values, self.bore['Liv (Gladstone Dock) HT time (GMT)'][i].values, self.bore['glad_time'][i].values)
 
     def compare_Glad_HLW(self):
         """ Compare Glad HLW from external file with bore tabilated data"""
         print("WIP: Compare Glad HLW from external file with bore tabilated data")
-        pass
+        print('log time, orig tide table, new tide table lookup')
+        for i in range(len(self.bore.time)):
+            print( self.bore.time[i].values, self.bore['Liv (Gladstone Dock) HT time (GMT)'][i].values, self.bore['glad_time'][i].values)
 
     def calc_Glad_Saltney_time_diff(self):
         """ Compute lag (-ve) for arrival at Saltney relative to Glastone HT """
         print('WIP: calc_Glad_Saltney_time_diff')
-        self.bore['Saltney_lag'] = (self.bore['glad_time'] - self.bore['time']).astype('timedelta64[m]')
+        self.bore['lag'] = (self.bore['glad_time'].values - self.bore['time'].values).astype('timedelta64[m]')
+
+        self.bore['Saltney_lag'] = xr.where( self.bore['location'] == 'bridge', self.bore['lag'], np.nat)
+        self.bore['bluebridge_lag'] = xr.where( self.bore['location'] == 'blue bridge', self.bore['lag'], np.nat)
+
+        plt.plot(  self.bore['glad_height'], self.bore['Saltney_lag'],'+');
+        plt.show()
+        plt.plot(  self.bore['glad_height'], self.bore['bluebridge_lag'],'.');
+        plt.xlabel('Liv (Gladstone Dock) HT (m)')
+        plt.ylabel('Arrival time (mins before LiV HT)')
+        plt.title('Bore arrival time at Saltney Ferry')
+        plt.show()
 
     def linearfit(self):
         """ Linear regression """
