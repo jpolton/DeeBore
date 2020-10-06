@@ -24,7 +24,7 @@ from coast.TIDETABLE import TIDETABLE, npdatetime64_2_datetime
 import logging
 logging.basicConfig(filename='bore.log', filemode='w+', level=logging.INFO)
 
-################################################################################
+#%% ################################################################################
 
 class Controller(object):
     """
@@ -86,7 +86,11 @@ class Controller(object):
             bore = xr.Dataset()
             bore = df.to_xarray()
 
+        # Set the t_dim to be a dimension and 'time' to be a coordinate
+        bore = bore.rename_dims( {'index':'t_dim'} ).assign_coords( time=("t_dim", bore.time))
         self.bore = bore
+
+
 
     def add_tidetable_data(self):
         """
@@ -144,8 +148,14 @@ class Controller(object):
                 #self.bore['LT_t'][i] = HLW.dataset.time[HLW.dataset['sea_level'].argmin()]
             except:
                 print('Issue with appening HLW data')
-        self.bore['glad_height'] = np.array(HT_h)
-        self.bore['glad_time'] = np.array(HT_t)
+
+        # Save a xarray objects
+        coords = {'time': (('t_dim'), self.bore.time.values)}
+        self.bore['glad_height'] = xr.DataArray( np.array(HT_h), coords=coords, dims=['t_dim'])
+        self.bore['glad_time'] = xr.DataArray( np.array(HT_t), coords=coords, dims=['t_dim'])
+
+        #self.bore['glad_height'] = np.array(HT_h)
+        #self.bore['glad_time'] = np.array(HT_t)
 
         self.bore.plot.scatter(x='glad_time', y='glad_height'); plt.show()
         print('len(self.bore.glad_time)', len(self.bore.glad_time))
@@ -166,14 +176,21 @@ class Controller(object):
     def calc_Glad_Saltney_time_diff(self):
         """ Compute lag (-ve) for arrival at Saltney relative to Glastone HT """
         print('WIP: calc_Glad_Saltney_time_diff')
-        self.bore['lag'] = (self.bore['glad_time'].values - self.bore['time'].values).astype('timedelta64[m]')
+        nt = len(self.bore.time)
+        lag = (self.bore['glad_time'].values - self.bore['time'].values).astype('timedelta64[m]')
+        Saltney_lag    = [ lag[i] if self.bore['location'][i] == 'bridge' else np.NaN for i in range(nt) ]
+        bluebridge_lag = [ lag[i] if self.bore['location'][i] == 'blue bridge' else np.NaN for i in range(nt) ]
 
-        self.bore['Saltney_lag'] = xr.where( self.bore['location'] == 'bridge', self.bore['lag'], np.nat)
-        self.bore['bluebridge_lag'] = xr.where( self.bore['location'] == 'blue bridge', self.bore['lag'], np.nat)
+        # Save a xarray objects
+        coords = {'time': (('t_dim'), self.bore.time.values)}
+        self.bore['lag'] = xr.DataArray( lag, coords=coords, dims=['t_dim'])
+        self.bore['Saltney_lag'] = xr.DataArray( Saltney_lag, coords=coords, dims=['t_dim'])
+        #self.bore['bluebridge_lag'] = xr.DataArray( bluebridge_lag, coords=coords, dims=['t_dim'])
+
 
         plt.plot(  self.bore['glad_height'], self.bore['Saltney_lag'],'+');
-        plt.show()
-        plt.plot(  self.bore['glad_height'], self.bore['bluebridge_lag'],'.');
+        #plt.show()
+        #plt.plot(  self.bore['glad_height'], self.bore['bluebridge_lag'],'.');
         plt.xlabel('Liv (Gladstone Dock) HT (m)')
         plt.ylabel('Arrival time (mins before LiV HT)')
         plt.title('Bore arrival time at Saltney Ferry')
@@ -227,7 +244,7 @@ class Controller(object):
                 print(INSTRUCTIONS)
 
             elif command == "1":
-                #%% Load and plot raw data
+                # Load and plot raw data
                 print('load dataframe')
                 self.load()
                 self.get_Glad_data()
