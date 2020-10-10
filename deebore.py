@@ -22,7 +22,8 @@ sys.path.insert(0,coastdir)
 from coast.TIDETABLE import TIDETABLE, npdatetime64_2_datetime
 
 import logging
-logging.basicConfig(filename='bore.log', filemode='w+', level=logging.INFO)
+logging.basicConfig(filename='bore.log', filemode='w+')
+logging.getLogger().setLevel(logging.DEBUG)
 
 #%% ################################################################################
 
