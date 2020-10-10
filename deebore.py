@@ -286,13 +286,22 @@ class Controller(object):
 
 
 
-    def linearfit(self):
+    def linearfit(self, X, Y):
         """ Linear regression """
-        weights = np.polyfit( \
-                        self.bore['Liv (Gladstone Dock) HT height (m)'], \
-                        self.bore['Time difference: Glad-Saltney (mins)'], 1)
+        idx = np.isfinite(X).values
+        print('Here')
+        #c.linearfit(c.bore.X[idx], c.bore.Y[idx].astype(np.int64))
+        weights = np.polyfit( X[idx], Y[idx].astype('int64'), 1)
+                        #self.bore[x_str], \
+                        #self.bore[y_str], 1)
+        print('weights', weights)
         self.linfit = np.poly1d(weights)
-        self.bore['linfit_lag'] = self.linfit(self.bore['Liv (Gladstone Dock) HT height (m)'])
+        print('Now here:', weights)
+        #self.bore['linfit_lag'] = self.linfit(self.bore[x_str])
+        #self.bore['linfit_lag'] = self.linfit(X)
+        self.bore['linfit_lag'] =  np.timedelta64( np.timedelta64( self.linfit(X), 'ns'), 'm')
+        
+        # np.timedelta64( np.timedelta64( c.bore.Y[1].values.astype('int64'), 'ns'), 'm')
 
     def show(self):
         """ Show xarray dataset """
@@ -312,17 +321,26 @@ class Controller(object):
         Yblue = [np.timedelta64(x.values,'m') for x in Yblue]
         plt.plot( Xsalt,Ysalt, 'r+', label='Saltney')
         plt.plot( Xblue,Yblue, 'b.', label='Bluebridge')
+
+        self.bore['X'] = Xsalt
+        self.bore['Y'] = Ysalt
+
+        self.linearfit(Xsalt, Ysalt)
+        #Xsalt = c.bore.X; Ysalt=c.bore.Y; c.linearfit(Xsalt,Ysalt)
+        #plt.plot( Xsalt,self.bore['linfit_lag'], 'k', label='fit')
+
+
         #plt.show()
         #plt.plot(  self.bore['glad_height'], self.bore['bluebridge_lag'],'.');
         plt.xlabel('Liv (Gladstone Dock) HT (m)')
         plt.ylabel('Arrival time (mins before LiV HT)')
         plt.title('Bore arrival time at Saltney Ferry')
         plt.legend()
-        plt.show()
+        #plt.show()
+        plt.savefig('figs/SaltneyArrivalLag_vs_LivHeight.png')
 
         if(0):
             #plt.show()
-            plt.savefig('figs/SaltneyArrivalLag_vs_LivHeight.png')
 
             s = plt.scatter( self.bore['glad_height'], \
                 self.bore['Saltney_lag']) #, \
