@@ -53,6 +53,7 @@ class Controller(object):
             if command == "q":
                 print("run_interface: quit")
                 logging.info("quit") # Function call.
+                self.pickle()
                 break
             elif command == "i":
                 print(INSTRUCTIONS)
@@ -107,6 +108,10 @@ class Controller(object):
                 Saltney_time_pred = [HT.time[i] + datetime.timedelta(minutes=lag_pred[i]) for i in range(len(lag_pred))]
                 #plt.scatter( Saltney_time_pred, HT ,'.');plt.show()
                 # problem with time stamp
+
+            elif command == "x":
+                print('Export data')
+                self.export()
 
             else:
                 template = "run_interface: I don't recognise (%s)"
@@ -332,6 +337,14 @@ class Controller(object):
             plt.xlabel('Liv (Gladstone Dock) HT height (m)')
             plt.show()
 
+    def pickle(self):
+        print('Pickle data. NOT IMPLEMENTED')
+        pass
+
+    def export(self):
+        print('Export data to csv. NOT IMPLEMENTED')
+        pass
+
 if __name__ == "__main__":
 
     #### Initialise logging
@@ -350,6 +363,8 @@ if __name__ == "__main__":
 
     5       polyfit rmse.
     6       Predict bore.
+
+    x       Export data to csv
 
     i       to show these instructions
     q       to quit
