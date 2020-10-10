@@ -257,7 +257,7 @@ class Controller(object):
 
     def calc_Glad_Saltney_time_diff(self):
         """ Compute lag (-ve) for arrival at Saltney relative to Glastone HT """
-        print('WIP: calc_Glad_Saltney_time_diff')
+        logging.info('calc_Glad_Saltney_time_diff')
         nt = len(self.bore.time)
         lag = (self.bore['glad_time'].values - self.bore['time'].values).astype('timedelta64[m]')
         Saltney_lag    = [ lag[i] if self.bore['location'][i] == 'bridge' else np.NaN for i in range(nt) ]
@@ -267,16 +267,19 @@ class Controller(object):
         coords = {'time': (('t_dim'), self.bore.time.values)}
         self.bore['lag'] = xr.DataArray( lag, coords=coords, dims=['t_dim'])
         self.bore['Saltney_lag'] = xr.DataArray( Saltney_lag, coords=coords, dims=['t_dim'])
-        #self.bore['bluebridge_lag'] = xr.DataArray( bluebridge_lag, coords=coords, dims=['t_dim'])
+
+        #For some reason there are too many nans in bluebridge_lag... so xarray can't create a dataset...?
+        def notype(your_datetime):
+            try:
+                dtype_string = str(your_datetime.dtype)
+                return False # Has a type
+            except:
+                return True # no type --> nan
+        bluebridge_lag = [np.timedelta64(-999,'m') if notype(x) else x for x in bluebridge_lag]
+
+        self.bore['bluebridge_lag'] = xr.DataArray( bluebridge_lag, coords=coords, dims=['t_dim'])
 
 
-        plt.plot(  self.bore['glad_height'], self.bore['Saltney_lag'],'+');
-        #plt.show()
-        #plt.plot(  self.bore['glad_height'], self.bore['bluebridge_lag'],'.');
-        plt.xlabel('Liv (Gladstone Dock) HT (m)')
-        plt.ylabel('Arrival time (mins before LiV HT)')
-        plt.title('Bore arrival time at Saltney Ferry')
-        plt.show()
 
     def linearfit(self):
         """ Linear regression """
@@ -293,20 +296,41 @@ class Controller(object):
 
     def plot_data(self):
         """ plot dataframe """
-        s = plt.scatter( self.bore['glad_height'], \
-            self.bore['Saltney_lag'])  #, \
-            #c=self.bore['Chester Weir height: CHESTER WEIR 15 MIN SG'] )
-        cbar = plt.colorbar(s)
-        # Linear fit
-        #x = self.df['Liv (Gladstone Dock) HT height (m)']
-        #plt.plot( x, self.df['linfit_lag'], '-' )
-        cbar.set_label('River height at weir (m)')
-        plt.title('Bore arrival time at Saltney Ferry')
-        plt.ylabel('Arrival time (mins before Liv HT)')
-        plt.xlabel('Liv (Gladstone Dock) HT height (m)')
-        #plt.show()
-        plt.savefig('figs/SaltneyArrivalLag_vs_LivHeight.png')
 
+
+        # Need to mask the Not A Time values in both variables, or is doesn't work
+        Xsalt = self.bore['glad_height'].where(self.bore['Saltney_lag']>np.array(0, dtype='timedelta64[ns]'))
+        Ysalt = self.bore['Saltney_lag'].where(self.bore['Saltney_lag']>np.array(0, dtype='timedelta64[ns]'))
+        Xblue = self.bore['glad_height'].where(self.bore['bluebridge_lag']>np.array(0, dtype='timedelta64[ns]'))
+        Yblue = self.bore['bluebridge_lag'].where(self.bore['bluebridge_lag']>np.array(0, dtype='timedelta64[ns]'))
+        Ysalt = [np.timedelta64(x.values,'m') for x in Ysalt]
+        Yblue = [np.timedelta64(x.values,'m') for x in Yblue]
+        plt.plot( Xsalt,Ysalt, 'r+', label='Saltney')
+        plt.plot( Xblue,Yblue, 'b.', label='Bluebridge')
+        #plt.show()
+        #plt.plot(  self.bore['glad_height'], self.bore['bluebridge_lag'],'.');
+        plt.xlabel('Liv (Gladstone Dock) HT (m)')
+        plt.ylabel('Arrival time (mins before LiV HT)')
+        plt.title('Bore arrival time at Saltney Ferry')
+        plt.legend()
+        plt.show()
+
+        if(0):
+            #plt.show()
+            plt.savefig('figs/SaltneyArrivalLag_vs_LivHeight.png')
+
+            s = plt.scatter( self.bore['glad_height'], \
+                self.bore['Saltney_lag']) #, \
+                #c=self.bore['Chester Weir height: CHESTER WEIR 15 MIN SG'] )
+            cbar = plt.colorbar(s)
+            # Linear fit
+            #x = self.df['Liv (Gladstone Dock) HT height (m)']
+            #plt.plot( x, self.df['linfit_lag'], '-' )
+            cbar.set_label('River height at weir (m)')
+            plt.title('Bore arrival time at Saltney Ferry')
+            plt.ylabel('Arrival time (mins before Liv HT)')
+            plt.xlabel('Liv (Gladstone Dock) HT height (m)')
+            plt.show()
 
 if __name__ == "__main__":
 
@@ -318,8 +342,8 @@ if __name__ == "__main__":
     INSTRUCTIONS = """
 
     Choose Action:
-    1       load bore dataframe
-    2       show bore dataframe
+    1       load bore dataset
+    2       show bore dataset
     3       plot bore data
 
     4       load and plot HLW data
