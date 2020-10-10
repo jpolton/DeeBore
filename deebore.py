@@ -38,6 +38,80 @@ class Controller(object):
         logging.info("run interface")
         self.run_interface()
 
+
+    def run_interface(self):
+        """
+        Application's main loop
+        Get user input and respond
+        """
+
+        print(INSTRUCTIONS)
+        while True:
+            command = input("What do you want to do? ")
+
+            if command == "q":
+                print("run_interface: quit")
+                logging.info("quit") # Function call.
+                break
+            elif command == "i":
+                print(INSTRUCTIONS)
+
+            elif command == "1":
+                # Load and plot raw data
+                print('loading bore data')
+                self.load()
+                print('loading tide data')
+                self.get_Glad_data()
+                #self.compare_Glad_HLW()
+                print('Calculating the Gladstone to Saltney time difference')
+                self.calc_Glad_Saltney_time_diff()
+                #self.linearfit()
+
+            elif command == "2":
+                print('show dataframe')
+                self.show()
+
+            elif command == "3":
+                print('plot data')
+                self.plot_data()
+
+            elif command == "4":
+                print('load and plot HLW data')
+                filnam = 'data/Liverpool_2015_2020_HLW.txt'
+                date_start = datetime.datetime(2020,1,1)
+                date_end = datetime.datetime(2020,12,31)
+                tg = TIDETABLE(filnam, date_start, date_end)
+                # Exaple plot
+                tg.dataset.plot.scatter(x="time", y="sea_level")
+                print(f"stats: mean {tg.time_mean('sea_level')}")
+                print(f"stats: std {tg.time_std('sea_level')}")
+
+            elif command == "5":
+                print('stats')
+                tt = TIDETABLE()
+                y1 = self.df['Time difference: Glad-Saltney (mins)'].values
+                y2 = self.df['linfit_lag'].values
+                print(f"stats: root mean sq err {np.sqrt(metrics.mean_squared_error(y1,y2 ))}")
+
+            elif command == "6":
+                print('Bore predictions:')
+                date_start = datetime.datetime(2020,1,1)
+                date_end = datetime.datetime(2020,12,31)
+                tg = TIDETABLE(filnam, date_start, date_end)
+
+                HT = tg.dataset['sea_level'].where( tg.dataset['sea_level'] > 7, drop=True)
+                plt.plot( HT.time, HT,'.' );plt.show()
+                self.lag_pred = self.linfit(HT)
+
+                Saltney_time_pred = [HT.time[i] + datetime.timedelta(minutes=lag_pred[i]) for i in range(len(lag_pred))]
+                #plt.scatter( Saltney_time_pred, HT ,'.');plt.show()
+                # problem with time stamp
+
+            else:
+                template = "run_interface: I don't recognise (%s)"
+                print(template%command)
+
+
     def load_old(self):
         """
         Load pickle file from the standard file save
@@ -225,76 +299,6 @@ class Controller(object):
         #plt.show()
         plt.savefig('figs/SaltneyArrivalLag_vs_LivHeight.png')
 
-
-    def run_interface(self):
-        """
-        Application's main loop
-        Get user input and respond
-        """
-
-        print(INSTRUCTIONS)
-        while True:
-            command = input("What do you want to do? ")
-
-            if command == "q":
-                print("run_interface: quit")
-                logging.info("quit") # Function call.
-                break
-            elif command == "i":
-                print(INSTRUCTIONS)
-
-            elif command == "1":
-                # Load and plot raw data
-                print('load dataframe')
-                self.load()
-                self.get_Glad_data()
-                #self.compare_Glad_HLW()
-                self.calc_Glad_Saltney_time_diff()
-                #self.linearfit()
-
-            elif command == "2":
-                print('show dataframe')
-                self.show()
-
-            elif command == "3":
-                print('plot data')
-                self.plot_data()
-
-            elif command == "4":
-                print('load and plot HLW data')
-                filnam = 'data/Liverpool_2015_2020_HLW.txt'
-                date_start = datetime.datetime(2020,1,1)
-                date_end = datetime.datetime(2020,12,31)
-                tg = TIDETABLE(filnam, date_start, date_end)
-                # Exaple plot
-                tg.dataset.plot.scatter(x="time", y="sea_level")
-                print(f"stats: mean {tg.time_mean('sea_level')}")
-                print(f"stats: std {tg.time_std('sea_level')}")
-
-            elif command == "5":
-                print('stats')
-                tt = TIDETABLE()
-                y1 = self.df['Time difference: Glad-Saltney (mins)'].values
-                y2 = self.df['linfit_lag'].values
-                print(f"stats: root mean sq err {np.sqrt(metrics.mean_squared_error(y1,y2 ))}")
-
-            elif command == "6":
-                print('Bore predictions:')
-                date_start = datetime.datetime(2020,1,1)
-                date_end = datetime.datetime(2020,12,31)
-                tg = TIDETABLE(filnam, date_start, date_end)
-
-                HT = tg.dataset['sea_level'].where( tg.dataset['sea_level'] > 7, drop=True)
-                plt.plot( HT.time, HT,'.' );plt.show()
-                self.lag_pred = self.linfit(HT)
-
-                Saltney_time_pred = [HT.time[i] + datetime.timedelta(minutes=lag_pred[i]) for i in range(len(lag_pred))]
-                #plt.scatter( Saltney_time_pred, HT ,'.');plt.show()
-                # problem with time stamp
-
-            else:
-                template = "run_interface: I don't recognise (%s)"
-                print(template%command)
 
 if __name__ == "__main__":
 
