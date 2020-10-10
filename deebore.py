@@ -125,8 +125,9 @@ class Controller(object):
 
     def load(self):
         """
-        Load pickle file from the standard file save
+        Load bore data
         """
+        logging.info('Load bore data from csv file')
         df =  pd.read_csv('data/master-Table 1.csv')
         df.drop(columns=['date + logged time','Unnamed: 2','Unnamed: 11', \
                                 'Unnamed: 12','Unnamed: 13', 'Unnamed: 15'], \
@@ -152,7 +153,7 @@ class Controller(object):
 
             for i in range(nt):
                 tmp[i] = npdatetime64_2_datetime(df.time[i].item())
-                print( 'output',type(tmp[i] ) )
+                logging.debug( 'output',type(tmp[i] ) )
                 #print( 'output', type(bore.time3[i] ) )
             bore['time2'] = tmp
         else:
@@ -164,8 +165,7 @@ class Controller(object):
         # Set the t_dim to be a dimension and 'time' to be a coordinate
         bore = bore.rename_dims( {'index':'t_dim'} ).assign_coords( time=("t_dim", bore.time))
         self.bore = bore
-
-
+        logging.info('Bore data loaded')
 
     def add_tidetable_data(self):
         """
@@ -198,7 +198,7 @@ class Controller(object):
 
     def get_Glad_data(self):
         """ Get Gladstone HLW data from external file """
-        print("WIP: Get Gladstone HLW data from external file")
+        logging.info("Get Gladstone HLW data from external file")
         HT_h = []
         HT_t = []
         # load tidetable
@@ -222,7 +222,7 @@ class Controller(object):
                 #self.bore['LT_h'][i] = HLW.dataset.sea_level[HLW.dataset['sea_level'].argmin()]
                 #self.bore['LT_t'][i] = HLW.dataset.time[HLW.dataset['sea_level'].argmin()]
             except:
-                print('Issue with appening HLW data')
+                logging.warning('Issue with appening HLW data')
 
         # Save a xarray objects
         coords = {'time': (('t_dim'), self.bore.time.values)}
@@ -231,15 +231,22 @@ class Controller(object):
 
         #self.bore['glad_height'] = np.array(HT_h)
         #self.bore['glad_time'] = np.array(HT_t)
+        print('There is a supressed plot.scatter here')
+        #self.bore.plot.scatter(x='glad_time', y='glad_height'); plt.show()
 
-        self.bore.plot.scatter(x='glad_time', y='glad_height'); plt.show()
-        print('len(self.bore.glad_time)', len(self.bore.glad_time))
-        #print('type(HT_t):', type(HT_t))
-        #print('type(HT_h):', type(HT_h))
+        logging.debug(f"len(self.bore.glad_time): {len(self.bore.glad_time)}")
+        #logging.info(f'len(self.bore.glad_time)', len(self.bore.glad_time))
+        logging.debug(f"type(HT_t): {type(HT_t)}")
+        logging.debug(f"type(HT_h): {type(HT_h)}")
 
-        print('log time, orig tide table, new tide table lookup')
+        logging.debug('log time, orig tide table, new tide table lookup')
         for i in range(len(self.bore.time)):
-            print( self.bore.time[i].values, self.bore['Liv (Gladstone Dock) HT time (GMT)'][i].values, self.bore['glad_time'][i].values)
+            logging.debug( f"{self.bore.time[i].values}, {self.bore['Liv (Gladstone Dock) HT time (GMT)'][i].values}, {self.bore['glad_time'][i].values}")
+
+        #print('log time, orig tide table, new tide table lookup')
+        #for i in range(len(self.bore.time)):
+        #    print( self.bore.time[i].values, self.bore['Liv (Gladstone Dock) HT time (GMT)'][i].values, self.bore['glad_time'][i].values)
+
 
     def compare_Glad_HLW(self):
         """ Compare Glad HLW from external file with bore tabilated data"""
@@ -280,7 +287,7 @@ class Controller(object):
         self.bore['linfit_lag'] = self.linfit(self.bore['Liv (Gladstone Dock) HT height (m)'])
 
     def show(self):
-        """ Show dataframe """
+        """ Show xarray dataset """
         print( self.bore )
 
 
