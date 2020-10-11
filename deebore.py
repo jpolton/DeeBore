@@ -67,7 +67,8 @@ class Controller(object):
                 #self.compare_Glad_HLW()
                 print('Calculating the Gladstone to Saltney time difference')
                 self.calc_Glad_Saltney_time_diff()
-                #self.linearfit()
+                print('Calculating linear fit')
+                self.linearfit( self.bore.glad_height, self.bore.Saltney_lag )
 
             elif command == "2":
                 print('show dataframe')
@@ -261,77 +262,48 @@ class Controller(object):
             print( self.bore.time[i].values, self.bore['Liv (Gladstone Dock) HT time (GMT)'][i].values, self.bore['glad_time'][i].values)
 
     def calc_Glad_Saltney_time_diff(self):
-        """ Compute lag (-ve) for arrival at Saltney relative to Glastone HT """
+        """
+        Compute lag (-ve) for arrival at Saltney relative to Glastone HT
+        Store lags as integer (minutes). Messing with np.datetime64 and 
+        np.timedelta64 is problematic with polyfitting.
+        """
         logging.info('calc_Glad_Saltney_time_diff')
         nt = len(self.bore.time)
         lag = (self.bore['glad_time'].values - self.bore['time'].values).astype('timedelta64[m]')
-        Saltney_lag    = [ lag[i] if self.bore['location'][i] == 'bridge' else np.NaN for i in range(nt) ]
-        bluebridge_lag = [ lag[i] if self.bore['location'][i] == 'blue bridge' else np.NaN for i in range(nt) ]
+        Saltney_lag    = [ lag[i].astype('int') if self.bore.location.values[i] == 'bridge' else np.NaN for i in range(nt) ]
+        bluebridge_lag = [ lag[i].astype('int') if self.bore.location.values[i] == 'blue bridge' else np.NaN for i in range(nt) ]
 
         # Save a xarray objects
         coords = {'time': (('t_dim'), self.bore.time.values)}
         self.bore['lag'] = xr.DataArray( lag, coords=coords, dims=['t_dim'])
         self.bore['Saltney_lag'] = xr.DataArray( Saltney_lag, coords=coords, dims=['t_dim'])
-
-        #For some reason there are too many nans in bluebridge_lag... so xarray can't create a dataset...?
-        def notype(your_datetime):
-            try:
-                dtype_string = str(your_datetime.dtype)
-                return False # Has a type
-            except:
-                return True # no type --> nan
-        bluebridge_lag = [np.timedelta64(-999,'m') if notype(x) else x for x in bluebridge_lag]
-
         self.bore['bluebridge_lag'] = xr.DataArray( bluebridge_lag, coords=coords, dims=['t_dim'])
-
-
 
     def linearfit(self, X, Y):
         """ Linear regression """
-        idx = np.isfinite(X).values
-        print('Here')
-        #c.linearfit(c.bore.X[idx], c.bore.Y[idx].astype(np.int64))
-        weights = np.polyfit( X[idx], Y[idx].astype('int64'), 1)
-                        #self.bore[x_str], \
-                        #self.bore[y_str], 1)
-        print('weights', weights)
+        idx = np.isfinite(Y).values
+        weights = np.polyfit( X[idx], Y[idx], 1)
+        logging.debug("weights: {weights}")
         self.linfit = np.poly1d(weights)
-        print('Now here:', weights)
-        #self.bore['linfit_lag'] = self.linfit(self.bore[x_str])
-        #self.bore['linfit_lag'] = self.linfit(X)
-        self.bore['linfit_lag'] =  np.timedelta64( np.timedelta64( self.linfit(X), 'ns'), 'm')
+        self.bore['linfit_lag'] =  self.linfit(X)
         
-        # np.timedelta64( np.timedelta64( c.bore.Y[1].values.astype('int64'), 'ns'), 'm')
-
     def show(self):
         """ Show xarray dataset """
         print( self.bore )
 
 
     def plot_data(self):
-        """ plot dataframe """
+        """ plot data """
 
 
-        # Need to mask the Not A Time values in both variables, or is doesn't work
-        Xsalt = self.bore['glad_height'].where(self.bore['Saltney_lag']>np.array(0, dtype='timedelta64[ns]'))
-        Ysalt = self.bore['Saltney_lag'].where(self.bore['Saltney_lag']>np.array(0, dtype='timedelta64[ns]'))
-        Xblue = self.bore['glad_height'].where(self.bore['bluebridge_lag']>np.array(0, dtype='timedelta64[ns]'))
-        Yblue = self.bore['bluebridge_lag'].where(self.bore['bluebridge_lag']>np.array(0, dtype='timedelta64[ns]'))
-        Ysalt = [np.timedelta64(x.values,'m') for x in Ysalt]
-        Yblue = [np.timedelta64(x.values,'m') for x in Yblue]
-        plt.plot( Xsalt,Ysalt, 'r+', label='Saltney')
-        plt.plot( Xblue,Yblue, 'b.', label='Bluebridge')
+        Xglad = self.bore.glad_height
+        Ysalt = self.bore.Saltney_lag
+        Yblue = self.bore.bluebridge_lag
+        Yfit = self.bore.linfit_lag
+        plt.plot( Xglad,Ysalt, 'r+', label='Saltney')
+        plt.plot( Xglad,Yblue, 'b.', label='Bluebridge')
+        plt.plot( Xglad,Yfit, 'k-')
 
-        self.bore['X'] = Xsalt
-        self.bore['Y'] = Ysalt
-
-        self.linearfit(Xsalt, Ysalt)
-        #Xsalt = c.bore.X; Ysalt=c.bore.Y; c.linearfit(Xsalt,Ysalt)
-        #plt.plot( Xsalt,self.bore['linfit_lag'], 'k', label='fit')
-
-
-        #plt.show()
-        #plt.plot(  self.bore['glad_height'], self.bore['bluebridge_lag'],'.');
         plt.xlabel('Liv (Gladstone Dock) HT (m)')
         plt.ylabel('Arrival time (mins before LiV HT)')
         plt.title('Bore arrival time at Saltney Ferry')
@@ -373,7 +345,7 @@ if __name__ == "__main__":
     INSTRUCTIONS = """
 
     Choose Action:
-    1       load bore dataset
+    1       load and process bore dataset
     2       show bore dataset
     3       plot bore data
 
