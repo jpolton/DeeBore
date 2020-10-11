@@ -97,16 +97,44 @@ class Controller(object):
                 print(f"stats: root mean sq err {np.sqrt(metrics.mean_squared_error(y1,y2 ))}")
 
             elif command == "6":
-                print('Bore predictions:')
-                date_start = datetime.datetime(2020,1,1)
-                date_end = datetime.datetime(2020,12,31)
-                tg = TIDETABLE(filnam, date_start, date_end)
+                """
+                Glad_HT - float
+                 Glad_time - datetime64
+                 Saltney_time - datetime64
+                 Saltney_lag - int
 
+
+
+                 Predict the bore timing at Saltney for a input date
+                 Parameters
+                 ----------
+                 day : day
+                     DESCRIPTION.
+
+                 Returns
+                 -------
+                 Glad_HT - float
+                 Glad_time - datetime64
+                 Saltney_time - datetime64
+                 Saltney_lag - int
+
+                 """
+
+                filnam = '/Users/jeff/GitHub/DeeBore/data/Liverpool_2015_2020_HLW.txt'
+
+                day = np.datetime64('now','D')
+                tg = TIDETABLE(filnam, day, day )
                 HT = tg.dataset['sea_level'].where( tg.dataset['sea_level'] > 7, drop=True)
-                plt.plot( HT.time, HT,'.' );plt.show()
-                self.lag_pred = self.linfit(HT)
 
-                Saltney_time_pred = [HT.time[i] + datetime.timedelta(minutes=lag_pred[i]) for i in range(len(lag_pred))]
+
+                #plt.plot( HT.time, HT,'.' );plt.show()
+                lag_pred = self.linfit(HT)
+
+                Saltney_time_pred = [HT.time[i].values - np.timedelta64( int(round(lag_pred[i])), 'm') for i in range(len(lag_pred))]
+
+                for i in range(len(lag_pred)):
+                    print( "Gladstone HT",  HT.time[i].values,  HT.values[i], "m")
+                    print(" Saltney time", Saltney_time_pred[i], "lag:",  lag_pred[i], "m")
                 #plt.scatter( Saltney_time_pred, HT ,'.');plt.show()
                 # problem with time stamp
 
@@ -254,6 +282,7 @@ class Controller(object):
         #    print( self.bore.time[i].values, self.bore['Liv (Gladstone Dock) HT time (GMT)'][i].values, self.bore['glad_time'][i].values)
 
 
+
     def compare_Glad_HLW(self):
         """ Compare Glad HLW from external file with bore tabilated data"""
         print("WIP: Compare Glad HLW from external file with bore tabilated data")
@@ -264,7 +293,7 @@ class Controller(object):
     def calc_Glad_Saltney_time_diff(self):
         """
         Compute lag (-ve) for arrival at Saltney relative to Glastone HT
-        Store lags as integer (minutes). Messing with np.datetime64 and 
+        Store lags as integer (minutes). Messing with np.datetime64 and
         np.timedelta64 is problematic with polyfitting.
         """
         logging.info('calc_Glad_Saltney_time_diff')
@@ -286,7 +315,7 @@ class Controller(object):
         logging.debug("weights: {weights}")
         self.linfit = np.poly1d(weights)
         self.bore['linfit_lag'] =  self.linfit(X)
-        
+
     def show(self):
         """ Show xarray dataset """
         print( self.bore )
