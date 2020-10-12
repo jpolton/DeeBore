@@ -37,6 +37,7 @@ class Controller(object):
         Initialise main controller. Look for file. If exists load it
         """
         logging.info("run interface")
+        self.load_flag = False
         self.run_interface()
 
 
@@ -61,14 +62,7 @@ class Controller(object):
             elif command == "1":
                 # Load and plot raw data
                 print('loading bore data')
-                self.load()
-                print('loading tide data')
-                self.get_Glad_data()
-                #self.compare_Glad_HLW()
-                print('Calculating the Gladstone to Saltney time difference')
-                self.calc_Glad_Saltney_time_diff()
-                print('Calculating linear fit')
-                self.linearfit( self.bore.glad_height, self.bore.Saltney_lag )
+                self.load_databucket()
 
             elif command == "2":
                 print('show dataframe')
@@ -142,9 +136,18 @@ class Controller(object):
                 print('Export data')
                 self.export()
 
+            elif command == "r":
+                print('Refresh database (delete pickle file is it exists)')
+                if os.path.exists(DATABUCKET_FILE):
+                    os.remove(DATABUCKET_FILE)
+                else:
+                    print("Can not delete the pickle file as it doesn't exists")
+                self.load_databucket()
+
             else:
                 template = "run_interface: I don't recognise (%s)"
                 print(template%command)
+
 
 
     def load_old(self):
@@ -162,6 +165,7 @@ class Controller(object):
         Load bore data
         """
         logging.info('Load bore data from csv file')
+        self.load_flag = True
         df =  pd.read_csv('data/master-Table 1.csv')
         df.drop(columns=['date + logged time','Unnamed: 2','Unnamed: 11', \
                                 'Unnamed: 12','Unnamed: 13', 'Unnamed: 15'], \
@@ -357,8 +361,48 @@ class Controller(object):
             plt.show()
 
     def pickle(self):
+        """ save copy of self into pickle file """
         print('Pickle data. NOT IMPLEMENTED')
-        pass
+        os.system('rm -f '+DATABUCKET_FILE)
+        if(1):
+            with open(DATABUCKET_FILE, 'wb') as file_object:
+                pickle.dump(self.bore, file_object)
+        else:
+            print("Don't save as pickle file")
+        return
+
+    def load_databucket(self):
+        """
+        Auto load databucket from pickle file if it exists, otherwise create it
+        """
+        #databucket = DataBucket()
+        logging.info("Auto load databucket from pickle file if it exists")
+        print("Add to pickle file, if it exists")
+        try:
+            if os.path.exists(DATABUCKET_FILE):
+                template = "...Loading (%s)"
+                print(template%DATABUCKET_FILE)
+                with open(DATABUCKET_FILE, 'rb') as file_object:
+                    databucket = pickle.load(file_object)
+            else:
+                print("... %s does not exist"%DATABUCKET_FILE)
+                print("Load and process data")
+
+                self.load()
+                print('loading tide data')
+                self.get_Glad_data()
+                #self.compare_Glad_HLW()
+                print('Calculating the Gladstone to Saltney time difference')
+                self.calc_Glad_Saltney_time_diff()
+                print('Calculating linear fit')
+                self.linearfit( self.bore.glad_height, self.bore.Saltney_lag )
+
+
+        except KeyError:
+            print('ErrorA ')
+        except (IOError, RuntimeError):
+            print('ErrorB ')
+        self.databucket = databucket
 
     def export(self):
         print('Export data to csv. NOT IMPLEMENTED')
@@ -371,6 +415,8 @@ if __name__ == "__main__":
     logging.info(f"-----{now_str}-----")
 
     #### Constants
+    DATABUCKET_FILE = "deebore.pkl"
+
     INSTRUCTIONS = """
 
     Choose Action:
@@ -384,6 +430,7 @@ if __name__ == "__main__":
     6       Predict bore.
 
     x       Export data to csv
+    r       Refresh database
 
     i       to show these instructions
     q       to quit
