@@ -15,6 +15,7 @@ import matplotlib.pyplot as plt
 import xarray as xr
 import sklearn.metrics as metrics
 import pytz
+import pickle
 
 
 coastdir = os.path.dirname('/Users/jeff/GitHub/COAsT/coast')
@@ -116,7 +117,8 @@ class Controller(object):
 
                 filnam = '/Users/jeff/GitHub/DeeBore/data/Liverpool_2015_2020_HLW.txt'
 
-                day = np.datetime64('now','D')
+                nd = input('Make predictions for N days from hence (int):?')
+                day = np.datetime64('now','D') + np.timedelta64( int(nd), 'D' )
                 tg = TIDETABLE(filnam, day, day )
                 HT = tg.dataset['sea_level'].where( tg.dataset['sea_level'] > 7, drop=True)
 
@@ -127,8 +129,9 @@ class Controller(object):
                 Saltney_time_pred = [HT.time[i].values - np.timedelta64( int(round(lag_pred[i])), 'm') for i in range(len(lag_pred))]
 
                 for i in range(len(lag_pred)):
-                    print( "Gladstone HT",  HT.time[i].values,  HT.values[i], "m")
-                    print(" Saltney time", Saltney_time_pred[i], "lag:",  lag_pred[i], "m")
+                    #print( "Gladstone HT", np.datetime_as_string(HT.time[i], unit='m',timezone=pytz.timezone('UTC')),"(GMT). Height: {:.2f} m".format(  HT.values[i]))
+                    #print(" Saltney arrival", np.datetime_as_string(Saltney_time_pred[i], unit='m', timezone=pytz.timezone('Europe/London')),"(GMT/BST). Lag: {:.0f} mins".format( lag_pred[i] )) 
+                    print(" Saltney pred", np.datetime_as_string(Saltney_time_pred[i], unit='m', timezone=pytz.timezone('Europe/London')),". Height: {:.2f} m".format( HT.values[i] )) 
                 #plt.scatter( Saltney_time_pred, HT ,'.');plt.show()
                 # problem with time stamp
 
@@ -383,7 +386,7 @@ class Controller(object):
                 template = "...Loading (%s)"
                 print(template%DATABUCKET_FILE)
                 with open(DATABUCKET_FILE, 'rb') as file_object:
-                    databucket = pickle.load(file_object)
+                    self.bore = pickle.load(file_object)
             else:
                 print("... %s does not exist"%DATABUCKET_FILE)
                 print("Load and process data")
@@ -397,12 +400,10 @@ class Controller(object):
                 print('Calculating linear fit')
                 self.linearfit( self.bore.glad_height, self.bore.Saltney_lag )
 
-
         except KeyError:
             print('ErrorA ')
         except (IOError, RuntimeError):
             print('ErrorB ')
-        self.databucket = databucket
 
     def export(self):
         print('Export data to csv. NOT IMPLEMENTED')
