@@ -20,7 +20,7 @@ import pickle
 
 coastdir = os.path.dirname('/Users/jeff/GitHub/COAsT/coast')
 sys.path.insert(0,coastdir)
-from coast.TIDETABLE import TIDETABLE, npdatetime64_2_datetime
+from coast.TIDEGAUGE import TIDEGAUGE
 
 import logging
 logging.basicConfig(filename='bore.log', filemode='w+')
@@ -55,7 +55,7 @@ class Controller(object):
             if command == "q":
                 print("run_interface: quit")
                 logging.info("quit") # Function call.
-                self.pickle()
+                #self.pickle()
                 break
             elif command == "i":
                 print(INSTRUCTIONS)
@@ -78,7 +78,8 @@ class Controller(object):
                 filnam = 'data/Liverpool_2015_2020_HLW.txt'
                 date_start = datetime.datetime(2020,1,1)
                 date_end = datetime.datetime(2020,12,31)
-                tg = TIDETABLE(filnam, date_start, date_end)
+                tg = TIDEGAUGE()
+                tg.dataset = tg.get_tidetabletimes( filnam, date_start, date_end )
                 # Exaple plot
                 tg.dataset.plot.scatter(x="time", y="sea_level")
                 print(f"stats: mean {tg.time_mean('sea_level')}")
@@ -86,7 +87,7 @@ class Controller(object):
 
             elif command == "5":
                 print('stats')
-                tt = TIDETABLE()
+                tt = TIDEGAUGE()
                 y1 = self.df['Time difference: Glad-Saltney (mins)'].values
                 y2 = self.df['linfit_lag'].values
                 print(f"stats: root mean sq err {np.sqrt(metrics.mean_squared_error(y1,y2 ))}")
@@ -119,7 +120,9 @@ class Controller(object):
 
                 nd = input('Make predictions for N days from hence (int):?')
                 day = np.datetime64('now','D') + np.timedelta64( int(nd), 'D' )
-                tg = TIDETABLE(filnam, day, day )
+                dayp1 = day + np.timedelta64( 24, 'h' )
+                tg = TIDEGAUGE()
+                tg.dataset = tg.read_HLW_to_xarray( filnam, day, dayp1 )
                 HT = tg.dataset['sea_level'].where( tg.dataset['sea_level'] > 7, drop=True)
 
 
@@ -245,20 +248,22 @@ class Controller(object):
         # load tidetable
         filnam1 = '/Users/jeff/GitHub/DeeBore/data/Liverpool_2005_2014_HLW.txt'
         filnam2 = '/Users/jeff/GitHub/DeeBore/data/Liverpool_2015_2020_HLW.txt'
-        tg  = TIDETABLE(filnam1)
-        tg1 = TIDETABLE(filnam1, self.bore.time.min().values, self.bore.time.max().values )
-        tg2 = TIDETABLE(filnam2, self.bore.time.min().values, self.bore.time.max().values )
+        tg  = TIDEGAUGE()
+        tg1 = TIDEGAUGE()
+        tg2 = TIDEGAUGE()
+        tg1.dataset = tg1.read_HLW_to_xarray(filnam1)#, self.bore.time.min().values, self.bore.time.max().values)
+        tg2.dataset = tg2.read_HLW_to_xarray(filnam2)#, self.bore.time.min().values, self.bore.time.max().values)
         tg.dataset = xr.concat([ tg1.dataset, tg2.dataset], dim='t_dim')
         self.tg = tg
         for i in range(len(self.bore.time)):
             try:
-                HLW = None
-                HLW = tg.get_tidetabletimes(self.bore.time[i].values)
+                HW = None
+                #HLW = tg.get_tidetabletimes(self.bore.time[i].values)
+                HW = tg.get_tidetabletimes( self.bore.time[i].values, method='nearest_HT' )
                 #print(f"HLW: {HLW}")
-                ind = np.argmax(HLW[0]) # pick out HT from HT & LT
-                HT_h.append( HLW[0][ind] )
+                HT_h.append( HW.values )
                 #print('len(HT_h)', len(HT_h))
-                HT_t.append( HLW[1][ind] )
+                HT_t.append( HW.time.values )
                 #print('len(HT_t)', len(HT_t))
                 #self.bore['LT_h'][i] = HLW.dataset.sea_level[HLW.dataset['sea_level'].argmin()]
                 #self.bore['LT_t'][i] = HLW.dataset.time[HLW.dataset['sea_level'].argmin()]
