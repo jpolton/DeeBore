@@ -15,11 +15,12 @@ import matplotlib.pyplot as plt
 import xarray as xr
 import sklearn.metrics as metrics
 import pytz
+import pickle
 
 
 coastdir = os.path.dirname('/Users/jeff/GitHub/COAsT/coast')
 sys.path.insert(0,coastdir)
-from coast.TIDETABLE import TIDETABLE, npdatetime64_2_datetime
+from coast.TIDEGAUGE import TIDEGAUGE
 
 import logging
 logging.basicConfig(filename='bore.log', filemode='w+')
@@ -37,6 +38,7 @@ class Controller(object):
         Initialise main controller. Look for file. If exists load it
         """
         logging.info("run interface")
+        self.load_flag = False
         self.run_interface()
 
 
@@ -53,7 +55,7 @@ class Controller(object):
             if command == "q":
                 print("run_interface: quit")
                 logging.info("quit") # Function call.
-                self.pickle()
+                #self.pickle()
                 break
             elif command == "i":
                 print(INSTRUCTIONS)
@@ -61,14 +63,7 @@ class Controller(object):
             elif command == "1":
                 # Load and plot raw data
                 print('loading bore data')
-                self.load()
-                print('loading tide data')
-                self.get_Glad_data()
-                #self.compare_Glad_HLW()
-                print('Calculating the Gladstone to Saltney time difference')
-                self.calc_Glad_Saltney_time_diff()
-                print('Calculating linear fit')
-                self.linearfit( self.bore.glad_height, self.bore.Saltney_lag )
+                self.load_databucket()
 
             elif command == "2":
                 print('show dataframe')
@@ -83,7 +78,8 @@ class Controller(object):
                 filnam = 'data/Liverpool_2015_2020_HLW.txt'
                 date_start = datetime.datetime(2020,1,1)
                 date_end = datetime.datetime(2020,12,31)
-                tg = TIDETABLE(filnam, date_start, date_end)
+                tg = TIDEGAUGE()
+                tg.dataset = tg.get_tidetabletimes( filnam, date_start, date_end )
                 # Exaple plot
                 tg.dataset.plot.scatter(x="time", y="sea_level")
                 print(f"stats: mean {tg.time_mean('sea_level')}")
@@ -91,22 +87,54 @@ class Controller(object):
 
             elif command == "5":
                 print('stats')
-                tt = TIDETABLE()
+                tt = TIDEGAUGE()
                 y1 = self.df['Time difference: Glad-Saltney (mins)'].values
                 y2 = self.df['linfit_lag'].values
                 print(f"stats: root mean sq err {np.sqrt(metrics.mean_squared_error(y1,y2 ))}")
 
             elif command == "6":
-                print('Bore predictions:')
-                date_start = datetime.datetime(2020,1,1)
-                date_end = datetime.datetime(2020,12,31)
-                tg = TIDETABLE(filnam, date_start, date_end)
+                """
+                Glad_HT - float
+                 Glad_time - datetime64
+                 Saltney_time - datetime64
+                 Saltney_lag - int
 
+
+
+                 Predict the bore timing at Saltney for a input date
+                 Parameters
+                 ----------
+                 day : day
+                     DESCRIPTION.
+
+                 Returns
+                 -------
+                 Glad_HT - float
+                 Glad_time - datetime64
+                 Saltney_time - datetime64
+                 Saltney_lag - int
+
+                 """
+
+                filnam = '/Users/jeff/GitHub/DeeBore/data/Liverpool_2015_2020_HLW.txt'
+
+                nd = input('Make predictions for N days from hence (int):?')
+                day = np.datetime64('now','D') + np.timedelta64( int(nd), 'D' )
+                dayp1 = day + np.timedelta64( 24, 'h' )
+                tg = TIDEGAUGE()
+                tg.dataset = tg.read_HLW_to_xarray( filnam, day, dayp1 )
                 HT = tg.dataset['sea_level'].where( tg.dataset['sea_level'] > 7, drop=True)
-                plt.plot( HT.time, HT,'.' );plt.show()
-                self.lag_pred = self.linfit(HT)
 
-                Saltney_time_pred = [HT.time[i] + datetime.timedelta(minutes=lag_pred[i]) for i in range(len(lag_pred))]
+
+                #plt.plot( HT.time, HT,'.' );plt.show()
+                lag_pred = self.linfit(HT)
+
+                Saltney_time_pred = [HT.time[i].values - np.timedelta64( int(round(lag_pred[i])), 'm') for i in range(len(lag_pred))]
+
+                for i in range(len(lag_pred)):
+                    #print( "Gladstone HT", np.datetime_as_string(HT.time[i], unit='m',timezone=pytz.timezone('UTC')),"(GMT). Height: {:.2f} m".format(  HT.values[i]))
+                    #print(" Saltney arrival", np.datetime_as_string(Saltney_time_pred[i], unit='m', timezone=pytz.timezone('Europe/London')),"(GMT/BST). Lag: {:.0f} mins".format( lag_pred[i] )) 
+                    print(" Saltney pred", np.datetime_as_string(Saltney_time_pred[i], unit='m', timezone=pytz.timezone('Europe/London')),". Height: {:.2f} m".format( HT.values[i] )) 
                 #plt.scatter( Saltney_time_pred, HT ,'.');plt.show()
                 # problem with time stamp
 
@@ -114,9 +142,18 @@ class Controller(object):
                 print('Export data')
                 self.export()
 
+            elif command == "r":
+                print('Refresh database (delete pickle file is it exists)')
+                if os.path.exists(DATABUCKET_FILE):
+                    os.remove(DATABUCKET_FILE)
+                else:
+                    print("Can not delete the pickle file as it doesn't exists")
+                self.load_databucket()
+
             else:
                 template = "run_interface: I don't recognise (%s)"
                 print(template%command)
+
 
 
     def load_old(self):
@@ -134,6 +171,7 @@ class Controller(object):
         Load bore data
         """
         logging.info('Load bore data from csv file')
+        self.load_flag = True
         df =  pd.read_csv('data/master-Table 1.csv')
         df.drop(columns=['date + logged time','Unnamed: 2','Unnamed: 11', \
                                 'Unnamed: 12','Unnamed: 13', 'Unnamed: 15'], \
@@ -210,20 +248,22 @@ class Controller(object):
         # load tidetable
         filnam1 = '/Users/jeff/GitHub/DeeBore/data/Liverpool_2005_2014_HLW.txt'
         filnam2 = '/Users/jeff/GitHub/DeeBore/data/Liverpool_2015_2020_HLW.txt'
-        tg  = TIDETABLE(filnam1)
-        tg1 = TIDETABLE(filnam1, self.bore.time.min().values, self.bore.time.max().values )
-        tg2 = TIDETABLE(filnam2, self.bore.time.min().values, self.bore.time.max().values )
+        tg  = TIDEGAUGE()
+        tg1 = TIDEGAUGE()
+        tg2 = TIDEGAUGE()
+        tg1.dataset = tg1.read_HLW_to_xarray(filnam1)#, self.bore.time.min().values, self.bore.time.max().values)
+        tg2.dataset = tg2.read_HLW_to_xarray(filnam2)#, self.bore.time.min().values, self.bore.time.max().values)
         tg.dataset = xr.concat([ tg1.dataset, tg2.dataset], dim='t_dim')
         self.tg = tg
         for i in range(len(self.bore.time)):
             try:
-                HLW = None
-                HLW = tg.get_tidetabletimes(self.bore.time[i].values)
+                HW = None
+                #HLW = tg.get_tidetabletimes(self.bore.time[i].values)
+                HW = tg.get_tidetabletimes( self.bore.time[i].values, method='nearest_HT' )
                 #print(f"HLW: {HLW}")
-                ind = np.argmax(HLW[0]) # pick out HT from HT & LT
-                HT_h.append( HLW[0][ind] )
+                HT_h.append( HW.values )
                 #print('len(HT_h)', len(HT_h))
-                HT_t.append( HLW[1][ind] )
+                HT_t.append( HW.time.values )
                 #print('len(HT_t)', len(HT_t))
                 #self.bore['LT_h'][i] = HLW.dataset.sea_level[HLW.dataset['sea_level'].argmin()]
                 #self.bore['LT_t'][i] = HLW.dataset.time[HLW.dataset['sea_level'].argmin()]
@@ -254,6 +294,7 @@ class Controller(object):
         #    print( self.bore.time[i].values, self.bore['Liv (Gladstone Dock) HT time (GMT)'][i].values, self.bore['glad_time'][i].values)
 
 
+
     def compare_Glad_HLW(self):
         """ Compare Glad HLW from external file with bore tabilated data"""
         print("WIP: Compare Glad HLW from external file with bore tabilated data")
@@ -264,7 +305,7 @@ class Controller(object):
     def calc_Glad_Saltney_time_diff(self):
         """
         Compute lag (-ve) for arrival at Saltney relative to Glastone HT
-        Store lags as integer (minutes). Messing with np.datetime64 and 
+        Store lags as integer (minutes). Messing with np.datetime64 and
         np.timedelta64 is problematic with polyfitting.
         """
         logging.info('calc_Glad_Saltney_time_diff')
@@ -286,7 +327,7 @@ class Controller(object):
         logging.debug("weights: {weights}")
         self.linfit = np.poly1d(weights)
         self.bore['linfit_lag'] =  self.linfit(X)
-        
+
     def show(self):
         """ Show xarray dataset """
         print( self.bore )
@@ -328,8 +369,46 @@ class Controller(object):
             plt.show()
 
     def pickle(self):
+        """ save copy of self into pickle file """
         print('Pickle data. NOT IMPLEMENTED')
-        pass
+        os.system('rm -f '+DATABUCKET_FILE)
+        if(1):
+            with open(DATABUCKET_FILE, 'wb') as file_object:
+                pickle.dump(self.bore, file_object)
+        else:
+            print("Don't save as pickle file")
+        return
+
+    def load_databucket(self):
+        """
+        Auto load databucket from pickle file if it exists, otherwise create it
+        """
+        #databucket = DataBucket()
+        logging.info("Auto load databucket from pickle file if it exists")
+        print("Add to pickle file, if it exists")
+        try:
+            if os.path.exists(DATABUCKET_FILE):
+                template = "...Loading (%s)"
+                print(template%DATABUCKET_FILE)
+                with open(DATABUCKET_FILE, 'rb') as file_object:
+                    self.bore = pickle.load(file_object)
+            else:
+                print("... %s does not exist"%DATABUCKET_FILE)
+                print("Load and process data")
+
+                self.load()
+                print('loading tide data')
+                self.get_Glad_data()
+                #self.compare_Glad_HLW()
+                print('Calculating the Gladstone to Saltney time difference')
+                self.calc_Glad_Saltney_time_diff()
+                print('Calculating linear fit')
+                self.linearfit( self.bore.glad_height, self.bore.Saltney_lag )
+
+        except KeyError:
+            print('ErrorA ')
+        except (IOError, RuntimeError):
+            print('ErrorB ')
 
     def export(self):
         print('Export data to csv. NOT IMPLEMENTED')
@@ -342,6 +421,8 @@ if __name__ == "__main__":
     logging.info(f"-----{now_str}-----")
 
     #### Constants
+    DATABUCKET_FILE = "deebore.pkl"
+
     INSTRUCTIONS = """
 
     Choose Action:
@@ -355,6 +436,7 @@ if __name__ == "__main__":
     6       Predict bore.
 
     x       Export data to csv
+    r       Refresh database
 
     i       to show these instructions
     q       to quit
