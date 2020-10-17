@@ -21,6 +21,7 @@ import pickle
 coastdir = os.path.dirname('/Users/jeff/GitHub/COAsT/coast')
 sys.path.insert(0,coastdir)
 from coast.TIDEGAUGE import TIDEGAUGE
+from coast.general_utils import dayoweek
 
 import logging
 logging.basicConfig(filename='bore.log', filemode='w+')
@@ -135,7 +136,7 @@ class Controller(object):
                 for i in range(len(lag_pred)):
                     #print( "Gladstone HT", np.datetime_as_string(HT.time[i], unit='m',timezone=pytz.timezone('UTC')),"(GMT). Height: {:.2f} m".format(  HT.values[i]))
                     #print(" Saltney arrival", np.datetime_as_string(Saltney_time_pred[i], unit='m', timezone=pytz.timezone('Europe/London')),"(GMT/BST). Lag: {:.0f} mins".format( lag_pred[i] ))
-                    print(" Saltney pred", np.datetime_as_string(Saltney_time_pred[i], unit='m', timezone=pytz.timezone('Europe/London')),". Height: {:.2f} m".format( HT.values[i] ))
+                    print(" Saltney pred", dayoweek(Saltney_time_pred[i]), np.datetime_as_string(Saltney_time_pred[i], unit='m', timezone=pytz.timezone('Europe/London')),". Height: {:.2f} m".format( HT.values[i] ))
                 #plt.scatter( Saltney_time_pred, HT ,'.');plt.show()
                 # problem with time stamp
 
