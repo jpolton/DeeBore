@@ -55,7 +55,7 @@ class Controller(object):
             if command == "q":
                 print("run_interface: quit")
                 logging.info("quit") # Function call.
-                #self.pickle()
+                self.pickle()
                 break
             elif command == "i":
                 print(INSTRUCTIONS)
@@ -133,8 +133,8 @@ class Controller(object):
 
                 for i in range(len(lag_pred)):
                     #print( "Gladstone HT", np.datetime_as_string(HT.time[i], unit='m',timezone=pytz.timezone('UTC')),"(GMT). Height: {:.2f} m".format(  HT.values[i]))
-                    #print(" Saltney arrival", np.datetime_as_string(Saltney_time_pred[i], unit='m', timezone=pytz.timezone('Europe/London')),"(GMT/BST). Lag: {:.0f} mins".format( lag_pred[i] )) 
-                    print(" Saltney pred", np.datetime_as_string(Saltney_time_pred[i], unit='m', timezone=pytz.timezone('Europe/London')),". Height: {:.2f} m".format( HT.values[i] )) 
+                    #print(" Saltney arrival", np.datetime_as_string(Saltney_time_pred[i], unit='m', timezone=pytz.timezone('Europe/London')),"(GMT/BST). Lag: {:.0f} mins".format( lag_pred[i] ))
+                    print(" Saltney pred", np.datetime_as_string(Saltney_time_pred[i], unit='m', timezone=pytz.timezone('Europe/London')),". Height: {:.2f} m".format( HT.values[i] ))
                 #plt.scatter( Saltney_time_pred, HT ,'.');plt.show()
                 # problem with time stamp
 
