@@ -37,6 +37,7 @@ class Controller(object):
         """
         Initialise main controller. Look for file. If exists load it
         """
+        self.load_databucket()
         logging.info("run interface")
         self.load_flag = False
         self.run_interface()
@@ -62,8 +63,8 @@ class Controller(object):
 
             elif command == "1":
                 # Load and plot raw data
-                print('loading bore data')
-                self.load_databucket()
+                print('load and process a bore data')
+                self.load_and_process()
 
             elif command == "2":
                 print('show dataframe')
@@ -370,7 +371,7 @@ class Controller(object):
 
     def pickle(self):
         """ save copy of self into pickle file """
-        print('Pickle data. NOT IMPLEMENTED')
+        print('Pickle data.')
         os.system('rm -f '+DATABUCKET_FILE)
         if(1):
             with open(DATABUCKET_FILE, 'wb') as file_object:
@@ -382,6 +383,7 @@ class Controller(object):
     def load_databucket(self):
         """
         Auto load databucket from pickle file if it exists, otherwise create it
+        If databucket is loaded. Also perform linear fit to data (couldn't pickle it into bore:xr.DataArray)
         """
         #databucket = DataBucket()
         logging.info("Auto load databucket from pickle file if it exists")
@@ -392,23 +394,26 @@ class Controller(object):
                 print(template%DATABUCKET_FILE)
                 with open(DATABUCKET_FILE, 'rb') as file_object:
                     self.bore = pickle.load(file_object)
+                    print('Calculating linear fit')
+                    self.linearfit( self.bore.glad_height, self.bore.Saltney_lag )
             else:
                 print("... %s does not exist"%DATABUCKET_FILE)
                 print("Load and process data")
-
-                self.load()
-                print('loading tide data')
-                self.get_Glad_data()
-                #self.compare_Glad_HLW()
-                print('Calculating the Gladstone to Saltney time difference')
-                self.calc_Glad_Saltney_time_diff()
-                print('Calculating linear fit')
-                self.linearfit( self.bore.glad_height, self.bore.Saltney_lag )
 
         except KeyError:
             print('ErrorA ')
         except (IOError, RuntimeError):
             print('ErrorB ')
+
+    def load_and_process(self):
+        self.load()
+        print('loading tide data')
+        self.get_Glad_data()
+        #self.compare_Glad_HLW()
+        print('Calculating the Gladstone to Saltney time difference')
+        self.calc_Glad_Saltney_time_diff()
+        print('Calculating linear fit')
+        self.linearfit( self.bore.glad_height, self.bore.Saltney_lag )
 
     def export(self):
         print('Export data to csv. NOT IMPLEMENTED')
