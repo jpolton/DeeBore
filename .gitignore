@@ -1,4 +1,6 @@
 *~
 *log
-figs/*png
+figs/
 data/*
+
+*pkl
