@@ -125,18 +125,27 @@ class Controller(object):
                 dayp1 = day + np.timedelta64( 24, 'h' )
                 tg = TIDEGAUGE()
                 tg.dataset = tg.read_HLW_to_xarray( filnam, day, dayp1 )
-                HT = tg.dataset['sea_level'].where( tg.dataset['sea_level'] > 7, drop=True)
+                HT = tg.dataset['sea_level'].where( tg.dataset['sea_level'].values > 7).dropna('t_dim') #, drop=True)
 
 
                 #plt.plot( HT.time, HT,'.' );plt.show()
                 lag_pred = self.linfit(HT)
+                #lag_pred = lag_pred[np.isfinite(lag_pred)] # drop nans
 
                 Saltney_time_pred = [HT.time[i].values - np.timedelta64( int(round(lag_pred[i])), 'm') for i in range(len(lag_pred))]
-
+                # Iterate over high tide events to print useful information
                 for i in range(len(lag_pred)):
                     #print( "Gladstone HT", np.datetime_as_string(HT.time[i], unit='m',timezone=pytz.timezone('UTC')),"(GMT). Height: {:.2f} m".format(  HT.values[i]))
                     #print(" Saltney arrival", np.datetime_as_string(Saltney_time_pred[i], unit='m', timezone=pytz.timezone('Europe/London')),"(GMT/BST). Lag: {:.0f} mins".format( lag_pred[i] ))
-                    print(" Saltney pred", dayoweek(Saltney_time_pred[i]), np.datetime_as_string(Saltney_time_pred[i], unit='m', timezone=pytz.timezone('Europe/London')),". Height: {:.2f} m".format( HT.values[i] ))
+                    print("Predictions for ", dayoweek(Saltney_time_pred[i]), Saltney_time_pred[i].astype('datetime64[s]').astype(datetime.datetime).strftime('%Y/%m/%d') )
+                    print("Saltney FB:", np.datetime_as_string(Saltney_time_pred[i], unit='m', timezone=pytz.timezone('Europe/London')) )
+                    Glad_HLW = tg.get_tidetabletimes( Saltney_time_pred[i], method='nearest_2' )
+                    # Extract the High Tide value
+                    print('Liv HT:    ', np.datetime_as_string(Glad_HLW[ np.argmax(Glad_HLW) ].time.values, unit='m', timezone=pytz.timezone('Europe/London')), Glad_HLW[ np.argmax(Glad_HLW) ].values, 'm' )
+                    # Extract the Low Tide value
+                    print('Liv LT:    ', np.datetime_as_string(Glad_HLW[ np.argmin(Glad_HLW) ].time.values, unit='m', timezone=pytz.timezone('Europe/London')), Glad_HLW[ np.argmin(Glad_HLW) ].values, 'm' )
+                    print("")
+
                 #plt.scatter( Saltney_time_pred, HT ,'.');plt.show()
                 # problem with time stamp
 
