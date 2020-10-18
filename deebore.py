@@ -29,6 +29,19 @@ logging.getLogger().setLevel(logging.DEBUG)
 
 #%% ################################################################################
 
+class GAUGE(TIDEGAUGE):
+    """ Inherit from COAsT. Add new methods """
+
+    def get_mean_crossing_time_as_xarray(self, date_start=None, date_end=None):
+        """
+        Get the height (constant) and times of crossing the mean height as xarray
+        """
+        pass
+
+    def get_HW_to_xarray(self, date_start=None, date_end=None):
+        """ Extract actual HW value and time as an xarray """
+
+
 class Controller(object):
     """
     This is where the main things happen.
@@ -428,6 +441,13 @@ class Controller(object):
     def export(self):
         print('Export data to csv. NOT IMPLEMENTED')
         pass
+
+    def load_timeseries(self):
+        fn_tidegauge = '../COAsT/example_files/tide_gauges/lowestoft-p024-uk-bodc'
+        date0 = datetime.datetime(2007,1,10)
+        date1 = datetime.datetime(2007,1,12)
+        tidegauge = GAUGE(fn_tidegauge, date_start = date0, date_end = date1)
+        print(tidegauge.dataset)
 
 if __name__ == "__main__":
 
