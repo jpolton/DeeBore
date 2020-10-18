@@ -429,6 +429,13 @@ class Controller(object):
         print('Export data to csv. NOT IMPLEMENTED')
         pass
 
+    def load_timeseries(self):
+        fn_tidegauge = '../COAsT/example_files/tide_gauges/lowestoft-p024-uk-bodc'
+        date0 = datetime.datetime(2007,1,10)
+        date1 = datetime.datetime(2007,1,12)
+        tidegauge = TIDEGAUGE(fn_tidegauge, date_start = date0, date_end = date1)
+        print(tidegauge.dataset)
+
 if __name__ == "__main__":
 
     #### Initialise logging
