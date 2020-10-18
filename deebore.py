@@ -40,7 +40,7 @@ class GAUGE(TIDEGAUGE):
 
     def get_HW_to_xarray(self, date_start=None, date_end=None):
         """ Extract actual HW value and time as an xarray """
-
+        pass
 
 class Controller(object):
     """
