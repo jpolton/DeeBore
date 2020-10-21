@@ -109,7 +109,7 @@ class Controller(object):
 
             elif command == "6":
                 """
-                Glad_HT - float
+                Glad_HW - float
                  Glad_time - datetime64
                  Saltney_time - datetime64
                  Saltney_lag - int
@@ -124,7 +124,7 @@ class Controller(object):
 
                  Returns
                  -------
-                 Glad_HT - float
+                 Glad_HW - float
                  Glad_time - datetime64
                  Saltney_time - datetime64
                  Saltney_lag - int
@@ -283,7 +283,7 @@ class Controller(object):
             try:
                 HW = None
                 #HLW = tg.get_tidetabletimes(self.bore.time[i].values)
-                HW = tg.get_tidetabletimes( self.bore.time[i].values, method='nearest_HT' )
+                HW = tg.get_tidetabletimes( self.bore.time[i].values, method='nearest_HW' )
                 #print(f"HLW: {HLW}")
                 HT_h.append( HW.values )
                 #print('len(HT_h)', len(HT_h))
