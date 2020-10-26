@@ -19,7 +19,7 @@ import pickle
 
 
 coastdir = os.path.dirname('/Users/jeff/GitHub/COAsT/coast')
-sys.path.insert(0,coastdir)
+sys.path.insert(0, coastdir)
 from coast.TIDEGAUGE import TIDEGAUGE
 from coast.general_utils import dayoweek
 
@@ -42,7 +42,7 @@ class GAUGE(TIDEGAUGE):
         """ Extract actual HW value and time as an xarray """
         pass
 
-class Controller(object):
+class Controller():
     """
     This is where the main things happen.
     Where user input is managed and methods are launched
@@ -91,10 +91,10 @@ class Controller(object):
             elif command == "4":
                 print('load and plot HLW data')
                 filnam = 'data/Liverpool_2015_2020_HLW.txt'
-                date_start = datetime.datetime(2020,1,1)
-                date_end = datetime.datetime(2020,12,31)
+                date_start = datetime.datetime(2020, 1, 1)
+                date_end = datetime.datetime(2020, 12, 31)
                 tg = TIDEGAUGE()
-                tg.dataset = tg.get_tidetabletimes( filnam, date_start, date_end )
+                tg.dataset = tg.get_tidetabletimes(filnam, date_start, date_end)
                 # Exaple plot
                 tg.dataset.plot.scatter(x="time", y="sea_level")
                 print(f"stats: mean {tg.time_mean('sea_level')}")
@@ -134,18 +134,20 @@ class Controller(object):
                 filnam = '/Users/jeff/GitHub/DeeBore/data/Liverpool_2015_2020_HLW.txt'
 
                 nd = input('Make predictions for N days from hence (int):?')
-                day = np.datetime64('now','D') + np.timedelta64( int(nd), 'D' )
-                dayp1 = day + np.timedelta64( 24, 'h' )
+                day = np.datetime64('now', 'D') + np.timedelta64(int(nd), 'D')
+                dayp1 = day + np.timedelta64(24, 'h')
                 tg = TIDEGAUGE()
-                tg.dataset = tg.read_HLW_to_xarray( filnam, day, dayp1 )
-                HT = tg.dataset['sea_level'].where( tg.dataset['sea_level'].values > 7).dropna('t_dim') #, drop=True)
-
+                tg.dataset = tg.read_HLW_to_xarray(filnam, day, dayp1)
+                HT = tg.dataset['sea_level'].where(tg.dataset['sea_level']\
+                                            .values > 7).dropna('t_dim') #, drop=True)
 
                 #plt.plot( HT.time, HT,'.' );plt.show()
                 lag_pred = self.linfit(HT)
                 #lag_pred = lag_pred[np.isfinite(lag_pred)] # drop nans
 
-                Saltney_time_pred = [HT.time[i].values - np.timedelta64( int(round(lag_pred[i])), 'm') for i in range(len(lag_pred))]
+                Saltney_time_pred = [HT.time[i].values
+                                     - np.timedelta64(int(round(lag_pred[i])), 'm')
+                                     for i in range(len(lag_pred))]
                 # Iterate over high tide events to print useful information
                 for i in range(len(lag_pred)):
                     #print( "Gladstone HT", np.datetime_as_string(HT.time[i], unit='m',timezone=pytz.timezone('UTC')),"(GMT). Height: {:.2f} m".format(  HT.values[i]))
@@ -204,31 +206,12 @@ class Controller(object):
         df['time'] = pd.to_datetime(df['time'], format="%d/%m/%Y %H:%M")
         #df['time'] = pd.to_datetime(df['time'], utc=True, format="%d/%m/%Y %H:%M")
         #df.set_index(['time'], inplace=True)
-        if(0):
-            for index, row in df.iterrows():
-                df.loc[index,'time'] = np.datetime64( df.at[index,'time'] )
-            # Create new reduced df with essential variables
-            df_new = df[['logger','Chester Weir height: CHESTER WEIR 15 MIN SG']]
-            df_new.rename(columns={"Chester Weir height: CHESTER WEIR 15 MIN SG":"weir_height"}, inplace=True)
 
 
-            bore = xr.Dataset()
-            bore = df_new.to_xarray()
-            nt = len(bore.weir_height)
-            tmp = np.array([datetime.datetime(2000,1,1) for i in range(nt) ])
-            #bore['time3'] = bore['time']*np.NaN
-            #bore['time3'] = [npdatetime64_2_datetime(bore.time[i].item()) for i in range(nt)]
-
-            for i in range(nt):
-                tmp[i] = npdatetime64_2_datetime(df.time[i].item())
-                logging.debug( 'output',type(tmp[i] ) )
-                #print( 'output', type(bore.time3[i] ) )
-            bore['time2'] = tmp
-        else:
-            for index, row in df.iterrows():
-                df.loc[index,'time'] = np.datetime64( df.at[index,'time'] ) # numpy.datetime64 in UTC
-            bore = xr.Dataset()
-            bore = df.to_xarray()
+        for index, row in df.iterrows():
+            df.loc[index,'time'] = np.datetime64( df.at[index,'time'] ) # numpy.datetime64 in UTC
+        bore = xr.Dataset()
+        bore = df.to_xarray()
 
         # Set the t_dim to be a dimension and 'time' to be a coordinate
         bore = bore.rename_dims( {'index':'t_dim'} ).assign_coords( time=("t_dim", bore.time))
