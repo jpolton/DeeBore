@@ -47,14 +47,62 @@ class Controller():
     This is where the main things happen.
     Where user input is managed and methods are launched
     """
+    ############################################################################
+    #%% Initialising and Finishing methods
+    ############################################################################
     def __init__(self):
         """
-        Initialise main controller. Look for file. If exists load it
+        Look for pickle file. If exists load it.
+        Initialise main controller.
         """
         self.load_databucket()
         logging.info("run interface")
         self.load_flag = False
         self.run_interface()
+
+
+    def load_databucket(self):
+        """
+        Auto load databucket from pickle file if it exists, otherwise create it
+        If databucket is loaded. Also perform linear fit to data (couldn't pickle it into bore:xr.DataArray)
+        """
+        #databucket = DataBucket()
+        logging.info("Auto load databucket from pickle file if it exists")
+        print("Add to pickle file, if it exists")
+        try:
+            if os.path.exists(DATABUCKET_FILE):
+                template = "...Loading (%s)"
+                print(template%DATABUCKET_FILE)
+                with open(DATABUCKET_FILE, 'rb') as file_object:
+                    self.bore = pickle.load(file_object)
+                    print('Calculating linear fit')
+                    self.linearfit( self.bore.glad_height, self.bore.Saltney_lag )
+            else:
+                print("... %s does not exist"%DATABUCKET_FILE)
+        except KeyError:
+            print('ErrorA ')
+        except (IOError, RuntimeError):
+            print('ErrorB ')
+
+
+    def pickle_bore(self):
+        """ save copy of self.bore into pickle file """
+        print('Pickle data.')
+        os.system('rm -f '+DATABUCKET_FILE)
+        if(1):
+            with open(DATABUCKET_FILE, 'wb') as file_object:
+                pickle.dump(self.bore, file_object)
+        else:
+            print("Don't save as pickle file")
+        return
+
+
+    def export_to_csv(self):
+        """
+        Export the bore xr.Dataset to a CSV file for sharing
+        """
+        print('Export data to csv. NOT IMPLEMENTED')
+        pass
 
 
     def run_interface(self):
@@ -70,131 +118,75 @@ class Controller():
             if command == "q":
                 print("run_interface: quit")
                 logging.info("quit") # Function call.
-                self.pickle()
+                self.pickle_bore()
                 break
+
             elif command == "i":
                 print(INSTRUCTIONS)
 
             elif command == "1":
                 # Load and plot raw data
-                print('load and process a bore data')
+                print('load and process bore dataset')
                 self.load_and_process()
 
             elif command == "2":
-                print('show dataframe')
+                print('show bore dataset')
                 self.show()
 
             elif command == "3":
-                print('plot data')
-                self.plot_data()
+                print('plot bore data (lag vs tidal height')
+                self.plot_lag_vs_height()
 
-            elif command == "4":
+            elif command == "d1":
                 print('load and plot HLW data')
-                filnam = 'data/Liverpool_2015_2020_HLW.txt'
-                date_start = datetime.datetime(2020, 1, 1)
-                date_end = datetime.datetime(2020, 12, 31)
-                tg = TIDEGAUGE()
-                tg.dataset = tg.get_tidetabletimes(filnam, date_start, date_end)
-                # Exaple plot
-                tg.dataset.plot.scatter(x="time", y="sea_level")
-                print(f"stats: mean {tg.time_mean('sea_level')}")
-                print(f"stats: std {tg.time_std('sea_level')}")
+                self.load_and_plot_HLW_data()
 
-            elif command == "5":
-                print('stats')
-                tt = TIDEGAUGE()
-                y1 = self.df['Time difference: Glad-Saltney (mins)'].values
-                y2 = self.df['linfit_lag'].values
-                print(f"stats: root mean sq err {np.sqrt(metrics.mean_squared_error(y1,y2 ))}")
 
             elif command == "6":
-                """
-                Glad_HW - float
-                 Glad_time - datetime64
-                 Saltney_time - datetime64
-                 Saltney_lag - int
-
-
-
-                 Predict the bore timing at Saltney for a input date
-                 Parameters
-                 ----------
-                 day : day
-                     DESCRIPTION.
-
-                 Returns
-                 -------
-                 Glad_HW - float
-                 Glad_time - datetime64
-                 Saltney_time - datetime64
-                 Saltney_lag - int
-
-                 """
-
-                filnam = '/Users/jeff/GitHub/DeeBore/data/Liverpool_2015_2020_HLW.txt'
-
-                nd = input('Make predictions for N days from hence (int):?')
-                day = np.datetime64('now', 'D') + np.timedelta64(int(nd), 'D')
-                dayp1 = day + np.timedelta64(24, 'h')
-                tg = TIDEGAUGE()
-                tg.dataset = tg.read_HLW_to_xarray(filnam, day, dayp1)
-                HT = tg.dataset['sea_level'].where(tg.dataset['sea_level']\
-                                            .values > 7).dropna('t_dim') #, drop=True)
-
-                #plt.plot( HT.time, HT,'.' );plt.show()
-                lag_pred = self.linfit(HT)
-                #lag_pred = lag_pred[np.isfinite(lag_pred)] # drop nans
-
-                Saltney_time_pred = [HT.time[i].values
-                                     - np.timedelta64(int(round(lag_pred[i])), 'm')
-                                     for i in range(len(lag_pred))]
-                # Iterate over high tide events to print useful information
-                for i in range(len(lag_pred)):
-                    #print( "Gladstone HT", np.datetime_as_string(HT.time[i], unit='m',timezone=pytz.timezone('UTC')),"(GMT). Height: {:.2f} m".format(  HT.values[i]))
-                    #print(" Saltney arrival", np.datetime_as_string(Saltney_time_pred[i], unit='m', timezone=pytz.timezone('Europe/London')),"(GMT/BST). Lag: {:.0f} mins".format( lag_pred[i] ))
-                    print("Predictions for ", dayoweek(Saltney_time_pred[i]), Saltney_time_pred[i].astype('datetime64[s]').astype(datetime.datetime).strftime('%Y/%m/%d') )
-                    print("Saltney FB:", np.datetime_as_string(Saltney_time_pred[i], unit='m', timezone=pytz.timezone('Europe/London')) )
-                    Glad_HLW = tg.get_tidetabletimes( Saltney_time_pred[i], method='nearest_2' )
-                    # Extract the High Tide value
-                    print('Liv HT:    ', np.datetime_as_string(Glad_HLW[ np.argmax(Glad_HLW) ].time.values, unit='m', timezone=pytz.timezone('Europe/London')), Glad_HLW[ np.argmax(Glad_HLW) ].values, 'm' )
-                    # Extract the Low Tide value
-                    print('Liv LT:    ', np.datetime_as_string(Glad_HLW[ np.argmin(Glad_HLW) ].time.values, unit='m', timezone=pytz.timezone('Europe/London')), Glad_HLW[ np.argmin(Glad_HLW) ].values, 'm' )
-                    print("")
-
-                #plt.scatter( Saltney_time_pred, HT ,'.');plt.show()
-                # problem with time stamp
+                self.predict_bore()
 
             elif command == "x":
                 print('Export data')
-                self.export()
+                self.export_to_csv()
 
             elif command == "r":
-                print('Refresh database (delete pickle file is it exists)')
+                print('Remove pickle file)')
                 if os.path.exists(DATABUCKET_FILE):
                     os.remove(DATABUCKET_FILE)
                 else:
                     print("Can not delete the pickle file as it doesn't exists")
-                self.load_databucket()
+                #self.load_databucket()
 
             else:
                 template = "run_interface: I don't recognise (%s)"
                 print(template%command)
 
+    ############################################################################
+    #%% Load and process methods
+    ############################################################################
+
+    def load_and_process(self):
+        """
+        Performs sequential steps to build the bore object.
+        1. Load bore data (Essential elements are obs times and locations)
+        2. Load Gladstone Dock data (though this might also be loaded from the obs logs)
+        3. Calculate the time lag between Gladstone and Saltney events.
+        4. Perform a linear fit to the time lag.
+        """
+        self.load_csv()
+        print('loading tide data')
+        self.get_Glad_data()
+        #self.compare_Glad_HLW()
+        print('Calculating the Gladstone to Saltney time difference')
+        self.calc_Glad_Saltney_time_diff()
+        print('Calculating linear fit')
+        self.linearfit( self.bore.glad_height, self.bore.Saltney_lag )
 
 
-    def load_old(self):
+    def load_csv(self):
         """
-        Load pickle file from the standard file save
-        """
-        self.df =  pd.read_csv('data/data_26Sep20.csv')
-        self.df.drop(columns=['Unnamed: 1','Unnamed: 2'], inplace=True)
-        self.df.dropna( inplace=True).set_index(['GMT time'])
-        #self.df.dropna( inplace=True).set_index(['GMT time'])
-        #self.bore = self.df.to_xarray()
-
-    def load(self):
-        """
-        Load bore data
+        Load observed bore data from text file.
+        Load as a dataframe and save to bore:xr.DataSet
         """
         logging.info('Load bore data from csv file')
         self.load_flag = True
@@ -218,37 +210,14 @@ class Controller():
         self.bore = bore
         logging.info('Bore data loaded')
 
-    def add_tidetable_data(self):
-        """
-        Add tide table HT and LT data to xr.DataSet
-        Though these can (and in most historical cases have) be looked up, here
-        it is automated.
-        WIP
-        """
-        self.bore['HT_t'] = []
-        self.bore['HT_h'] = []
-        self.bore['LT_t'] = []
-        self.bore['LT_h'] = []
-        HT_h = []
-        HT_t = []
-        for i in range(len(self.bore.time)):
-            try:
-                HLW = None
-                HLW = self.get_tidetabletimes(self.bore.time[i].values)
-                print(f"HLW {HLW.dataset['sea_level']}")
-                HT_h.append( float( HLW.dataset.sea_level[HLW.dataset['sea_level'].argmax()].values ) )
-                HT_t.append( HLW.dataset.time[HLW.dataset['sea_level'].argmax()].values.item() )
-                #self.bore['LT_h'][i] = HLW.dataset.sea_level[HLW.dataset['sea_level'].argmin()]
-                #self.bore['LT_t'][i] = HLW.dataset.time[HLW.dataset['sea_level'].argmin()]
-            except:
-                print('Issue with appening HLW data')
-
-            print('HT_h:',HT_h)
-
-            print('THE NEXT STEP IS TO ADD THESE HT_h  and HT_t VALUES TO xr.BORE')
 
     def get_Glad_data(self):
-        """ Get Gladstone HLW data from external file """
+        """
+        Get Gladstone HLW data from external file
+        These data are reported in the bore.csv file but not consistently and it
+        is laborous to find old values.
+        It was considered a good idea to automate this step.
+        """
         logging.info("Get Gladstone HLW data from external file")
         HT_h = []
         HT_t = []
@@ -301,14 +270,6 @@ class Controller():
         #    print( self.bore.time[i].values, self.bore['Liv (Gladstone Dock) HT time (GMT)'][i].values, self.bore['glad_time'][i].values)
 
 
-
-    def compare_Glad_HLW(self):
-        """ Compare Glad HLW from external file with bore tabilated data"""
-        print("WIP: Compare Glad HLW from external file with bore tabilated data")
-        print('log time, orig tide table, new tide table lookup')
-        for i in range(len(self.bore.time)):
-            print( self.bore.time[i].values, self.bore['Liv (Gladstone Dock) HT time (GMT)'][i].values, self.bore['glad_time'][i].values)
-
     def calc_Glad_Saltney_time_diff(self):
         """
         Compute lag (-ve) for arrival at Saltney relative to Glastone HT
@@ -327,23 +288,37 @@ class Controller():
         self.bore['Saltney_lag'] = xr.DataArray( Saltney_lag, coords=coords, dims=['t_dim'])
         self.bore['bluebridge_lag'] = xr.DataArray( bluebridge_lag, coords=coords, dims=['t_dim'])
 
+
     def linearfit(self, X, Y):
-        """ Linear regression """
+        """
+        Linear regression
+        Is used if pickle file is loaded to get the fit between
+            self.bore.glad_height and self.bore.Saltney_lag
+        Is used after computing the lag between Gladstone and Saltney events,
+            during load_and_process(), to find a fit between Liverpool heights
+            and Saltney arrival lag.
+        """
         idx = np.isfinite(Y).values
         weights = np.polyfit( X[idx], Y[idx], 1)
         logging.debug("weights: {weights}")
         self.linfit = np.poly1d(weights)
         self.bore['linfit_lag'] =  self.linfit(X)
 
+    ############################################################################
+    #%% Presenting data
+    ############################################################################
+
     def show(self):
         """ Show xarray dataset """
         print( self.bore )
 
 
-    def plot_data(self):
-        """ plot data """
-
-
+    def plot_lag_vs_height(self):
+        """
+        Plot bore lag (as time difference before Gladstone HW) against
+        Gladstone high water (m).
+        Separate colours for Saltney, Bluebridge, Chester.
+        """
         Xglad = self.bore.glad_height
         Ysalt = self.bore.Saltney_lag
         Yblue = self.bore.bluebridge_lag
@@ -375,55 +350,69 @@ class Controller():
             plt.xlabel('Liv (Gladstone Dock) HT height (m)')
             plt.show()
 
-    def pickle(self):
-        """ save copy of self into pickle file """
-        print('Pickle data.')
-        os.system('rm -f '+DATABUCKET_FILE)
-        if(1):
-            with open(DATABUCKET_FILE, 'wb') as file_object:
-                pickle.dump(self.bore, file_object)
-        else:
-            print("Don't save as pickle file")
-        return
 
-    def load_databucket(self):
+    ############################################################################
+    #%% DIAGNOSTICS
+    ############################################################################
+
+    def predict_bore(self):
         """
-        Auto load databucket from pickle file if it exists, otherwise create it
-        If databucket is loaded. Also perform linear fit to data (couldn't pickle it into bore:xr.DataArray)
+        Glad_HW - float
+        Glad_time - datetime64
+        Saltney_time - datetime64
+        Saltney_lag - int
+
+        Predict the bore timing at Saltney for a input date
+        Parameters
+        ----------
+        day : day
+         DESCRIPTION.
+
+        Returns
+        -------
+        Glad_HW - float
+        Glad_time - datetime64
+        Saltney_time - datetime64
+        Saltney_lag - int
+
         """
-        #databucket = DataBucket()
-        logging.info("Auto load databucket from pickle file if it exists")
-        print("Add to pickle file, if it exists")
-        try:
-            if os.path.exists(DATABUCKET_FILE):
-                template = "...Loading (%s)"
-                print(template%DATABUCKET_FILE)
-                with open(DATABUCKET_FILE, 'rb') as file_object:
-                    self.bore = pickle.load(file_object)
-                    print('Calculating linear fit')
-                    self.linearfit( self.bore.glad_height, self.bore.Saltney_lag )
-            else:
-                print("... %s does not exist"%DATABUCKET_FILE)
-                print("Load and process data")
+        print('Predict bore event for date')
+        filnam = '/Users/jeff/GitHub/DeeBore/data/Liverpool_2015_2020_HLW.txt'
 
-        except KeyError:
-            print('ErrorA ')
-        except (IOError, RuntimeError):
-            print('ErrorB ')
+        nd = input('Make predictions for N days from hence (int):?')
+        day = np.datetime64('now', 'D') + np.timedelta64(int(nd), 'D')
+        dayp1 = day + np.timedelta64(24, 'h')
+        tg = TIDEGAUGE()
+        tg.dataset = tg.read_HLW_to_xarray(filnam, day, dayp1)
+        HT = tg.dataset['sea_level'].where(tg.dataset['sea_level']\
+                                    .values > 7).dropna('t_dim') #, drop=True)
 
-    def load_and_process(self):
-        self.load()
-        print('loading tide data')
-        self.get_Glad_data()
-        #self.compare_Glad_HLW()
-        print('Calculating the Gladstone to Saltney time difference')
-        self.calc_Glad_Saltney_time_diff()
-        print('Calculating linear fit')
-        self.linearfit( self.bore.glad_height, self.bore.Saltney_lag )
+        #plt.plot( HT.time, HT,'.' );plt.show()
+        lag_pred = self.linfit(HT)
+        #lag_pred = lag_pred[np.isfinite(lag_pred)] # drop nans
 
-    def export(self):
-        print('Export data to csv. NOT IMPLEMENTED')
-        pass
+        Saltney_time_pred = [HT.time[i].values
+                             - np.timedelta64(int(round(lag_pred[i])), 'm')
+                             for i in range(len(lag_pred))]
+        # Iterate over high tide events to print useful information
+        for i in range(len(lag_pred)):
+            #print( "Gladstone HT", np.datetime_as_string(HT.time[i], unit='m',timezone=pytz.timezone('UTC')),"(GMT). Height: {:.2f} m".format(  HT.values[i]))
+            #print(" Saltney arrival", np.datetime_as_string(Saltney_time_pred[i], unit='m', timezone=pytz.timezone('Europe/London')),"(GMT/BST). Lag: {:.0f} mins".format( lag_pred[i] ))
+            print("Predictions for ", dayoweek(Saltney_time_pred[i]), Saltney_time_pred[i].astype('datetime64[s]').astype(datetime.datetime).strftime('%Y/%m/%d') )
+            print("Saltney FB:", np.datetime_as_string(Saltney_time_pred[i], unit='m', timezone=pytz.timezone('Europe/London')) )
+            Glad_HLW = tg.get_tidetabletimes( Saltney_time_pred[i], method='nearest_2' )
+            # Extract the High Tide value
+            print('Liv HT:    ', np.datetime_as_string(Glad_HLW[ np.argmax(Glad_HLW) ].time.values, unit='m', timezone=pytz.timezone('Europe/London')), Glad_HLW[ np.argmax(Glad_HLW) ].values, 'm' )
+            # Extract the Low Tide value
+            print('Liv LT:    ', np.datetime_as_string(Glad_HLW[ np.argmin(Glad_HLW) ].time.values, unit='m', timezone=pytz.timezone('Europe/London')), Glad_HLW[ np.argmin(Glad_HLW) ].values, 'm' )
+            print("")
+
+        #plt.scatter( Saltney_time_pred, HT ,'.');plt.show()
+        # problem with time stamp
+
+    ############################################################################
+    #%% SECTION
+    ############################################################################
 
     def load_timeseries(self):
         fn_tidegauge = '../COAsT/example_files/tide_gauges/lowestoft-p024-uk-bodc'
@@ -432,6 +421,32 @@ class Controller():
         tidegauge = GAUGE(fn_tidegauge, date_start = date0, date_end = date1)
         print(tidegauge.dataset)
 
+    ############################################################################
+    #%% Development / Misc methods
+    ############################################################################
+
+    def load_and_plot_HLW_data(self):
+        """ Simply load HLW file and plot """
+        filnam = 'data/Liverpool_2015_2020_HLW.txt'
+        date_start = datetime.datetime(2020, 1, 1)
+        date_end = datetime.datetime(2020, 12, 31)
+        tg = TIDEGAUGE()
+        tg.dataset = tg.read_HLW_to_xarray(filnam, date_start, date_end)
+        # Exaple plot
+        plt.figure()
+        tg.dataset.plot.scatter(x="time", y="sea_level")
+        plt.savefig('figs/Liverpool_HLW.png')
+        plt.close('all')
+
+        print(f"stats: mean {tg.time_mean('sea_level')}")
+        print(f"stats: std {tg.time_std('sea_level')}")
+
+
+################################################################################
+################################################################################
+#%% Main Routine
+################################################################################
+################################################################################
 if __name__ == "__main__":
 
     #### Initialise logging
@@ -446,18 +461,19 @@ if __name__ == "__main__":
     Choose Action:
     1       load and process bore dataset
     2       show bore dataset
-    3       plot bore data
+    3       plot bore data (lag vs tidal height)
 
-    4       load and plot HLW data
+    6       Predict bore event for date
 
-    5       polyfit rmse.
-    6       Predict bore.
-
-    x       Export data to csv
-    r       Refresh database
+    x       Export data to csv. NOT IMPLEMENTED
+    r       Remove pickle file
 
     i       to show these instructions
-    q       to quit
+    q       to quit (and pickle bore)
+
+    ---
+    DEV:
+    d1     load and plot HLW data
     """
 
 
