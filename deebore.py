@@ -23,6 +23,8 @@ sys.path.insert(0, coastdir)
 from coast.TIDEGAUGE import TIDEGAUGE
 from coast.general_utils import dayoweek
 
+import scipy.signal # find_peaks
+
 import logging
 logging.basicConfig(filename='bore.log', filemode='w+')
 logging.getLogger().setLevel(logging.DEBUG)
@@ -41,6 +43,24 @@ def create_shoothill_key():
     response = requests.post(api_url, data=json.dumps(postdata), headers=headers)
     print(response.text)
     return response.text['SessionHeaderId']
+
+def find_maxima(x, y, method='comp', **kwargs):
+    '''
+    Finds maxima of a time series y. Returns maximum values of y (e.g heights)
+    and corresponding values of x (e.g. times).
+    **kwargs are dependent on method.
+
+    Methods:
+        'comp' :: Find maxima by comparison with neighbouring values.
+                  Uses scipy.signal.find_peaks. **kwargs passed to this routine
+                  will be passed to scipy.signal.find_peaks.
+        DB NOTE: Currently only the 'comp' method is implemented. Future
+                 methods include linear interpolation and cublic splines.
+    '''
+
+    if method == 'comp':
+        peaks, props = scipy.signal.find_peaks(y, **kwargs)
+        return x[peaks], y[peaks]
 
 
 class GAUGE(TIDEGAUGE):
@@ -145,6 +165,42 @@ class GAUGE(TIDEGAUGE):
         return dataset
 
 
+    def find_high_and_low_water(self, var_str, method='comp'):
+        '''
+        Finds high and low water for a given variable.
+        Returns in a new TIDEGAUGE object with similar data format to
+        a TIDETABLE.
+
+        Methods:
+        'comp' :: Find maxima by comparison with neighbouring values.
+                  Uses scipy.signal.find_peaks. **kwargs passed to this routine
+                  will be passed to scipy.signal.find_peaks.
+        DB NOTE: Currently only the 'comp' method is implemented. Future
+                 methods include linear interpolation and cublic splines.
+        '''
+
+        x = self.dataset.time
+        y = self.dataset[var_str]
+
+        time_max, values_max = find_maxima(x, y, method=method)
+        time_min, values_min = find_maxima(x,-y, method=method)
+        values_min = -1*values_min
+
+        new_dataset = xr.Dataset()
+        new_dataset.attrs = self.dataset.attrs
+        new_dataset[var_str + '_highs'] = ('time_highs', values_max)
+        new_dataset[var_str + '_lows'] = ('time_lows', values_min)
+        new_dataset['time_highs'] = ('time_highs', time_max)
+        new_dataset['time_lows'] = ('time_lows', time_min)
+
+        new_object = TIDEGAUGE()
+        new_object.dataset = new_dataset
+
+        return new_object
+
+
+
+
 
 class Controller():
     """
@@ -245,6 +301,9 @@ class Controller():
                 print('load and plot HLW data')
                 self.load_and_plot_HLW_data()
 
+            elif command == "d2":
+                print("shoothill dev")
+                self.shoothill()
 
             elif command == "6":
                 self.predict_bore()
@@ -317,7 +376,7 @@ class Controller():
 
     def get_Glad_data(self):
         """
-        Get Gladstone HLW data from external file
+        Get Gladstone HLW data from external
         These data are reported in the bore.csv file but not consistently and it
         is laborous to find old values.
         It was considered a good idea to automate this step.
@@ -545,6 +604,83 @@ class Controller():
         print(f"stats: mean {tg.time_mean('sea_level')}")
         print(f"stats: std {tg.time_std('sea_level')}")
 
+    def shoothill(self):
+
+        """
+        Extract the timeseries for a period.
+        Extract the extrema.
+        Plot timeseries. Overlay highs and lows
+        """
+        date_start = datetime.datetime(2020, 9, 10)
+        date_end = datetime.datetime(2020, 9, 11)
+        sg = GAUGE(startday=date_start, endday=date_end) # create modified TIDEGAUGE object
+        sg_HLW = sg.find_high_and_low_water(var_str='sea_level')
+        #g.dataset
+        #g_HLW.dataset
+
+        plt.figure()
+        sg.dataset.plot.scatter(x="time", y="sea_level")
+        sg_HLW.dataset.plot.scatter(x="time_highs", y="sea_level_highs")
+        sg_HLW.dataset.plot.scatter(x="time_lows", y="sea_level_lows")
+        plt.savefig('figs/Liverpool_shoothill.png')
+        plt.close('all')
+
+        """
+        Compare harmonic predicted highs and lows with measured highs and lows
+        """
+        # Compare tide predictions with measured HLW
+        filnam = 'data/Liverpool_2015_2020_HLW.txt'
+        tg = GAUGE()
+        tg.dataset = tg.read_HLW_to_xarray(filnam, date_start, date_end)
+        tg_HLW = tg.find_high_and_low_water(var_str='sea_level')
+
+        sg = GAUGE(startday=date_start, endday=date_end) # create modified TIDEGAUGE object
+        sg_HLW = sg.find_high_and_low_water(var_str='sea_level')
+
+        # Example plot
+        from matplotlib.collections import LineCollection
+        from matplotlib import colors as mcolors
+        import matplotlib.dates as mdates
+
+        nval = min( len(sg_HLW.dataset.time_lows), len(sg_HLW.dataset.time_highs),
+                    len(tg_HLW.dataset.time_lows), len(tg_HLW.dataset.time_highs) )
+
+        segs_l = np.zeros((nval,2,2)) # line, pointA/B, t/z
+        #convert dates to numbers first
+        segs_l[:,0,0] = mdates.date2num( tg_HLW.dataset.time_lows[:nval].astype('M8[ns]').astype('M8[ms]') )
+        segs_l[:,1,0] = mdates.date2num( sg_HLW.dataset.time_lows[:nval].astype('M8[ns]').astype('M8[ms]') )
+        segs_l[:,0,1] = tg_HLW.dataset.sea_level_lows[:nval]
+        segs_l[:,1,1] = sg_HLW.dataset.sea_level_lows[:nval]
+
+        segs_h = np.zeros((nval,2,2)) # line, pointA/B, t/z
+        #convert dates to numbers first
+        segs_h[:,0,0] = mdates.date2num( tg_HLW.dataset.time_highs[:nval].astype('M8[ns]').astype('M8[ms]') )
+        segs_h[:,1,0] = mdates.date2num( sg_HLW.dataset.time_highs[:nval].astype('M8[ns]').astype('M8[ms]') )
+        segs_h[:,0,1] = tg_HLW.dataset.sea_level_highs[:nval]
+        segs_h[:,1,1] = sg_HLW.dataset.sea_level_highs[:nval]
+
+
+        fig, ax = plt.subplots()
+        ax.set_ylim(segs_l[:,:,1].min(), segs_h[:,:,1].max())
+        line_segments_LW = LineCollection(segs_l, cmap='plasma', linewidth=1)
+        line_segments_HW = LineCollection(segs_h, cmap='plasma', linewidth=1)
+        ax.add_collection(line_segments_LW)
+        ax.add_collection(line_segments_HW)
+        ax.scatter(segs_l[:,0,0],segs_l[:,0,1], c='red', s=2) # harmonic predictions
+        ax.scatter(segs_h[:,0,0],segs_h[:,0,1], c='green', s=2) # harmonic predictions
+        ax.set_title('Paired harmonic prediction with measured high and low waters')
+
+        ax.xaxis_date()
+        ax.autoscale_view()
+        plt.show()
+
+        #plt.figure()
+        #plt.scatter( [tg.dataset.time[::2], sg_HLW.dataset.time_lows], [tg.dataset.sea_level[::2], sg_HLW.dataset.sea_level_lows], '.' )
+        #plt.scatter( [tg.dataset.time[1::2], sg_HLW.dataset.time_highs], [tg.dataset.sea_level[1::2], sg_HLW.dataset.sea_level_highs], '.' )
+        #plt.savefig('figs/Liverpool_HLW.png')
+        #plt.close('all')
+
+
 
 ################################################################################
 ################################################################################
@@ -578,6 +714,7 @@ if __name__ == "__main__":
     ---
     DEV:
     d1     load and plot HLW data
+    d2     shoothill dev
     """
 
 
