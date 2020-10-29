@@ -27,10 +27,38 @@ import logging
 logging.basicConfig(filename='bore.log', filemode='w+')
 logging.getLogger().setLevel(logging.DEBUG)
 
+
 #%% ################################################################################
+def create_shoothill_key():
+    """ Create API key - Only do if you want a new API key
+    (which has to be cut and pasted into the latter cells as `SessionHeaderId`)
+    """
+    api_url = 'http://riverlevelsapi.shoothill.com/ApiAccount/ApiLogin'
+    PublicApiKey = config_keys.SHOOTHILL_PublicApiKey #e.g. '9a1...snip...5e414'
+    ApiVersion = '2'
+    postdata = { 'PublicApiKey': PublicApiKey, 'ApiVersion': ApiVersion}
+    headers = {'content-type': 'application/json'}
+    response = requests.post(api_url, data=json.dumps(postdata), headers=headers)
+    print(response.text)
+    return response.text['SessionHeaderId']
+
 
 class GAUGE(TIDEGAUGE):
     """ Inherit from COAsT. Add new methods """
+    def __init__(self, ndays: int=5, startday: datetime=None, endday: datetime=None, geoId=7708):
+        try:
+            import config_keys # Load secret keys
+        except:
+            logging.info('Need a Shoothil API Key. Use e.g. create_shoothill_key() having obtained a public key')
+
+        self.SessionHeaderId=config_keys.SHOOTHILL_KEY #'4b6...snip...a5ea'
+        self.ndays=ndays
+        self.startday=startday
+        self.endday=endday
+        self.geoId=geoId # Shoothill id
+
+        self.dataset = self.load_gauge_xr()
+        pass
 
     def get_mean_crossing_time_as_xarray(self, date_start=None, date_end=None):
         """
@@ -41,6 +69,82 @@ class GAUGE(TIDEGAUGE):
     def get_HW_to_xarray(self, date_start=None, date_end=None):
         """ Extract actual HW value and time as an xarray """
         pass
+
+    def load_gauge_xr(self):
+        """
+        load EA gauge data
+        Either loads last ndays, or from startday:endday
+
+        INPUTS:
+            ndays : int
+            startday : datetime. UTC format string "yyyy-MM-ddThh:mm:ssZ" E.g 2020-01-05T08:20:01.5011423+00:00
+            endday : datetime
+            SessionHeaderId : string
+            id : int (station id)
+        OUTPUT:
+            sea_level, time : xr.Dataset
+        """
+        import requests,json
+
+        logging.info("load gauge")
+
+        if self.geoId == 7708:
+            id_ref = "Gladston Dock"
+        elif self.geoId == 7899:
+            id_ref = "Chester weir"
+        else:
+            logging.debug(f"Not ready for that station id. {self.geoId}")
+
+        #%% Construct API request
+        headers = {'content-type': 'application/json', 'SessionHeaderId': self.SessionHeaderId}
+
+        if (self.startday == None) & (self.endday == None):
+            logging.info(f"GETting ndays= {self.ndays} of data")
+
+            htmlcall_stationId = 'http://riverlevelsapi.shoothill.com/TimeSeries/GetTimeSeriesRecentDatapoints/?stationId='
+            url  = htmlcall_stationId+str(self.geoId)+'&dataType=3&numberDays='+str(int(self.ndays))
+        else:
+            # Check startday and endday are timetime objects
+            if (type(self.startday) is datetime.datetime) & (type(self.endday) is datetime.datetime):
+                logging.info(f"GETting data from {self.startday} to {self.endday}")
+                startTime = self.startday.replace(tzinfo=datetime.timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
+                endTime = self.endday.replace(tzinfo=datetime.timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
+
+                htmlcall_stationId = 'http://riverlevelsapi.shoothill.com/TimeSeries/GetTimeSeriesDatapointsDateTime/?stationId='
+                url   = htmlcall_stationId+str(self.geoId)+'&dataType=3&endTime='+endTime+'&startTime='+startTime
+
+            else:
+                logging.debug('Expecting startday and endday as datetime objects')
+
+        #%% Get the data
+        request_raw = requests.get(url, headers=headers)
+        request = json.loads(request_raw.content)
+        logging.debug(f"Shoothil API request: {request_raw.text}")
+        # Check the output
+        logging.info(f"Gauge id is {request['gauge']['geoEntityId']}")
+        logging.info(f"timestamp and value of the zero index is {[ str(request['values'][0]['time']), request['values'][0]['value'] ]}")
+
+        #%% Process header information
+        header_dict = request['gauge']
+        header_dict['name'] = id_ref
+
+        #%% Process timeseries data
+        dataset = xr.Dataset()
+        time = []
+        sea_level = []
+        nvals = len(request['values'])
+        time = np.array([np.datetime64(request['values'][i]['time']) for i in range(nvals)])
+        sea_level = np.array([request['values'][i]['value'] for i in range(nvals)])
+
+        #%% Assign arrays to Dataset
+        dataset['sea_level'] = xr.DataArray(sea_level, dims=['time'])
+        dataset = dataset.assign_coords(time = ('time', time))
+        dataset.attrs = header_dict
+
+        # Assign local dataset to object-scope dataset
+        return dataset
+
+
 
 class Controller():
     """
