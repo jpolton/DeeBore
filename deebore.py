@@ -199,7 +199,37 @@ class GAUGE(TIDEGAUGE):
         return new_object
 
 
+    def find_nearby_high_and_low_water(self, var_str, target_times:xr.DataArray=None, winsize:int=2, method='comp'):
+        """
+        Finds high and low water for a given variable, in close proximity to
+        input xrray of times.
+        Returns in a new TIDEGAUGE object with similar data format to
+        a TIDETABLE, and same size as target_times.
 
+        winsize: +/- hours search radius
+        target_times: xr.DataArray of target times to search around (e.g. harmonic predictions)
+        var_str: root of var name for new variable.
+        """
+        x = self.dataset.time
+        y = self.dataset[var_str]
+
+        nt = len(target_times)
+        time_max = np.zeros(nt)
+        values_max = np.zeros(nt)
+        for i in range(nt):
+            HLW = self.get_tidetabletimes( target_times[i].values, method='window', winsize=winsize )
+            logging.debug(f"{i}: {find_maxima(HLW.time.values, HLW.values, method=method)}")
+            time_max[i], values_max[i] = find_maxima(HLW.time.values, HLW.values, method=method)
+
+        new_dataset = xr.Dataset()
+        new_dataset.attrs = self.dataset.attrs
+        new_dataset['time_highs'] = ('time_highs', time_max)
+        new_dataset[var_str + '_highs'] = ('time_highs', values_max)
+
+        new_object = TIDEGAUGE()
+        new_object.dataset = new_dataset
+
+        return new_object
 
 
 class Controller():
@@ -611,8 +641,8 @@ class Controller():
         Extract the extrema.
         Plot timeseries. Overlay highs and lows
         """
-        date_start = datetime.datetime(2020, 9, 10)
-        date_end = datetime.datetime(2020, 9, 11)
+        date_start = datetime.datetime(2020, 9, 1)
+        date_end = datetime.datetime(2020, 9, 30)
         sg = GAUGE(startday=date_start, endday=date_end) # create modified TIDEGAUGE object
         sg_HLW = sg.find_high_and_low_water(var_str='sea_level')
         #g.dataset
@@ -626,7 +656,7 @@ class Controller():
         plt.close('all')
 
         """
-        Compare harmonic predicted highs and lows with measured highs and lows
+        Compare harmonic predicted highs with measured highs
         """
         # Compare tide predictions with measured HLW
         filnam = 'data/Liverpool_2015_2020_HLW.txt'
@@ -635,52 +665,33 @@ class Controller():
         tg_HLW = tg.find_high_and_low_water(var_str='sea_level')
 
         sg = GAUGE(startday=date_start, endday=date_end) # create modified TIDEGAUGE object
-        sg_HLW = sg.find_high_and_low_water(var_str='sea_level')
+        sg_HW = sg.find_nearby_high_and_low_water(var_str='sea_level', target_times=tg_HLW.dataset.time_highs, method='comp')
 
         # Example plot
         from matplotlib.collections import LineCollection
         from matplotlib import colors as mcolors
         import matplotlib.dates as mdates
 
-        nval = min( len(sg_HLW.dataset.time_lows), len(sg_HLW.dataset.time_highs),
-                    len(tg_HLW.dataset.time_lows), len(tg_HLW.dataset.time_highs) )
-
-        segs_l = np.zeros((nval,2,2)) # line, pointA/B, t/z
-        #convert dates to numbers first
-        segs_l[:,0,0] = mdates.date2num( tg_HLW.dataset.time_lows[:nval].astype('M8[ns]').astype('M8[ms]') )
-        segs_l[:,1,0] = mdates.date2num( sg_HLW.dataset.time_lows[:nval].astype('M8[ns]').astype('M8[ms]') )
-        segs_l[:,0,1] = tg_HLW.dataset.sea_level_lows[:nval]
-        segs_l[:,1,1] = sg_HLW.dataset.sea_level_lows[:nval]
-
+        nval = min( len(sg_HLW.dataset.time_highs), len(tg_HLW.dataset.time_highs) )
         segs_h = np.zeros((nval,2,2)) # line, pointA/B, t/z
         #convert dates to numbers first
         segs_h[:,0,0] = mdates.date2num( tg_HLW.dataset.time_highs[:nval].astype('M8[ns]').astype('M8[ms]') )
-        segs_h[:,1,0] = mdates.date2num( sg_HLW.dataset.time_highs[:nval].astype('M8[ns]').astype('M8[ms]') )
+        segs_h[:,1,0] = mdates.date2num( sg_HW.dataset.time_highs[:nval].astype('M8[ns]').astype('M8[ms]') )
         segs_h[:,0,1] = tg_HLW.dataset.sea_level_highs[:nval]
-        segs_h[:,1,1] = sg_HLW.dataset.sea_level_highs[:nval]
+        segs_h[:,1,1] = sg_HW.dataset.sea_level_highs[:nval]
 
 
         fig, ax = plt.subplots()
-        ax.set_ylim(segs_l[:,:,1].min(), segs_h[:,:,1].max())
-        line_segments_LW = LineCollection(segs_l, cmap='plasma', linewidth=1)
+        ax.set_ylim(segs_h[:,:,1].min(), segs_h[:,:,1].max())
         line_segments_HW = LineCollection(segs_h, cmap='plasma', linewidth=1)
-        ax.add_collection(line_segments_LW)
         ax.add_collection(line_segments_HW)
-        ax.scatter(segs_l[:,0,0],segs_l[:,0,1], c='red', s=2) # harmonic predictions
         ax.scatter(segs_h[:,0,0],segs_h[:,0,1], c='green', s=2) # harmonic predictions
-        ax.set_title('Paired harmonic prediction with measured high and low waters')
+        ax.set_title('Harmonic prediction with quiver to measured high waters')
 
         ax.xaxis_date()
         ax.autoscale_view()
-        plt.show()
-
-        #plt.figure()
-        #plt.scatter( [tg.dataset.time[::2], sg_HLW.dataset.time_lows], [tg.dataset.sea_level[::2], sg_HLW.dataset.sea_level_lows], '.' )
-        #plt.scatter( [tg.dataset.time[1::2], sg_HLW.dataset.time_highs], [tg.dataset.sea_level[1::2], sg_HLW.dataset.sea_level_highs], '.' )
-        #plt.savefig('figs/Liverpool_HLW.png')
-        #plt.close('all')
-
-
+        plt.savefig('figs/Liverpool_shoothill_vs_table.png')
+        plt.close('all')
 
 ################################################################################
 ################################################################################
