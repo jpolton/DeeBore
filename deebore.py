@@ -62,7 +62,6 @@ def find_maxima(x, y, method='comp', **kwargs):
         peaks, props = scipy.signal.find_peaks(y, **kwargs)
         return x[peaks], y[peaks]
 
-
 class GAUGE(TIDEGAUGE):
     """ Inherit from COAsT. Add new methods """
     def __init__(self, ndays: int=5, startday: datetime=None, endday: datetime=None, geoId=7708):
@@ -160,6 +159,9 @@ class GAUGE(TIDEGAUGE):
         dataset['sea_level'] = xr.DataArray(sea_level, dims=['time'])
         dataset = dataset.assign_coords(time = ('time', time))
         dataset.attrs = header_dict
+        logging.debug(f"Shoothil API request headers: {header_dict}")
+        logging.debug(f"Shoothil API request 1st time: {time[0]} and value: {sea_level[0]}")
+
 
         # Assign local dataset to object-scope dataset
         return dataset
@@ -230,6 +232,182 @@ class GAUGE(TIDEGAUGE):
         new_object.dataset = new_dataset
 
         return new_object
+
+
+############ BODC tide gauge methods ##############################################
+    @classmethod
+    def read_bodc_to_xarray(cls, fn_bodc, date_start=None, date_end=None):
+        '''
+        For reading from a single BODC (processed) file into an
+        xarray dataset.
+        If no data lies between the specified dates, a dataset is still created
+        containing information on the tide gauge, but the time dimension will
+        be empty.
+
+        Data name: UK Tide Gauge Network, processed data.
+        Source: https://www.bodc.ac.uk/
+        See data notes from source for description of QC flags.
+
+        The data takes the form:
+            Port:              P234
+            Site:              Liverpool, Gladstone Dock
+            Latitude:          53.44969
+            Longitude:         -3.01800
+            Start Date:        01AUG2020-00.00.00
+            End Date:          31AUG2020-23.45.00
+            Contributor:       National Oceanography Centre, Liverpool
+            Datum information: The data refer to Admiralty Chart Datum (ACD)
+            Parameter code:    ASLVBG02 = Surface elevation (unspecified datum) of the water body by bubbler tide gauge (second sensor)
+              Cycle    Date      Time    ASLVBG02   Residual
+             Number yyyy mm dd hh mi ssf         f          f
+                 1) 2020/08/01 00:00:00     5.354M     0.265M
+                 2) 2020/08/01 00:15:00     5.016M     0.243M
+                 3) 2020/08/01 00:30:00     4.704M     0.241M
+                 4) 2020/08/01 00:45:00     4.418M     0.255M
+                 5) 2020/08/01 01:00:00     4.133      0.257
+                 ...
+
+        Parameters
+        ----------
+        fn_bodc (str) : path to bodc tide gauge file
+        date_start (datetime) : start date for returning data
+        date_end (datetime) : end date for returning data
+
+        Returns
+        -------
+        xarray.Dataset object.
+        '''
+        logging.debug(f"Reading \"{fn_bodc}\" as a BODC file")  # TODO Maybe include start/end dates
+        try:
+            header_dict = cls.read_bodc_header(fn_bodc)
+            dataset = cls.read_bodc_data(fn_bodc, date_start, date_end)
+        except:
+            raise Exception('Problem reading BODC file: ' + fn_bodc)
+        # Attributes
+        dataset['longitude'] = header_dict['longitude']
+        dataset['latitude'] = header_dict['latitude']
+        del header_dict['longitude']
+        del header_dict['latitude']
+
+        dataset.attrs = header_dict
+
+        return dataset
+
+    @staticmethod
+    def read_bodc_header(fn_bodc):
+        '''
+        Reads header from a BODC file (format version 3.0).
+
+        Parameters
+        ----------
+        fn_bodc (str) : path to bodc tide gauge file
+
+        Returns
+        -------
+        dictionary of attributes
+        '''
+        logging.debug(f"Reading BODC header from \"{fn_bodc}\"")
+        fid = open(fn_bodc)
+
+        # Read lines one by one (hopefully formatting is consistent)
+        # Geographical stuff
+        header_dict = {}
+        header = True
+        for line in fid:
+            if ':' in line and header == True:
+                (key, val) = line.split(':')
+                key = key.lower().strip().replace(' ','_')
+                val = val.lower().strip().replace(' ','_')
+                header_dict[key] = val
+                logging.debug(f"Header key: {key} and value: {val}")
+            else:
+                #print('No colon')
+                header = False
+        logging.debug(f"Read done, close file \"{fn_bodc}\"")
+        fid.close()
+
+        header_dict['latitude'] = float( header_dict['latitude'] )
+        header_dict['longitude'] = float( header_dict['longitude'] )
+
+        return header_dict
+
+    @staticmethod
+    def read_bodc_data(fn_bodc, date_start=None, date_end=None,
+                           header_length:int=11):
+        '''
+        Reads observation data from a BODC file.
+
+        Parameters
+        ----------
+        fn_bodc (str) : path to bodc tide gauge file
+        date_start (datetime) : start date for returning data
+        date_end (datetime) : end date for returning data
+        header_length (int) : number of lines in header (to skip when reading)
+
+        Returns
+        -------
+        xarray.Dataset containing times, sealevel and quality control flags
+        '''
+        # Initialise empty dataset and lists
+        logging.debug(f"Reading BODC data from \"{fn_bodc}\"")
+        dataset = xr.Dataset()
+        time = []
+        sea_level = []
+        qc_flags = []
+        residual = []
+        # Open file and loop until EOF
+        with open(fn_bodc) as file:
+            line_count = 1
+            for line in file:
+                # Read all data. Date boundaries are set later.
+                if line_count>header_length:
+                    working_line = line.split()
+                    time_str = working_line[1] + ' ' + working_line[2] # Empty lines cause trouble
+                    sea_level_str = working_line[3]
+                    residual_str = working_line[4]
+                    if sea_level_str[-1].isalpha():
+                        qc_flag_str = sea_level_str[-1]
+                        sea_level_str = sea_level_str.replace(qc_flag_str,'')
+                        residual_str = residual_str.replace(qc_flag_str,'')
+                    else:
+                        qc_flag_str = ''
+                    print(working_line, sea_level_str, qc_flag_str)
+                    time.append(time_str)
+                    qc_flags.append(qc_flag_str)
+                    sea_level.append(float(sea_level_str))
+                    residual.append(float(residual_str))
+
+                line_count = line_count + 1
+            logging.debug(f"Read done, close file \"{fn_bodc}\"")
+
+        # Convert time list to datetimes using pandas
+        time = np.array(pd.to_datetime(time))
+
+        # Return only values between stated dates
+        start_index = 0
+        end_index = len(time)
+        if date_start is not None:
+            date_start = np.datetime64(date_start)
+            start_index = np.argmax(time>=date_start)
+        if date_end is not None:
+            date_end = np.datetime64(date_end)
+            end_index = np.argmax(time>date_end)
+        time = time[start_index:end_index]
+        sea_level = sea_level[start_index:end_index]
+        qc_flags=qc_flags[start_index:end_index]
+
+        # Set null values to nan
+        sea_level = np.array(sea_level)
+        qc_flags = np.array(qc_flags)
+        #sea_level[qc_flags==5] = np.nan
+
+        # Assign arrays to Dataset
+        dataset['sea_level'] = xr.DataArray(sea_level, dims=['time'])
+        dataset['qc_flags'] = xr.DataArray(qc_flags, dims=['time'])
+        dataset = dataset.assign_coords(time = ('time', time))
+
+        # Assign local dataset to object-scope dataset
+        return dataset
 
 
 class Controller():
@@ -415,29 +593,77 @@ class Controller():
         HT_h = []
         HT_t = []
         # load tidetable
-        filnam1 = '/Users/jeff/GitHub/DeeBore/data/Liverpool_2005_2014_HLW.txt'
-        filnam2 = '/Users/jeff/GitHub/DeeBore/data/Liverpool_2015_2020_HLW.txt'
-        tg  = TIDEGAUGE()
-        tg1 = TIDEGAUGE()
-        tg2 = TIDEGAUGE()
-        tg1.dataset = tg1.read_HLW_to_xarray(filnam1)#, self.bore.time.min().values, self.bore.time.max().values)
-        tg2.dataset = tg2.read_HLW_to_xarray(filnam2)#, self.bore.time.min().values, self.bore.time.max().values)
-        tg.dataset = xr.concat([ tg1.dataset, tg2.dataset], dim='t_dim')
-        self.tg = tg
-        for i in range(len(self.bore.time)):
+        option = None
+        while (option != 1) and (option != 2):
             try:
-                HW = None
-                #HLW = tg.get_tidetabletimes(self.bore.time[i].values)
-                HW = tg.get_tidetabletimes( self.bore.time[i].values, method='nearest_HW' )
-                #print(f"HLW: {HLW}")
-                HT_h.append( HW.values )
-                #print('len(HT_h)', len(HT_h))
-                HT_t.append( HW.time.values )
-                #print('len(HT_t)', len(HT_t))
-                #self.bore['LT_h'][i] = HLW.dataset.sea_level[HLW.dataset['sea_level'].argmin()]
-                #self.bore['LT_t'][i] = HLW.dataset.time[HLW.dataset['sea_level'].argmin()]
+                option = int(input('Load tide table (1) or measured data (2)?'))
             except:
-                logging.warning('Issue with appening HLW data')
+                logging.debug(f"Expected an integer, got {option}")
+        if option == 1: # Load tidetable data from files
+            filnam1 = '/Users/jeff/GitHub/DeeBore/data/Liverpool_2005_2014_HLW.txt'
+            filnam2 = '/Users/jeff/GitHub/DeeBore/data/Liverpool_2015_2020_HLW.txt'
+            tg  = TIDEGAUGE()
+            tg1 = TIDEGAUGE()
+            tg2 = TIDEGAUGE()
+            tg1.dataset = tg1.read_HLW_to_xarray(filnam1)#, self.bore.time.min().values, self.bore.time.max().values)
+            tg2.dataset = tg2.read_HLW_to_xarray(filnam2)#, self.bore.time.min().values, self.bore.time.max().values)
+            tg.dataset = xr.concat([ tg1.dataset, tg2.dataset], dim='t_dim')
+
+
+            self.tg = tg
+            for i in range(len(self.bore.time)):
+                try:
+                    HW = None
+                    #HLW = tg.get_tidetabletimes(self.bore.time[i].values)
+                    HW = tg.get_tidetabletimes( self.bore.time[i].values, method='nearest_HW' )
+                    #print(f"HLW: {HLW}")
+                    HT_h.append( HW.values )
+                    #print('len(HT_h)', len(HT_h))
+                    HT_t.append( HW.time.values )
+                    #print('len(HT_t)', len(HT_t))
+                    #self.bore['LT_h'][i] = HLW.dataset.sea_level[HLW.dataset['sea_level'].argmin()]
+                    #self.bore['LT_t'][i] = HLW.dataset.time[HLW.dataset['sea_level'].argmin()]
+                except:
+                    logging.warning('Issue with appening HLW data')
+
+        elif option == 2: # Load measured height from files
+
+
+            # Load and plot BODC processed data
+            fn_bodc = '/Users/jeff/GitHub/DeeBore/data/LIV2008.txt'
+
+            # Set the start and end dates
+            date_start = np.datetime64('2020-08-12 23:59')
+            date_end = np.datetime64('2020-08-14 00:01')
+
+            # Initiate a TIDEGAUGE object, if a filename is passed it assumes it is a GESLA type object
+            tg = GAUGE()
+            # specify the data read as a High Low Water dataset
+            tg.dataset = tg.read_bodc_to_xarray(fn_bodc)#, date_start, date_end)
+
+            self.tg = tg
+            for i in range(len(self.bore.time)):
+                try:
+                    HW = None
+                    #HLW = tg.get_tidetabletimes(self.bore.time[i].values)
+                    HW = tg.find_nearby_high_and_low_water(var_str='sea_level', target_times=self.bore.time[i].values, method='comp')
+
+                    #print(f"HLW: {HLW}")
+                    HT_h.append( HW.values )
+                    #print('len(HT_h)', len(HT_h))
+                    HT_t.append( HW.time.values )
+                    #print('len(HT_t)', len(HT_t))
+                    #self.bore['LT_h'][i] = HLW.dataset.sea_level[HLW.dataset['sea_level'].argmin()]
+                    #self.bore['LT_t'][i] = HLW.dataset.time[HLW.dataset['sea_level'].argmin()]
+                except:
+                    logging.warning('Issue with appening HLW data')
+
+
+        else:
+            logging.debug(f"Did not expect this eventuality...")
+
+
+
 
         # Save a xarray objects
         coords = {'time': (('t_dim'), self.bore.time.values)}
