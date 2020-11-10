@@ -22,6 +22,7 @@ coastdir = os.path.dirname('/Users/jeff/GitHub/COAsT/coast')
 sys.path.insert(0, coastdir)
 from coast.TIDEGAUGE import TIDEGAUGE
 from coast.general_utils import dayoweek
+from coast.stats_util import find_maxima
 
 import scipy.signal # find_peaks
 
@@ -31,52 +32,22 @@ logging.getLogger().setLevel(logging.DEBUG)
 
 
 #%% ################################################################################
-def create_shoothill_key():
-    """ Create API key - Only do if you want a new API key
-    (which has to be cut and pasted into the latter cells as `SessionHeaderId`)
-    """
-    api_url = 'http://riverlevelsapi.shoothill.com/ApiAccount/ApiLogin'
-    PublicApiKey = config_keys.SHOOTHILL_PublicApiKey #e.g. '9a1...snip...5e414'
-    ApiVersion = '2'
-    postdata = { 'PublicApiKey': PublicApiKey, 'ApiVersion': ApiVersion}
-    headers = {'content-type': 'application/json'}
-    response = requests.post(api_url, data=json.dumps(postdata), headers=headers)
-    print(response.text)
-    return response.text['SessionHeaderId']
-
-def find_maxima(x, y, method='comp', **kwargs):
-    '''
-    Finds maxima of a time series y. Returns maximum values of y (e.g heights)
-    and corresponding values of x (e.g. times).
-    **kwargs are dependent on method.
-
-    Methods:
-        'comp' :: Find maxima by comparison with neighbouring values.
-                  Uses scipy.signal.find_peaks. **kwargs passed to this routine
-                  will be passed to scipy.signal.find_peaks.
-        DB NOTE: Currently only the 'comp' method is implemented. Future
-                 methods include linear interpolation and cublic splines.
-    '''
-
-    if method == 'comp':
-        peaks, props = scipy.signal.find_peaks(y, **kwargs)
-        return x[peaks], y[peaks]
-
 class GAUGE(TIDEGAUGE):
     """ Inherit from COAsT. Add new methods """
-    def __init__(self, ndays: int=5, startday: datetime=None, endday: datetime=None, geoId=7708):
+    def __init__(self, ndays: int=5, startday: datetime=None, endday: datetime=None, stationId="7708"):
         try:
             import config_keys # Load secret keys
         except:
             logging.info('Need a Shoothil API Key. Use e.g. create_shoothill_key() having obtained a public key')
 
-        self.SessionHeaderId=config_keys.SHOOTHILL_KEY #'4b6...snip...a5ea'
+        #self.SessionHeaderId=config_keys.SHOOTHILL_KEY #'4b6...snip...a5ea'
         self.ndays=ndays
         self.startday=startday
         self.endday=endday
-        self.geoId=geoId # Shoothill id
+        self.stationId=stationId # Shoothill id
 
-        self.dataset = self.load_gauge_xr()
+        #self.dataset = self.read_shoothill_to_xarray(stationId="13482") # Liverpool
+
         pass
 
     def get_mean_crossing_time_as_xarray(self, date_start=None, date_end=None):
@@ -88,117 +59,6 @@ class GAUGE(TIDEGAUGE):
     def get_HW_to_xarray(self, date_start=None, date_end=None):
         """ Extract actual HW value and time as an xarray """
         pass
-
-    def load_gauge_xr(self):
-        """
-        load EA gauge data
-        Either loads last ndays, or from startday:endday
-
-        INPUTS:
-            ndays : int
-            startday : datetime. UTC format string "yyyy-MM-ddThh:mm:ssZ" E.g 2020-01-05T08:20:01.5011423+00:00
-            endday : datetime
-            SessionHeaderId : string
-            id : int (station id)
-        OUTPUT:
-            sea_level, time : xr.Dataset
-        """
-        import requests,json
-
-        logging.info("load gauge")
-
-        if self.geoId == 7708:
-            id_ref = "Gladston Dock"
-        elif self.geoId == 7899:
-            id_ref = "Chester weir"
-        else:
-            logging.debug(f"Not ready for that station id. {self.geoId}")
-
-        #%% Construct API request
-        headers = {'content-type': 'application/json', 'SessionHeaderId': self.SessionHeaderId}
-
-        if (self.startday == None) & (self.endday == None):
-            logging.info(f"GETting ndays= {self.ndays} of data")
-
-            htmlcall_stationId = 'http://riverlevelsapi.shoothill.com/TimeSeries/GetTimeSeriesRecentDatapoints/?stationId='
-            url  = htmlcall_stationId+str(self.geoId)+'&dataType=3&numberDays='+str(int(self.ndays))
-        else:
-            # Check startday and endday are timetime objects
-            if (type(self.startday) is datetime.datetime) & (type(self.endday) is datetime.datetime):
-                logging.info(f"GETting data from {self.startday} to {self.endday}")
-                startTime = self.startday.replace(tzinfo=datetime.timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
-                endTime = self.endday.replace(tzinfo=datetime.timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
-
-                htmlcall_stationId = 'http://riverlevelsapi.shoothill.com/TimeSeries/GetTimeSeriesDatapointsDateTime/?stationId='
-                url   = htmlcall_stationId+str(self.geoId)+'&dataType=3&endTime='+endTime+'&startTime='+startTime
-
-            else:
-                logging.debug('Expecting startday and endday as datetime objects')
-
-        #%% Get the data
-        request_raw = requests.get(url, headers=headers)
-        request = json.loads(request_raw.content)
-        logging.debug(f"Shoothil API request: {request_raw.text}")
-        # Check the output
-        logging.info(f"Gauge id is {request['gauge']['geoEntityId']}")
-        logging.info(f"timestamp and value of the zero index is {[ str(request['values'][0]['time']), request['values'][0]['value'] ]}")
-
-        #%% Process header information
-        header_dict = request['gauge']
-        header_dict['name'] = id_ref
-
-        #%% Process timeseries data
-        dataset = xr.Dataset()
-        time = []
-        sea_level = []
-        nvals = len(request['values'])
-        time = np.array([np.datetime64(request['values'][i]['time']) for i in range(nvals)])
-        sea_level = np.array([request['values'][i]['value'] for i in range(nvals)])
-
-        #%% Assign arrays to Dataset
-        dataset['sea_level'] = xr.DataArray(sea_level, dims=['time'])
-        dataset = dataset.assign_coords(time = ('time', time))
-        dataset.attrs = header_dict
-        logging.debug(f"Shoothil API request headers: {header_dict}")
-        logging.debug(f"Shoothil API request 1st time: {time[0]} and value: {sea_level[0]}")
-
-
-        # Assign local dataset to object-scope dataset
-        return dataset
-
-
-    def find_high_and_low_water(self, var_str, method='comp'):
-        '''
-        Finds high and low water for a given variable.
-        Returns in a new TIDEGAUGE object with similar data format to
-        a TIDETABLE.
-
-        Methods:
-        'comp' :: Find maxima by comparison with neighbouring values.
-                  Uses scipy.signal.find_peaks. **kwargs passed to this routine
-                  will be passed to scipy.signal.find_peaks.
-        DB NOTE: Currently only the 'comp' method is implemented. Future
-                 methods include linear interpolation and cublic splines.
-        '''
-
-        x = self.dataset.time
-        y = self.dataset[var_str]
-
-        time_max, values_max = find_maxima(x, y, method=method)
-        time_min, values_min = find_maxima(x,-y, method=method)
-        values_min = -1*values_min
-
-        new_dataset = xr.Dataset()
-        new_dataset.attrs = self.dataset.attrs
-        new_dataset[var_str + '_highs'] = ('time_highs', values_max)
-        new_dataset[var_str + '_lows'] = ('time_lows', values_min)
-        new_dataset['time_highs'] = ('time_highs', time_max)
-        new_dataset['time_lows'] = ('time_lows', time_min)
-
-        new_object = TIDEGAUGE()
-        new_object.dataset = new_dataset
-
-        return new_object
 
 
     def find_nearby_high_and_low_water(self, var_str, target_times:xr.DataArray=None, winsize:int=2, method='comp'):
@@ -232,183 +92,6 @@ class GAUGE(TIDEGAUGE):
         new_object.dataset = new_dataset
 
         return new_object
-
-
-############ BODC tide gauge methods ##############################################
-    @classmethod
-    def read_bodc_to_xarray(cls, fn_bodc, date_start=None, date_end=None):
-        '''
-        For reading from a single BODC (processed) file into an
-        xarray dataset.
-        If no data lies between the specified dates, a dataset is still created
-        containing information on the tide gauge, but the time dimension will
-        be empty.
-
-        Data name: UK Tide Gauge Network, processed data.
-        Source: https://www.bodc.ac.uk/
-        See data notes from source for description of QC flags.
-
-        The data takes the form:
-            Port:              P234
-            Site:              Liverpool, Gladstone Dock
-            Latitude:          53.44969
-            Longitude:         -3.01800
-            Start Date:        01AUG2020-00.00.00
-            End Date:          31AUG2020-23.45.00
-            Contributor:       National Oceanography Centre, Liverpool
-            Datum information: The data refer to Admiralty Chart Datum (ACD)
-            Parameter code:    ASLVBG02 = Surface elevation (unspecified datum) of the water body by bubbler tide gauge (second sensor)
-              Cycle    Date      Time    ASLVBG02   Residual
-             Number yyyy mm dd hh mi ssf         f          f
-                 1) 2020/08/01 00:00:00     5.354M     0.265M
-                 2) 2020/08/01 00:15:00     5.016M     0.243M
-                 3) 2020/08/01 00:30:00     4.704M     0.241M
-                 4) 2020/08/01 00:45:00     4.418M     0.255M
-                 5) 2020/08/01 01:00:00     4.133      0.257
-                 ...
-
-        Parameters
-        ----------
-        fn_bodc (str) : path to bodc tide gauge file
-        date_start (datetime) : start date for returning data
-        date_end (datetime) : end date for returning data
-
-        Returns
-        -------
-        xarray.Dataset object.
-        '''
-        logging.debug(f"Reading \"{fn_bodc}\" as a BODC file")  # TODO Maybe include start/end dates
-        try:
-            header_dict = cls.read_bodc_header(fn_bodc)
-            dataset = cls.read_bodc_data(fn_bodc, date_start, date_end)
-        except:
-            raise Exception('Problem reading BODC file: ' + fn_bodc)
-        # Attributes
-        dataset['longitude'] = header_dict['longitude']
-        dataset['latitude'] = header_dict['latitude']
-        del header_dict['longitude']
-        del header_dict['latitude']
-
-        dataset.attrs = header_dict
-
-        return dataset
-
-    @staticmethod
-    def read_bodc_header(fn_bodc):
-        '''
-        Reads header from a BODC file (format version 3.0).
-
-        Parameters
-        ----------
-        fn_bodc (str) : path to bodc tide gauge file
-
-        Returns
-        -------
-        dictionary of attributes
-        '''
-        logging.debug(f"Reading BODC header from \"{fn_bodc}\"")
-        fid = open(fn_bodc)
-
-        # Read lines one by one (hopefully formatting is consistent)
-        # Geographical stuff
-        header_dict = {}
-        header = True
-        for line in fid:
-            if ':' in line and header == True:
-                (key, val) = line.split(':')
-                key = key.lower().strip().replace(' ','_')
-                val = val.lower().strip().replace(' ','_')
-                header_dict[key] = val
-                logging.debug(f"Header key: {key} and value: {val}")
-            else:
-                #print('No colon')
-                header = False
-        logging.debug(f"Read done, close file \"{fn_bodc}\"")
-        fid.close()
-
-        header_dict['latitude'] = float( header_dict['latitude'] )
-        header_dict['longitude'] = float( header_dict['longitude'] )
-
-        return header_dict
-
-    @staticmethod
-    def read_bodc_data(fn_bodc, date_start=None, date_end=None,
-                           header_length:int=11):
-        '''
-        Reads observation data from a BODC file.
-
-        Parameters
-        ----------
-        fn_bodc (str) : path to bodc tide gauge file
-        date_start (datetime) : start date for returning data
-        date_end (datetime) : end date for returning data
-        header_length (int) : number of lines in header (to skip when reading)
-
-        Returns
-        -------
-        xarray.Dataset containing times, sealevel and quality control flags
-        '''
-        # Initialise empty dataset and lists
-        logging.debug(f"Reading BODC data from \"{fn_bodc}\"")
-        dataset = xr.Dataset()
-        time = []
-        sea_level = []
-        qc_flags = []
-        residual = []
-        # Open file and loop until EOF
-        with open(fn_bodc) as file:
-            line_count = 1
-            for line in file:
-                # Read all data. Date boundaries are set later.
-                if line_count>header_length:
-                    working_line = line.split()
-                    time_str = working_line[1] + ' ' + working_line[2] # Empty lines cause trouble
-                    sea_level_str = working_line[3]
-                    residual_str = working_line[4]
-                    if sea_level_str[-1].isalpha():
-                        qc_flag_str = sea_level_str[-1]
-                        sea_level_str = sea_level_str.replace(qc_flag_str,'')
-                        residual_str = residual_str.replace(qc_flag_str,'')
-                    else:
-                        qc_flag_str = ''
-                    print(working_line, sea_level_str, qc_flag_str)
-                    time.append(time_str)
-                    qc_flags.append(qc_flag_str)
-                    sea_level.append(float(sea_level_str))
-                    residual.append(float(residual_str))
-
-                line_count = line_count + 1
-            logging.debug(f"Read done, close file \"{fn_bodc}\"")
-
-        # Convert time list to datetimes using pandas
-        time = np.array(pd.to_datetime(time))
-
-        # Return only values between stated dates
-        start_index = 0
-        end_index = len(time)
-        if date_start is not None:
-            date_start = np.datetime64(date_start)
-            start_index = np.argmax(time>=date_start)
-        if date_end is not None:
-            date_end = np.datetime64(date_end)
-            end_index = np.argmax(time>date_end)
-        time = time[start_index:end_index]
-        sea_level = sea_level[start_index:end_index]
-        qc_flags=qc_flags[start_index:end_index]
-
-        # Set null values to nan
-        sea_level = np.array(sea_level)
-        qc_flags = np.array(qc_flags)
-        #sea_level[qc_flags==5] = np.nan
-
-        # Assign arrays to Dataset
-        dataset['sea_level'] = xr.DataArray(sea_level, dims=['time'])
-        dataset['qc_flags'] = xr.DataArray(qc_flags, dims=['time'])
-        dataset = dataset.assign_coords(time = ('time', time))
-
-        # Assign local dataset to object-scope dataset
-        return dataset
-
 
 class Controller():
     """
@@ -628,7 +311,7 @@ class Controller():
 
         elif option == 2: # Load measured height from files
 
-
+            print("WIP: NOT PROPERLY IMPLEMENTED")
             # Load and plot BODC processed data
             fn_bodc = '/Users/jeff/GitHub/DeeBore/data/LIV2008.txt'
 
@@ -867,9 +550,15 @@ class Controller():
         Extract the extrema.
         Plot timeseries. Overlay highs and lows
         """
-        date_start = datetime.datetime(2020, 9, 1)
-        date_end = datetime.datetime(2020, 9, 30)
-        sg = GAUGE(startday=date_start, endday=date_end) # create modified TIDEGAUGE object
+        date_start = np.datetime64('2020-09-01')
+        date_end = np.datetime64('2020-09-30')
+
+        # E.g  Liverpool (Gladstone Dock stationId="13482", which is read by default.
+        # Load in data from the Shoothill API
+        sg = TIDEGAUGE()
+        sg.dataset = sg.read_shoothill_to_xarray(date_start=date_start, date_end=date_end)
+
+        #sg = GAUGE(startday=date_start, endday=date_end) # create modified TIDEGAUGE object
         sg_HLW = sg.find_high_and_low_water(var_str='sea_level')
         #g.dataset
         #g_HLW.dataset
@@ -890,7 +579,8 @@ class Controller():
         tg.dataset = tg.read_HLW_to_xarray(filnam, date_start, date_end)
         tg_HLW = tg.find_high_and_low_water(var_str='sea_level')
 
-        sg = GAUGE(startday=date_start, endday=date_end) # create modified TIDEGAUGE object
+        sg = GAUGE()
+        sg.dataset = sg.read_shoothill_to_xarray(date_start=date_start, date_end=date_end)
         sg_HW = sg.find_nearby_high_and_low_water(var_str='sea_level', target_times=tg_HLW.dataset.time_highs, method='comp')
 
         # Example plot
