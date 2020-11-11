@@ -86,7 +86,9 @@ class GAUGE(TIDEGAUGE):
         new_dataset = xr.Dataset()
         new_dataset.attrs = self.dataset.attrs
         new_dataset['time_highs'] = ('time_highs', time_max)
-        new_dataset[var_str + '_highs'] = ('time_highs', values_max)
+        print(time_max)
+        print(values_max)
+        new_dataset[var_str + '_highs'] = (var_str+'_highs', values_max)
 
         new_object = TIDEGAUGE()
         new_object.dataset = new_dataset
@@ -311,40 +313,40 @@ class Controller():
 
         elif option == 2: # Load measured height from files
 
-            print("WIP: NOT PROPERLY IMPLEMENTED")
-            # Load and plot BODC processed data
-            fn_bodc = '/Users/jeff/GitHub/DeeBore/data/LIV2008.txt'
+        #filnam = 'data/Liverpool_2015_2020_HLW.txt'
+        #tg = GAUGE()
+        #tg.dataset = tg.read_HLW_to_xarray(filnam, date_start, date_end)
+        #tg_HLW = tg.find_high_and_low_water(var_str='sea_level')
 
-            # Set the start and end dates
-            date_start = np.datetime64('2020-08-12 23:59')
-            date_end = np.datetime64('2020-08-14 00:01')
+            sg = GAUGE()
+            date_start=np.datetime64('2005-04-01')
+            date_end=np.datetime64('now','D')
+            sg.dataset = sg.read_shoothill_to_xarray(date_start=date_start, date_end=date_end)
 
-            # Initiate a TIDEGAUGE object, if a filename is passed it assumes it is a GESLA type object
-            tg = GAUGE()
-            # specify the data read as a High Low Water dataset
-            tg.dataset = tg.read_bodc_to_xarray(fn_bodc)#, date_start, date_end)
+            if(1):
+                print("WIP: NOT PROPERLY IMPLEMENTED")
 
-            self.tg = tg
-            for i in range(len(self.bore.time)):
-                try:
-                    HW = None
-                    #HLW = tg.get_tidetabletimes(self.bore.time[i].values)
-                    HW = tg.find_nearby_high_and_low_water(var_str='sea_level', target_times=self.bore.time[i].values, method='comp')
 
-                    #print(f"HLW: {HLW}")
-                    HT_h.append( HW.values )
-                    #print('len(HT_h)', len(HT_h))
-                    HT_t.append( HW.time.values )
-                    #print('len(HT_t)', len(HT_t))
-                    #self.bore['LT_h'][i] = HLW.dataset.sea_level[HLW.dataset['sea_level'].argmin()]
-                    #self.bore['LT_t'][i] = HLW.dataset.time[HLW.dataset['sea_level'].argmin()]
-                except:
-                    logging.warning('Issue with appening HLW data')
+                self.sg = sg
+                for i in range(len(self.bore.time)):
+                    try:
+                        HW = None
+                        #HLW = tg.get_tidetabletimes(self.bore.time[i].values)
+                        HW = sg.find_nearby_high_and_low_water(var_str='sea_level', target_times=self.bore.time[i].values, method='comp')
+
+                        #print(f"HLW: {HLW}")
+                        HT_h.append( HW.values )
+                        #print('len(HT_h)', len(HT_h))
+                        HT_t.append( HW.time.values )
+                        #print('len(HT_t)', len(HT_t))
+                        #self.bore['LT_h'][i] = HLW.dataset.sea_level[HLW.dataset['sea_level'].argmin()]
+                        #self.bore['LT_t'][i] = HLW.dataset.time[HLW.dataset['sea_level'].argmin()]
+                    except:
+                        logging.warning('Issue with appening HLW data')
 
 
         else:
             logging.debug(f"Did not expect this eventuality...")
-
 
 
 
