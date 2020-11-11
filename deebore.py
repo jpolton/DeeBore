@@ -268,6 +268,7 @@ class Controller():
 
         # Set the t_dim to be a dimension and 'time' to be a coordinate
         bore = bore.rename_dims( {'index':'t_dim'} ).assign_coords( time=("t_dim", bore.time))
+        bore = bore.swap_dims( {'t_dim':'time'} )
         self.bore = bore
         logging.info('Bore data loaded')
 
@@ -297,19 +298,42 @@ class Controller():
             tg2 = TIDEGAUGE()
             tg1.dataset = tg1.read_HLW_to_xarray(filnam1)#, self.bore.time.min().values, self.bore.time.max().values)
             tg2.dataset = tg2.read_HLW_to_xarray(filnam2)#, self.bore.time.min().values, self.bore.time.max().values)
-            tg.dataset = xr.concat([ tg1.dataset, tg2.dataset], dim='t_dim')
+            tg.dataset = xr.concat([ tg1.dataset, tg2.dataset], dim='time')
 
+            tg_HLW = tg.find_high_and_low_water(var_str='sea_level')
+            """
+            tg_HLW.dataset['time'] = tg_HLW.dataset['time_highs']
+            tg_HLW.dataset['sea_level'] = tg_HLW.dataset['sea_level_highs']
+
+
+            def get_tidetabletimes(self, time_guess:np.datetime64 = None,
+                            time_var:str='time',
+                            measure_var:str='sea_level',
+                            method: str='window', winsize:int=2): # window:int = 2):
+
+            """
+
+
+            # This has produced an xr.dataset with sea_level_highs and sea_level_lows
+            # with time variables time_highs and time_lows.
+            # Process the *_highs only
+
+            time_var = 'time_highs'
+            measure_var = 'sea_level_highs'
 
             self.tg = tg
             for i in range(len(self.bore.time)):
                 try:
                     HW = None
                     #HLW = tg.get_tidetabletimes(self.bore.time[i].values)
-                    HW = tg.get_tidetabletimes( self.bore.time[i].values, method='nearest_HW' )
+                    HW = tg_HLW.get_tidetabletimes( self.bore.time[i].values,
+                                                time_var=time_var,
+                                                measure_var=measure_var,
+                                                method='nearest_1' )
                     #print(f"HLW: {HLW}")
                     HT_h.append( HW.values )
                     #print('len(HT_h)', len(HT_h))
-                    HT_t.append( HW.time.values )
+                    HT_t.append( HW[time_var].values )
                     #print('len(HT_t)', len(HT_t))
                     #self.bore['LT_h'][i] = HLW.dataset.sea_level[HLW.dataset['sea_level'].argmin()]
                     #self.bore['LT_t'][i] = HLW.dataset.time[HLW.dataset['sea_level'].argmin()]
@@ -356,9 +380,9 @@ class Controller():
 
 
         # Save a xarray objects
-        coords = {'time': (('t_dim'), self.bore.time.values)}
-        self.bore['glad_height'] = xr.DataArray( np.array(HT_h), coords=coords, dims=['t_dim'])
-        self.bore['glad_time'] = xr.DataArray( np.array(HT_t), coords=coords, dims=['t_dim'])
+        coords = {'time': (('time'), self.bore.time.values)}
+        self.bore['glad_height'] = xr.DataArray( np.array(HT_h), coords=coords, dims=['time'])
+        self.bore['glad_time'] = xr.DataArray( np.array(HT_t), coords=coords, dims=['time'])
 
         #self.bore['glad_height'] = np.array(HT_h)
         #self.bore['glad_time'] = np.array(HT_t)
@@ -392,10 +416,10 @@ class Controller():
         bluebridge_lag = [ lag[i].astype('int') if self.bore.location.values[i] == 'blue bridge' else np.NaN for i in range(nt) ]
 
         # Save a xarray objects
-        coords = {'time': (('t_dim'), self.bore.time.values)}
-        self.bore['lag'] = xr.DataArray( lag, coords=coords, dims=['t_dim'])
-        self.bore['Saltney_lag'] = xr.DataArray( Saltney_lag, coords=coords, dims=['t_dim'])
-        self.bore['bluebridge_lag'] = xr.DataArray( bluebridge_lag, coords=coords, dims=['t_dim'])
+        coords = {'time': (('time'), self.bore.time.values)}
+        self.bore['lag'] = xr.DataArray( lag, coords=coords, dims=['time'])
+        self.bore['Saltney_lag'] = xr.DataArray( Saltney_lag, coords=coords, dims=['time'])
+        self.bore['bluebridge_lag'] = xr.DataArray( bluebridge_lag, coords=coords, dims=['time'])
 
 
     def linearfit(self, X, Y):
@@ -494,7 +518,7 @@ class Controller():
         tg = TIDEGAUGE()
         tg.dataset = tg.read_HLW_to_xarray(filnam, day, dayp1)
         HT = tg.dataset['sea_level'].where(tg.dataset['sea_level']\
-                                    .values > 7).dropna('t_dim') #, drop=True)
+                                    .values > 7).dropna('time') #, drop=True)
 
         #plt.plot( HT.time, HT,'.' );plt.show()
         lag_pred = self.linfit(HT)
@@ -511,9 +535,9 @@ class Controller():
             print("Saltney FB:", np.datetime_as_string(Saltney_time_pred[i], unit='m', timezone=pytz.timezone('Europe/London')) )
             Glad_HLW = tg.get_tidetabletimes( Saltney_time_pred[i], method='nearest_2' )
             # Extract the High Tide value
-            print('Liv HT:    ', np.datetime_as_string(Glad_HLW[ np.argmax(Glad_HLW) ].time.values, unit='m', timezone=pytz.timezone('Europe/London')), Glad_HLW[ np.argmax(Glad_HLW) ].values, 'm' )
+            print('Liv HT:    ', np.datetime_as_string(Glad_HLW[ np.argmax(Glad_HLW.values) ].time.values, unit='m', timezone=pytz.timezone('Europe/London')), Glad_HLW[ np.argmax(Glad_HLW.values) ].values, 'm' )
             # Extract the Low Tide value
-            print('Liv LT:    ', np.datetime_as_string(Glad_HLW[ np.argmin(Glad_HLW) ].time.values, unit='m', timezone=pytz.timezone('Europe/London')), Glad_HLW[ np.argmin(Glad_HLW) ].values, 'm' )
+            print('Liv LT:    ', np.datetime_as_string(Glad_HLW[ np.argmin(Glad_HLW.values) ].time.values, unit='m', timezone=pytz.timezone('Europe/London')), Glad_HLW[ np.argmin(Glad_HLW.values) ].values, 'm' )
             print("")
 
         #plt.scatter( Saltney_time_pred, HT ,'.');plt.show()
