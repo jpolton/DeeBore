@@ -128,8 +128,11 @@ class Controller():
                 print(template%DATABUCKET_FILE)
                 with open(DATABUCKET_FILE, 'rb') as file_object:
                     self.bore = pickle.load(file_object)
-                    print('Calculating linear fit')
-                    self.linearfit( self.bore.glad_height, self.bore.Saltney_lag )
+                    try:
+                        print('Calculating linear fit')
+                        self.linearfit( self.bore.glad_height, self.bore.Saltney_lag )
+                    except:
+                        logging.debug(f"did not do linear fit on pickle file vars")
             else:
                 print("... %s does not exist"%DATABUCKET_FILE)
         except KeyError:
@@ -177,9 +180,13 @@ class Controller():
             elif command == "i":
                 print(INSTRUCTIONS)
 
+            elif command == "0":
+                print('load bore observations')
+                self.load_csv()
+
             elif command == "1":
-                # Load and plot raw data
-                print('load and process bore dataset')
+                print('load and process extra bore dataset')
+                self.load_csv()
                 self.load_and_process()
 
             elif command == "2":
@@ -224,12 +231,10 @@ class Controller():
     def load_and_process(self):
         """
         Performs sequential steps to build the bore object.
-        1. Load bore data (Essential elements are obs times and locations)
-        2. Load Gladstone Dock data (though this might also be loaded from the obs logs)
-        3. Calculate the time lag between Gladstone and Saltney events.
-        4. Perform a linear fit to the time lag.
+        1. Load Gladstone Dock data (though this might also be loaded from the obs logs)
+        2. Calculate the time lag between Gladstone and Saltney events.
+        3. Perform a linear fit to the time lag.
         """
-        self.load_csv()
         print('loading tide data')
         self.get_Glad_data()
         #self.compare_Glad_HLW()
@@ -628,7 +633,8 @@ if __name__ == "__main__":
     INSTRUCTIONS = """
 
     Choose Action:
-    1       load and process bore dataset
+    0       load bore observations
+    1       load and process extra bore data
     2       show bore dataset
     3       plot bore data (lag vs tidal height)
 
