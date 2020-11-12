@@ -287,7 +287,7 @@ class Controller():
         option = None
         while (option != 1) and (option != 2):
             try:
-                option = int(input('Load tide table (1) or measured data (2)?'))
+                option = int(input('Load tide table (1) or processed measured data (2) or recent API data (3)?'))
             except:
                 logging.debug(f"Expected an integer, got {option}")
         if option == 1: # Load tidetable data from files
@@ -303,7 +303,34 @@ class Controller():
             tg_HLW = tg.find_high_and_low_water(var_str='sea_level')
             # This has produced an xr.dataset with sea_level_highs and sea_level_lows
             # with time variables time_highs and time_lows.
-        elif option == 2: # load full tidal signal from shoothill, extract HLW
+
+        elif option == 2: # load full 15min data from BODC files, extract HLW
+            dir = '/Users/jeff/GitHub/DeeBore/data/BODC_processed/'
+            filelist = ['2005LIV.txt',
+            '2006LIV.txt', '2007LIV.txt',
+            '2008LIV.txt', '2009LIV.txt',
+            '2010LIV.txt', '2011LIV.txt',
+            '2012LIV.txt', '2013LIV.txt',
+            '2014LIV.txt', '2015LIV.txt',
+            '2016LIV.txt', '2017LIV.txt',
+            '2018LIV.txt', '2019LIV.txt']
+            tg  = TIDEGAUGE()
+            for file in filelist:
+                tg0=TIDEGAUGE()
+                tg0.dataset = tg0.read_bodc_to_xarray(dir+file)
+                if tg.dataset is None:
+                    tg.dataset = tg0.dataset
+                else:
+                    tg.dataset = xr.concat([ tg.dataset, tg0.dataset], dim='time')
+            # Fix some attributes (others might not be correct for all data)
+            tg.dataset['start_date'] = tg.dataset.time.min().values
+            tg.dataset['end_date'] = tg.dataset.time.max().values
+
+            tg_HLW = tg.find_high_and_low_water(var_str='sea_level')
+            # This has produced an xr.dataset with sea_level_highs and sea_level_lows
+            # with time variables time_highs and time_lows.
+
+        elif option == 3: # load full tidal signal from shoothill, extract HLW
             tg = TIDEGAUGE()
             date_start=np.datetime64('2005-04-01')
             date_end=np.datetime64('now','D')
@@ -316,65 +343,31 @@ class Controller():
         # Process the *_highs only
         time_var = 'time_highs'
         measure_var = 'sea_level_highs'
+        ind = [] # list of indices in the obs bore data where gladstone data is found
+
 
         self.tg = tg
         for i in range(len(self.bore.time)):
             try:
                 HW = None
                 #HLW = tg.get_tidetabletimes(self.bore.time[i].values)
-                HW = tg_HLW.get_tidetabletimes( self.bore.time[i].values,
-                                            time_var=time_var,
-                                            measure_var=measure_var,
-                                            method='nearest_1' )
-                #print(f"HLW: {HLW}")
-                HT_h.append( HW.values )
-                #print('len(HT_h)', len(HT_h))
-                HT_t.append( HW[time_var].values )
-                #print('len(HT_t)', len(HT_t))
-                #self.bore['LT_h'][i] = HLW.dataset.sea_level[HLW.dataset['sea_level'].argmin()]
-                #self.bore['LT_t'][i] = HLW.dataset.time[HLW.dataset['sea_level'].argmin()]
+                HW = tg_HLW.get_tidetabletimes(
+                                        time_guess=self.bore.time[i].values,
+                                        time_var=time_var,
+                                        measure_var=measure_var,
+                                        method='nearest_1',
+                                        winsize=3 )
+                if type(HW) is xr.DataArray:
+                    #print(f"HLW: {HLW}")
+                    HT_h.append( HW.values )
+                    #print('len(HT_h)', len(HT_h))
+                    HT_t.append( HW[time_var].values )
+                    #print('len(HT_t)', len(HT_t))
+                    #self.bore['LT_h'][i] = HLW.dataset.sea_level[HLW.dataset['sea_level'].argmin()]
+                    #self.bore['LT_t'][i] = HLW.dataset.time[HLW.dataset['sea_level'].argmin()]
+                    ind.append(i)
             except:
                 logging.warning('Issue with appening HLW data')
-
-        if option == 4: # Load measured height from files
-
-        #filnam = 'data/Liverpool_2015_2020_HLW.txt'
-        #tg = GAUGE()
-        #tg.dataset = tg.read_HLW_to_xarray(filnam, date_start, date_end)
-        #tg_HLW = tg.find_high_and_low_water(var_str='sea_level')
-
-            sg = GAUGE()
-            date_start=np.datetime64('2005-04-01')
-            date_end=np.datetime64('now','D')
-            sg.dataset = sg.read_shoothill_to_xarray(date_start=date_start, date_end=date_end)
-            sg_HLW = sg.find_high_and_low_water(var_str='sea_level')
-            # This has produced an xr.dataset with sea_level_highs and sea_level_lows
-            # with time variables time_highs and time_lows.
-            # Process the *_highs only
-
-            time_var = 'time_highs'
-            measure_var = 'sea_level_highs'
-
-            if(1):
-                print("WIP: NOT PROPERLY IMPLEMENTED")
-
-
-                self.sg = sg
-                for i in range(len(self.bore.time)):
-                    try:
-                        HW = None
-                        #HLW = tg.get_tidetabletimes(self.bore.time[i].values)
-                        HW = sg.find_nearby_high_and_low_water(var_str='sea_level', target_times=self.bore.time[i].values, method='comp')
-
-                        #print(f"HLW: {HLW}")
-                        HT_h.append( HW.values )
-                        #print('len(HT_h)', len(HT_h))
-                        HT_t.append( HW.time.values )
-                        #print('len(HT_t)', len(HT_t))
-                        #self.bore['LT_h'][i] = HLW.dataset.sea_level[HLW.dataset['sea_level'].argmin()]
-                        #self.bore['LT_t'][i] = HLW.dataset.time[HLW.dataset['sea_level'].argmin()]
-                    except:
-                        logging.warning('Issue with appening HLW data')
 
 
         else:
