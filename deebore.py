@@ -301,46 +301,42 @@ class Controller():
             tg.dataset = xr.concat([ tg1.dataset, tg2.dataset], dim='time')
 
             tg_HLW = tg.find_high_and_low_water(var_str='sea_level')
-            """
-            tg_HLW.dataset['time'] = tg_HLW.dataset['time_highs']
-            tg_HLW.dataset['sea_level'] = tg_HLW.dataset['sea_level_highs']
-
-
-            def get_tidetabletimes(self, time_guess:np.datetime64 = None,
-                            time_var:str='time',
-                            measure_var:str='sea_level',
-                            method: str='window', winsize:int=2): # window:int = 2):
-
-            """
-
-
             # This has produced an xr.dataset with sea_level_highs and sea_level_lows
             # with time variables time_highs and time_lows.
-            # Process the *_highs only
+        elif option == 2: # load full tidal signal from shoothill, extract HLW
+            tg = TIDEGAUGE()
+            date_start=np.datetime64('2005-04-01')
+            date_end=np.datetime64('now','D')
+            tg.dataset = tg.read_shoothill_to_xarray(date_start=date_start, date_end=date_end)
+            tg_HLW = tg.find_high_and_low_water(var_str='sea_level')
+            # This has produced an xr.dataset with sea_level_highs and sea_level_lows
+            # with time variables time_highs and time_lows.
 
-            time_var = 'time_highs'
-            measure_var = 'sea_level_highs'
 
-            self.tg = tg
-            for i in range(len(self.bore.time)):
-                try:
-                    HW = None
-                    #HLW = tg.get_tidetabletimes(self.bore.time[i].values)
-                    HW = tg_HLW.get_tidetabletimes( self.bore.time[i].values,
-                                                time_var=time_var,
-                                                measure_var=measure_var,
-                                                method='nearest_1' )
-                    #print(f"HLW: {HLW}")
-                    HT_h.append( HW.values )
-                    #print('len(HT_h)', len(HT_h))
-                    HT_t.append( HW[time_var].values )
-                    #print('len(HT_t)', len(HT_t))
-                    #self.bore['LT_h'][i] = HLW.dataset.sea_level[HLW.dataset['sea_level'].argmin()]
-                    #self.bore['LT_t'][i] = HLW.dataset.time[HLW.dataset['sea_level'].argmin()]
-                except:
-                    logging.warning('Issue with appening HLW data')
+        # Process the *_highs only
+        time_var = 'time_highs'
+        measure_var = 'sea_level_highs'
 
-        elif option == 2: # Load measured height from files
+        self.tg = tg
+        for i in range(len(self.bore.time)):
+            try:
+                HW = None
+                #HLW = tg.get_tidetabletimes(self.bore.time[i].values)
+                HW = tg_HLW.get_tidetabletimes( self.bore.time[i].values,
+                                            time_var=time_var,
+                                            measure_var=measure_var,
+                                            method='nearest_1' )
+                #print(f"HLW: {HLW}")
+                HT_h.append( HW.values )
+                #print('len(HT_h)', len(HT_h))
+                HT_t.append( HW[time_var].values )
+                #print('len(HT_t)', len(HT_t))
+                #self.bore['LT_h'][i] = HLW.dataset.sea_level[HLW.dataset['sea_level'].argmin()]
+                #self.bore['LT_t'][i] = HLW.dataset.time[HLW.dataset['sea_level'].argmin()]
+            except:
+                logging.warning('Issue with appening HLW data')
+
+        if option == 4: # Load measured height from files
 
         #filnam = 'data/Liverpool_2015_2020_HLW.txt'
         #tg = GAUGE()
@@ -351,6 +347,13 @@ class Controller():
             date_start=np.datetime64('2005-04-01')
             date_end=np.datetime64('now','D')
             sg.dataset = sg.read_shoothill_to_xarray(date_start=date_start, date_end=date_end)
+            sg_HLW = sg.find_high_and_low_water(var_str='sea_level')
+            # This has produced an xr.dataset with sea_level_highs and sea_level_lows
+            # with time variables time_highs and time_lows.
+            # Process the *_highs only
+
+            time_var = 'time_highs'
+            measure_var = 'sea_level_highs'
 
             if(1):
                 print("WIP: NOT PROPERLY IMPLEMENTED")
