@@ -187,7 +187,7 @@ class Controller():
             elif command == "1":
                 print('load and process extra bore dataset')
                 self.load_csv()
-                self.load_and_process()
+                self.load_and_process(source="harmonic")
 
             elif command == "2":
                 print('show bore dataset')
@@ -228,20 +228,21 @@ class Controller():
     #%% Load and process methods
     ############################################################################
 
-    def load_and_process(self):
+    def load_and_process(self, source:str="harmonic"):
         """
         Performs sequential steps to build the bore object.
         1. Load Gladstone Dock data (though this might also be loaded from the obs logs)
         2. Calculate the time lag between Gladstone and Saltney events.
         3. Perform a linear fit to the time lag.
         """
-        print('loading tide data')
-        self.get_Glad_data()
+        print('loading '+source+' tide data')
+        self.get_Glad_data(source=source)
         #self.compare_Glad_HLW()
         print('Calculating the Gladstone to Saltney time difference')
-        self.calc_Glad_Saltney_time_diff()
+        self.calc_Glad_Saltney_time_diff(source=source)
         print('Calculating linear fit')
-        self.linearfit( self.bore.glad_height, self.bore.Saltney_lag )
+        source = 'harmonic'
+        self.linearfit( self.bore['glad_height_'+source], self.bore['Saltney_lag_'+source] )
 
 
     def load_csv(self):
@@ -273,24 +274,24 @@ class Controller():
         logging.info('Bore data loaded')
 
 
-    def get_Glad_data(self):
+    def get_Glad_data(self, source:str='harmonic'):
         """
-        Get Gladstone HLW data from external
+        Get Gladstone HLW data from external source
         These data are reported in the bore.csv file but not consistently and it
         is laborous to find old values.
         It was considered a good idea to automate this step.
+
+        inputs:
+        source: 'harmonic' [default] - load HT from harmonic prediction
+                'bodc' - measured and processed data
+                'API' - load recent, un processed data from shoothill API
         """
         logging.info("Get Gladstone HLW data from external file")
         HT_h = []
         HT_t = []
         # load tidetable
-        option = None
-        while (option != 1) and (option != 2):
-            try:
-                option = int(input('Load tide table (1) or processed measured data (2) or recent API data (3)?'))
-            except:
-                logging.debug(f"Expected an integer, got {option}")
-        if option == 1: # Load tidetable data from files
+
+        if source == "harmonic": # Load tidetable data from files
             filnam1 = '/Users/jeff/GitHub/DeeBore/data/Liverpool_2005_2014_HLW.txt'
             filnam2 = '/Users/jeff/GitHub/DeeBore/data/Liverpool_2015_2020_HLW.txt'
             tg  = TIDEGAUGE()
@@ -304,7 +305,7 @@ class Controller():
             # This has produced an xr.dataset with sea_level_highs and sea_level_lows
             # with time variables time_highs and time_lows.
 
-        elif option == 2: # load full 15min data from BODC files, extract HLW
+        elif source == "bodc": # load full 15min data from BODC files, extract HLW
             dir = '/Users/jeff/GitHub/DeeBore/data/BODC_processed/'
             filelist = ['2005LIV.txt',
             '2006LIV.txt', '2007LIV.txt',
@@ -330,7 +331,7 @@ class Controller():
             # This has produced an xr.dataset with sea_level_highs and sea_level_lows
             # with time variables time_highs and time_lows.
 
-        elif option == 3: # load full tidal signal from shoothill, extract HLW
+        elif source == "API": # load full tidal signal from shoothill, extract HLW
             tg = TIDEGAUGE()
             date_start=np.datetime64('2005-04-01')
             date_end=np.datetime64('now','D')
@@ -377,29 +378,29 @@ class Controller():
 
         # Save a xarray objects
         coords = {'time': (('time'), self.bore.time.values)}
-        self.bore['glad_height'] = xr.DataArray( np.array(HT_h), coords=coords, dims=['time'])
-        self.bore['glad_time'] = xr.DataArray( np.array(HT_t), coords=coords, dims=['time'])
+        self.bore['glad_height_'+source] = xr.DataArray( np.array(HT_h), coords=coords, dims=['time'])
+        self.bore['glad_time_'+source] = xr.DataArray( np.array(HT_t), coords=coords, dims=['time'])
 
         #self.bore['glad_height'] = np.array(HT_h)
         #self.bore['glad_time'] = np.array(HT_t)
         print('There is a supressed plot.scatter here')
         #self.bore.plot.scatter(x='glad_time', y='glad_height'); plt.show()
 
-        logging.debug(f"len(self.bore.glad_time): {len(self.bore.glad_time)}")
+        logging.debug(f"len(self.bore['glad_time_'{source}]): {len(self.bore['glad_time_'+source])}")
         #logging.info(f'len(self.bore.glad_time)', len(self.bore.glad_time))
         logging.debug(f"type(HT_t): {type(HT_t)}")
         logging.debug(f"type(HT_h): {type(HT_h)}")
 
         logging.debug('log time, orig tide table, new tide table lookup')
         for i in range(len(self.bore.time)):
-            logging.debug( f"{self.bore.time[i].values}, {self.bore['Liv (Gladstone Dock) HT time (GMT)'][i].values}, {self.bore['glad_time'][i].values}")
+            logging.debug( f"{self.bore.time[i].values}, {self.bore['Liv (Gladstone Dock) HT time (GMT)'][i].values}, {self.bore['glad_time_'+source][i].values}")
 
         #print('log time, orig tide table, new tide table lookup')
         #for i in range(len(self.bore.time)):
         #    print( self.bore.time[i].values, self.bore['Liv (Gladstone Dock) HT time (GMT)'][i].values, self.bore['glad_time'][i].values)
 
 
-    def calc_Glad_Saltney_time_diff(self):
+    def calc_Glad_Saltney_time_diff(self, source:str="harmonic"):
         """
         Compute lag (-ve) for arrival at Saltney relative to Glastone HT
         Store lags as integer (minutes). Messing with np.datetime64 and
@@ -407,15 +408,15 @@ class Controller():
         """
         logging.info('calc_Glad_Saltney_time_diff')
         nt = len(self.bore.time)
-        lag = (self.bore['glad_time'].values - self.bore['time'].values).astype('timedelta64[m]')
+        lag = (self.bore['glad_time_'+source].values - self.bore['time'].values).astype('timedelta64[m]')
         Saltney_lag    = [ lag[i].astype('int') if self.bore.location.values[i] == 'bridge' else np.NaN for i in range(nt) ]
         bluebridge_lag = [ lag[i].astype('int') if self.bore.location.values[i] == 'blue bridge' else np.NaN for i in range(nt) ]
 
         # Save a xarray objects
         coords = {'time': (('time'), self.bore.time.values)}
         self.bore['lag'] = xr.DataArray( lag, coords=coords, dims=['time'])
-        self.bore['Saltney_lag'] = xr.DataArray( Saltney_lag, coords=coords, dims=['time'])
-        self.bore['bluebridge_lag'] = xr.DataArray( bluebridge_lag, coords=coords, dims=['time'])
+        self.bore['Saltney_lag_'+source] = xr.DataArray( Saltney_lag, coords=coords, dims=['time'])
+        self.bore['bluebridge_lag_'+source] = xr.DataArray( bluebridge_lag, coords=coords, dims=['time'])
 
 
     def linearfit(self, X, Y):
