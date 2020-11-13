@@ -116,8 +116,7 @@ class Controller():
 
     def load_databucket(self):
         """
-        Auto load databucket from pickle file if it exists, otherwise create it
-        If databucket is loaded. Also perform linear fit to data (couldn't pickle it into bore:xr.DataArray)
+        Auto load databucket from pickle file if it exists.
         """
         #databucket = DataBucket()
         logging.info("Auto load databucket from pickle file if it exists")
@@ -128,12 +127,7 @@ class Controller():
                 print(template%DATABUCKET_FILE)
                 with open(DATABUCKET_FILE, 'rb') as file_object:
                     self.bore = pickle.load(file_object)
-                    try:
-                        print('Calculating linear fit')
-                        self.bore.attrs['weights'] = self.linearfit( self.bore.glad_height, self.bore.Saltney_lag )
-                        self.bore['linfit_lag_'+source] = self.bore.attrs['weights_'+source](self.bore['glad_height_'+source])
-                    except:
-                        logging.debug(f"did not do linear fit on pickle file vars")
+
             else:
                 print("... %s does not exist"%DATABUCKET_FILE)
         except KeyError:
@@ -242,7 +236,7 @@ class Controller():
         print('Calculating the Gladstone to Saltney time difference')
         self.calc_Glad_Saltney_time_diff(source=source)
         print('Calculating linear fit')
-        source = 'harmonic'
+        #source = 'harmonic'
         self.bore.attrs['weights_'+source] = self.linearfit( self.bore['glad_height_'+source], self.bore['Saltney_lag_'+source] )
         self.bore['linfit_lag_'+source] = self.bore.attrs['weights_'+source](self.bore['glad_height_'+source])
 
@@ -423,19 +417,18 @@ class Controller():
 
     def linearfit(self, X, Y):
         """
-        Linear regression
-        Is used if pickle file is loaded to get the fit between
-            self.bore.glad_height and self.bore.Saltney_lag
+        Linear regression. Calculates linear fit weights.
+
         Is used after computing the lag between Gladstone and Saltney events,
             during load_and_process(), to find a fit between Liverpool heights
             and Saltney arrival lag.
 
-        Returns polynomal function for linear fit:
+        Returns polynomal function for linear fit that can be used:
         E.g.
         X=range(10)
         np.poly1d(weights)( range(10) )
         """
-        idx = np.isfinite(Y).values
+        idx = np.isfinite(X).values & np.isfinite(Y).values
         weights = np.polyfit( X[idx], Y[idx], 1)
         logging.debug("weights: {weights}")
         #self.linfit = np.poly1d(weights)
