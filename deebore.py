@@ -110,7 +110,7 @@ class Controller():
         """
         self.load_databucket()
         logging.info("run interface")
-        self.load_flag = False
+        self.load_bore_flag = False
         self.run_interface()
 
 
@@ -127,6 +127,7 @@ class Controller():
                 print(template%DATABUCKET_FILE)
                 with open(DATABUCKET_FILE, 'rb') as file_object:
                     self.bore = pickle.load(file_object)
+                    self.load_bore_flag = True
 
             else:
                 print("... %s does not exist"%DATABUCKET_FILE)
@@ -179,10 +180,15 @@ class Controller():
                 print('load bore observations')
                 self.load_csv()
 
-            elif command == "1":
-                print('load and process extra bore dataset')
-                self.load_csv()
+            elif command == "h":
+                print('load and process harmonic data')
+                if not self.load_bore_flag: self.load_csv()
                 self.load_and_process(source="harmonic")
+
+            elif command == "b":
+                print('load and process measured (bodc) data')
+                if not self.load_bore_flag: self.load_csv()
+                self.load_and_process(source="bodc")
 
             elif command == "2":
                 print('show bore dataset')
@@ -247,7 +253,7 @@ class Controller():
         Load as a dataframe and save to bore:xr.DataSet
         """
         logging.info('Load bore data from csv file')
-        self.load_flag = True
+        self.load_bore_flag = True
         df =  pd.read_csv('data/master-Table 1.csv')
         df.drop(columns=['date + logged time','Unnamed: 2','Unnamed: 11', \
                                 'Unnamed: 12','Unnamed: 13', 'Unnamed: 15'], \
@@ -660,7 +666,8 @@ if __name__ == "__main__":
 
     Choose Action:
     0       load bore observations
-    1       load and process extra bore data
+    h       load and process harmonic data
+    b       load and process measured (bodc) data
     2       show bore dataset
     3       plot bore data (lag vs tidal height)
 
