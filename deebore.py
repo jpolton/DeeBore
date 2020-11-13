@@ -130,7 +130,8 @@ class Controller():
                     self.bore = pickle.load(file_object)
                     try:
                         print('Calculating linear fit')
-                        self.linearfit( self.bore.glad_height, self.bore.Saltney_lag )
+                        self.bore.attrs['weights'] = self.linearfit( self.bore.glad_height, self.bore.Saltney_lag )
+                        self.bore['linfit_lag_'+source] = self.bore.attrs['weights_'+source](self.bore['glad_height_'+source])
                     except:
                         logging.debug(f"did not do linear fit on pickle file vars")
             else:
@@ -242,7 +243,8 @@ class Controller():
         self.calc_Glad_Saltney_time_diff(source=source)
         print('Calculating linear fit')
         source = 'harmonic'
-        self.linearfit( self.bore['glad_height_'+source], self.bore['Saltney_lag_'+source] )
+        self.bore.attrs['weights_'+source] = self.linearfit( self.bore['glad_height_'+source], self.bore['Saltney_lag_'+source] )
+        self.bore['linfit_lag_'+source] = self.bore.attrs['weights_'+source](self.bore['glad_height_'+source])
 
 
     def load_csv(self):
@@ -414,7 +416,7 @@ class Controller():
 
         # Save a xarray objects
         coords = {'time': (('time'), self.bore.time.values)}
-        self.bore['lag'] = xr.DataArray( lag, coords=coords, dims=['time'])
+        self.bore['lag_'+source] = xr.DataArray( lag, coords=coords, dims=['time'])
         self.bore['Saltney_lag_'+source] = xr.DataArray( Saltney_lag, coords=coords, dims=['time'])
         self.bore['bluebridge_lag_'+source] = xr.DataArray( bluebridge_lag, coords=coords, dims=['time'])
 
@@ -427,12 +429,20 @@ class Controller():
         Is used after computing the lag between Gladstone and Saltney events,
             during load_and_process(), to find a fit between Liverpool heights
             and Saltney arrival lag.
+
+        Returns polynomal function for linear fit:
+        E.g.
+        X=range(10)
+        np.poly1d(weights)( range(10) )
         """
         idx = np.isfinite(Y).values
         weights = np.polyfit( X[idx], Y[idx], 1)
         logging.debug("weights: {weights}")
-        self.linfit = np.poly1d(weights)
-        self.bore['linfit_lag'] =  self.linfit(X)
+        #self.linfit = np.poly1d(weights)
+        #self.bore['linfit_lag'] =  self.linfit(X)
+        return np.poly1d(weights)
+        #self.bore.attrs['weights'] = np.poly1d(weights)
+        #self.bore.attrs['weights'](range(10))
 
     ############################################################################
     #%% Presenting data
@@ -443,16 +453,16 @@ class Controller():
         print( self.bore )
 
 
-    def plot_lag_vs_height(self):
+    def plot_lag_vs_height(self, source:str="harmonic"):
         """
         Plot bore lag (as time difference before Gladstone HW) against
         Gladstone high water (m).
         Separate colours for Saltney, Bluebridge, Chester.
         """
-        Xglad = self.bore.glad_height
-        Ysalt = self.bore.Saltney_lag
-        Yblue = self.bore.bluebridge_lag
-        Yfit = self.bore.linfit_lag
+        Xglad = self.bore['glad_height_'+source]
+        Ysalt = self.bore['Saltney_lag_'+source]
+        Yblue = self.bore['bluebridge_lag_'+source]
+        Yfit = self.bore['linfit_lag_'+source]
         plt.plot( Xglad,Ysalt, 'r+', label='Saltney')
         plt.plot( Xglad,Yblue, 'b.', label='Bluebridge')
         plt.plot( Xglad,Yfit, 'k-')
@@ -485,7 +495,7 @@ class Controller():
     #%% DIAGNOSTICS
     ############################################################################
 
-    def predict_bore(self):
+    def predict_bore(self, source:str='harmonic'):
         """
         Glad_HW - float
         Glad_time - datetime64
@@ -518,13 +528,15 @@ class Controller():
                                     .values > 7).dropna('time') #, drop=True)
 
         #plt.plot( HT.time, HT,'.' );plt.show()
-        lag_pred = self.linfit(HT)
+        #lag_pred = self.linfit(HT)
+        lag_pred = self.bore.attrs['weights_'+source](HT)
         #lag_pred = lag_pred[np.isfinite(lag_pred)] # drop nans
 
         Saltney_time_pred = [HT.time[i].values
                              - np.timedelta64(int(round(lag_pred[i])), 'm')
                              for i in range(len(lag_pred))]
         # Iterate over high tide events to print useful information
+        print(f"Predictions based on fit to {source} data")
         for i in range(len(lag_pred)):
             #print( "Gladstone HT", np.datetime_as_string(HT.time[i], unit='m',timezone=pytz.timezone('UTC')),"(GMT). Height: {:.2f} m".format(  HT.values[i]))
             #print(" Saltney arrival", np.datetime_as_string(Saltney_time_pred[i], unit='m', timezone=pytz.timezone('Europe/London')),"(GMT/BST). Lag: {:.0f} mins".format( lag_pred[i] ))
