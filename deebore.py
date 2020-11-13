@@ -198,6 +198,10 @@ class Controller():
                 print('plot bore data (lag vs tidal height')
                 self.plot_lag_vs_height()
 
+            elif command == "4":
+                print('plot difference between predicted and measured (lag vs tidal height)')
+                self.plot_surge_effect()
+
             elif command == "d1":
                 print('load and plot HLW data')
                 self.load_and_plot_HLW_data()
@@ -468,10 +472,10 @@ class Controller():
 
         plt.xlabel('Liv (Gladstone Dock) HT (m)')
         plt.ylabel('Arrival time (mins before LiV HT)')
-        plt.title('Bore arrival time at Saltney Ferry')
+        plt.title(f"Bore arrival time at Saltney Ferry ({source} data)")
         plt.legend()
         #plt.show()
-        plt.savefig('figs/SaltneyArrivalLag_vs_LivHeight.png')
+        plt.savefig('figs/SaltneyArrivalLag_vs_LivHeight_'+source+'.png')
 
         if(0):
             #plt.show()
@@ -488,6 +492,43 @@ class Controller():
             plt.ylabel('Arrival time (mins before Liv HT)')
             plt.xlabel('Liv (Gladstone Dock) HT height (m)')
             plt.show()
+
+
+    def plot_surge_effect(self):
+        """
+        Compare harmonic predicted highs/lag with measured highs/lag
+        Plot quiver between (lag,height) for harmonic and measured Liverpool highwater
+        """
+        # Example plot
+        from matplotlib.collections import LineCollection
+        from matplotlib import colors as mcolors
+        import matplotlib.dates as mdates
+
+        nval = min( len(self.bore.linfit_lag_harmonic), len(self.bore.linfit_lag_bodc) )
+        segs_h = np.zeros((nval,2,2)) # line, pointA/B, t/z
+        #convert dates to numbers first
+
+        segs_h[:,0,0] = self.bore.glad_height_bodc[:nval]
+        segs_h[:,1,0] = self.bore.glad_height_harmonic[:nval]
+        segs_h[:,0,1] = self.bore.Saltney_lag_bodc[:nval]
+        segs_h[:,1,1] = self.bore.Saltney_lag_harmonic[:nval]
+
+        fig, ax = plt.subplots()
+        ax.set_ylim(np.nanmin(segs_h[:,:,1]), np.nanmax(segs_h[:,:,1]))
+        line_segments_HW = LineCollection(segs_h, cmap='plasma', linewidth=1)
+        ax.add_collection(line_segments_HW)
+        ax.scatter(segs_h[:,0,0],segs_h[:,0,1], c='red', s=2, label='measured') # harmonic predictions
+        ax.scatter(segs_h[:,1,0],segs_h[:,1,1], c='blue', s=2, label='harmonic') # harmonic predictions
+        ax.set_title('Harmonic prediction with quiver to measured high waters')
+
+        plt.xlabel('Liv (Gladstone Dock) HT (m)')
+        plt.ylabel('Arrival time (mins before LiV HT)')
+        plt.title('Bore arrival time at Saltney Ferry. Harmonic prediction cf measured')
+        plt.legend()
+        #plt.show()
+        ax.autoscale_view()
+        plt.savefig('figs/SaltneyArrivalLag_vs_LivHeight_shift.png')
+        plt.close('all')
 
 
     ############################################################################
@@ -648,6 +689,7 @@ class Controller():
         plt.savefig('figs/Liverpool_shoothill_vs_table.png')
         plt.close('all')
 
+
 ################################################################################
 ################################################################################
 #%% Main Routine
@@ -670,6 +712,7 @@ if __name__ == "__main__":
     b       load and process measured (bodc) data
     2       show bore dataset
     3       plot bore data (lag vs tidal height)
+    4       plot difference between predicted and measured (lag vs tidal height)
 
     6       Predict bore event for date
 
