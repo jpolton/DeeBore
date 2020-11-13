@@ -329,6 +329,9 @@ class Controller():
                     tg.dataset = tg0.dataset
                 else:
                     tg.dataset = xr.concat([ tg.dataset, tg0.dataset], dim='time')
+            # Use QC to drop null values
+            #tg.dataset['sea_level'] = tg.dataset.sea_level.where( np.logical_or(tg.dataset.qc_flags=='', tg.dataset.qc_flags=='T'), drop=True)
+            tg.dataset['sea_level'] = tg.dataset.sea_level.where( tg.dataset.qc_flags!='N', drop=True)
             # Fix some attributes (others might not be correct for all data)
             tg.dataset['start_date'] = tg.dataset.time.min().values
             tg.dataset['end_date'] = tg.dataset.time.max().values
@@ -346,6 +349,8 @@ class Controller():
             # This has produced an xr.dataset with sea_level_highs and sea_level_lows
             # with time variables time_highs and time_lows.
 
+        else:
+            logging.debug(f"Did not expect this eventuality...")
 
         # Process the *_highs only
         time_var = 'time_highs'
@@ -363,22 +368,60 @@ class Controller():
                                         time_var=time_var,
                                         measure_var=measure_var,
                                         method='nearest_1',
-                                        winsize=3 )
+                                        winsize=4 )
                 if type(HW) is xr.DataArray:
-                    #print(f"HLW: {HLW}")
+                    #print(f"HW: {HW}")
                     HT_h.append( HW.values )
                     #print('len(HT_h)', len(HT_h))
                     HT_t.append( HW[time_var].values )
                     #print('len(HT_t)', len(HT_t))
                     #self.bore['LT_h'][i] = HLW.dataset.sea_level[HLW.dataset['sea_level'].argmin()]
                     #self.bore['LT_t'][i] = HLW.dataset.time[HLW.dataset['sea_level'].argmin()]
-                    ind.append(i)
+                    #ind.append(i)
+                    #print(f"i:{i}, {HT_t[-1].astype('M8[ns]').astype('M8[ms]').item()}" )
+                    #print(HT_t[-1].astype('M8[ns]').astype('M8[ms]').item().strftime('%Y-%m-%d'))
+
+                    ## Make timeseries plot around the highwater maxima to check
+                    # values are being extracted as expected.
+                    if (i % 12) == 0:
+                        fig = plt.figure()
+
+                    plt.subplot(3,4,(i%12)+1)
+                    plt.plot(self.tg.dataset.time, self.tg.dataset.sea_level)
+                    plt.plot( HT_t[-1],HT_h[-1], 'r+' )
+                    plt.xlim([HT_t[-1] - np.timedelta64(1,'D'),
+                              HT_t[-1] + np.timedelta64(1,'D')])
+                    plt.ylim([0,11])
+                    plt.text( HT_t[-1]-np.timedelta64(1,'D'),1,  HT_t[-1].astype('M8[ns]').astype('M8[ms]').item().strftime('%Y-%m-%d'))
+                    # Turn off tick labels
+                    plt.gca().axes.get_xaxis().set_visible(False)
+                    #plt.xaxis_date()
+                    #plt.autoscale_view()
+                    if (i%12) == 12-1:
+                        plt.savefig('figs/check_get_tidetabletimes_'+str(i//12).zfill(2)+'_'+source+'.png')
+                        plt.close('all')
+
+
+                else:
+                    logging.info(f"Did not find a high water near this guess")
+                    print(f"Did not find a high water near this guess")
+
+
+
             except:
-                logging.warning('Issue with appening HLW data')
+                logging.warning('Issue with appending HLW data')
+                print('Issue with appending HLW data')
+
+        try: # Try and print the last observation timeseries
+            plt.savefig('figs/check_get_tidetabletimes_'+str(i//12).zfill(2)+'_'+source+'.png')
+            plt.close('all')
+        except:
+            logging.info(f"Did not have any extra panels to plot")
+            print(f"Did not have any extra panels to plot")
 
 
-        else:
-            logging.debug(f"Did not expect this eventuality...")
+
+
 
 
 
