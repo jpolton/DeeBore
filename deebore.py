@@ -510,7 +510,7 @@ class Controller():
         Ysalt = self.bore['Saltney_lag_'+source]
         Yblue = self.bore['bluebridge_lag_'+source]
         Yfit = self.bore['linfit_lag_'+source]
-        plt.plot( Xglad,Ysalt, 'r+', label='Saltney')
+        plt.plot( Xglad,Ysalt, 'r+', label='Saltney: rmse '+'{:4.1f}'.format(self.stats(source))+'mins')
         plt.plot( Xglad,Yblue, 'b.', label='Bluebridge')
         plt.plot( Xglad,Yfit, 'k-')
 
@@ -636,6 +636,13 @@ class Controller():
         #plt.scatter( Saltney_time_pred, HT ,'.');plt.show()
         # problem with time stamp
 
+    def stats(self, source:str='harmonic'):
+        """
+        root mean square error
+        """
+        rmse = np.sqrt(np.nanmean((self.bore['Saltney_lag_'+source].values - self.bore['linfit_lag_'+source].values)**2))
+        print(f"{source}: Root mean square error = {rmse}")
+        return rmse
     ############################################################################
     #%% SECTION
     ############################################################################
