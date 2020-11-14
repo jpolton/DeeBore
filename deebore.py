@@ -388,11 +388,12 @@ class Controller():
 
                     plt.subplot(3,4,(i%12)+1)
                     plt.plot(self.tg.dataset.time, self.tg.dataset.sea_level)
-                    plt.plot( HT_t[-1],HT_h[-1], 'r+' )
-                    plt.xlim([HT_t[-1] - np.timedelta64(1,'D'),
-                              HT_t[-1] + np.timedelta64(1,'D')])
+                    plt.plot( HT_t[-1], HT_h[-1], 'r+' )
+                    plt.plot( [self.bore.time[i].values,self.bore.time[i].values],[0,11],'k')
+                    plt.xlim([HT_t[-1] - np.timedelta64(5,'h'),
+                              HT_t[-1] + np.timedelta64(5,'h')])
                     plt.ylim([0,11])
-                    plt.text( HT_t[-1]-np.timedelta64(1,'D'),1,  HT_t[-1].astype('M8[ns]').astype('M8[ms]').item().strftime('%Y-%m-%d'))
+                    plt.text( HT_t[-1]-np.timedelta64(6,'h'),1,  HT_t[-1].astype('M8[ns]').astype('M8[ms]').item().strftime('%Y-%m-%d'))
                     # Turn off tick labels
                     plt.gca().axes.get_xaxis().set_visible(False)
                     #plt.xaxis_date()
