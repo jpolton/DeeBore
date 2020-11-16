@@ -170,14 +170,18 @@ class Controller():
             if command == "q":
                 print("run_interface: quit")
                 logging.info("quit") # Function call.
-                self.pickle_bore()
-                break
+                ans = input('Save as pickle file?[Y/n]')
+                if ans == "n":
+                    break
+                else:
+                    self.pickle_bore()
+                    break
 
             elif command == "i":
                 print(INSTRUCTIONS)
 
             elif command == "all":
-                print('load bore observations')
+                print('load and process all data')
                 self.load_csv()
                 print('load and process harmonic data')
                 self.load_and_process(source="harmonic", HLW="HW")
