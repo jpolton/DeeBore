@@ -274,9 +274,12 @@ class Controller():
         self.calc_Glad_Saltney_time_diff(source=source, HLW=HLW)
         print('Calculating linear fit')
         #source = 'harmonic'
-        self.bore.attrs['weights_'+HLW+'_'+source] = self.linearfit( self.bore['glad_height_'+HLW+'_'+source], self.bore['Saltney_lag_'+HLW+'_'+source] )
+        self.bore.attrs['weights_'+HLW+'_'+source], self.bore['rmse_'+HLW+'_'+source] = self.linearfit(
+                self.bore['glad_height_'+HLW+'_'+source],
+                self.bore['Saltney_lag_'+HLW+'_'+source]
+                )
         self.bore['linfit_lag_'+HLW+'_'+source] = self.bore.attrs['weights_'+HLW+'_'+source](self.bore['glad_height_'+HLW+'_'+source])
-        self.bore['rmse_'+HLW+'_'+source] = '{:4.1f} mins'.format(self.stats(source=source, HLW=HLW))
+        #self.bore['rmse_'+HLW+'_'+source] = '{:4.1f} mins'.format(self.stats(source=source, HLW=HLW))
 
     def load_csv(self):
         """
@@ -529,9 +532,12 @@ class Controller():
         logging.debug("weights: {weights}")
         #self.linfit = np.poly1d(weights)
         #self.bore['linfit_lag'] =  self.linfit(X)
-        return np.poly1d(weights)
         #self.bore.attrs['weights'] = np.poly1d(weights)
         #self.bore.attrs['weights'](range(10))
+        Y_fit = np.poly1d(weights)(X)
+        rmse = '{:4.1f} mins'.format( np.sqrt(np.nanmean((Y.values - Y_fit)**2)) )
+        return np.poly1d(weights), rmse
+
 
     ############################################################################
     #%% Presenting data
