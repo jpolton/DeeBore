@@ -196,7 +196,10 @@ class Controller():
 
             elif command == "3":
                 print('plot bore data (lag vs tidal height')
-                self.plot_lag_vs_height()
+                plt.close('all');self.plot_lag_vs_height('bodc')
+                plt.close('all');self.plot_lag_vs_height('all')
+                plt.close('all');self.plot_lag_vs_height('harmonic')
+                plt.close('all');self.plot_lag_vs_height('API')
 
             elif command == "4":
                 print('plot difference between predicted and measured (lag vs tidal height)')
@@ -506,17 +509,42 @@ class Controller():
         Gladstone high water (m).
         Separate colours for Saltney, Bluebridge, Chester.
         """
-        Xglad = self.bore['glad_height_'+source]
-        Ysalt = self.bore['Saltney_lag_'+source]
-        Yblue = self.bore['bluebridge_lag_'+source]
-        Yfit = self.bore['linfit_lag_'+source]
-        plt.plot( Xglad,Ysalt, 'r+', label='Saltney: rmse '+'{:4.1f}'.format(self.stats(source))+'mins')
-        plt.plot( Xglad,Yblue, 'b.', label='Bluebridge')
-        plt.plot( Xglad,Yfit, 'k-')
+        if source == 'all':
+            Xglad = self.bore['glad_height_bodc']
+            Ysalt = self.bore['Saltney_lag_bodc']
+            Yblue = self.bore['bluebridge_lag_bodc']
+            Xglad_api = self.bore['glad_height_API'].where( np.isnan(self.bore.glad_height_bodc))
+            Ysalt_api = self.bore['Saltney_lag_API'].where( np.isnan(self.bore.glad_height_bodc))
+            Yblue_api = self.bore['bluebridge_lag_API'].where( np.isnan(self.bore.glad_height_bodc))
+            Yfit = self.bore['linfit_lag_bodc']
+            plt.plot( Xglad,Ysalt, 'r.', label='Saltney: rmse '+'{:4.1f}'.format(self.stats('bodc'))+'mins')
+            plt.plot( Xglad,Yblue, 'b.', label='Bluebridge')
+            plt.plot( Xglad,Yfit, 'k-')
+            plt.plot( Xglad_api,Ysalt_api, 'ro', label='Saltney 2020')
+            plt.plot( Xglad_api,Yblue_api, 'bo', label='Bluebridge 2020')
+        else:
+            Xglad = self.bore['glad_height_'+source]
+            Ysalt = self.bore['Saltney_lag_'+source]
+            Yblue = self.bore['bluebridge_lag_'+source]
+            Yfit = self.bore['linfit_lag_'+source]
+            plt.plot( Xglad,Ysalt, 'r.', label='Saltney: rmse '+'{:4.1f}'.format(self.stats(source))+'mins')
+            plt.plot( Xglad,Yblue, 'b.', label='Bluebridge')
+            plt.plot( Xglad,Yfit, 'k-')
+            Xglad = self.bore['glad_height_'+source].where( np.isnan(self.bore.glad_height_bodc))
+            Ysalt = self.bore['Saltney_lag_'+source].where( np.isnan(self.bore.glad_height_bodc))
+            Yblue = self.bore['bluebridge_lag_'+source].where( np.isnan(self.bore.glad_height_bodc))
+            plt.plot( Xglad,Ysalt, 'ro', label='Saltney 2020')
+            plt.plot( Xglad,Yblue, 'bo', label='Bluebridge 2020')
 
         plt.xlabel('Liv (Gladstone Dock) HT (m)')
         plt.ylabel('Arrival time (mins before LiV HT)')
-        plt.title(f"Bore arrival time at Saltney Ferry ({source} data)")
+        if source =='harmonic': str='predicted'
+        if source =='all': str='measured'
+        if source =='bodc': str='measured + QCd'
+        if source == 'API': str='measure w/o QC'
+        plt.title(f"Bore arrival time at Saltney Ferry ({str} data)")
+        plt.ylim([40, 125])   # minutes
+        plt.xlim([8.2, 10.9]) # metres
         plt.legend()
         #plt.show()
         plt.savefig('figs/SaltneyArrivalLag_vs_LivHeight_'+source+'.png')
