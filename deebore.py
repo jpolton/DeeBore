@@ -176,6 +176,20 @@ class Controller():
             elif command == "i":
                 print(INSTRUCTIONS)
 
+            elif command == "all":
+                print('load bore observations')
+                self.load_csv()
+                print('load and process harmonic data')
+                self.load_and_process(source="harmonic", HLW="HW")
+                self.load_and_process(source="harmonic", HLW="LW")
+                print('load and process measured (bodc) data')
+                self.load_and_process(source="bodc", HLW="HW")
+                self.load_and_process(source="bodc", HLW="LW")
+                print('load and process measured (API) data')
+                self.load_and_process(source="api", HLW="HW")
+                self.load_and_process(source="api", HLW="LW")
+
+
             elif command == "0":
                 print('load bore observations')
                 self.load_csv()
@@ -242,7 +256,7 @@ class Controller():
     #%% Load and process methods
     ############################################################################
 
-    def load_and_process(self, source:str="harmonic"):
+    def load_and_process(self, source:str="harmonic", HLW:str="HW"):
         """
         Performs sequential steps to build the bore object.
         1. Load Gladstone Dock data (though this might also be loaded from the obs logs)
@@ -250,15 +264,15 @@ class Controller():
         3. Perform a linear fit to the time lag.
         """
         print('loading '+source+' tide data')
-        self.get_Glad_data(source=source)
+        self.get_Glad_data(source=source, HLW=HLW)
         #self.compare_Glad_HLW()
         print('Calculating the Gladstone to Saltney time difference')
-        self.calc_Glad_Saltney_time_diff(source=source)
+        self.calc_Glad_Saltney_time_diff(source=source, HLW=HLW)
         print('Calculating linear fit')
         #source = 'harmonic'
-        self.bore.attrs['weights_'+source] = self.linearfit( self.bore['glad_height_'+source], self.bore['Saltney_lag_'+source] )
-        self.bore['linfit_lag_'+source] = self.bore.attrs['weights_'+source](self.bore['glad_height_'+source])
-
+        self.bore.attrs['weights_'+HLW+'_'+source] = self.linearfit( self.bore['glad_height_'+HLW+'_'+source], self.bore['Saltney_lag_'+HLW+'_'+source] )
+        self.bore['linfit_lag_'+HLW+'_'+source] = self.bore.attrs['weights_'+HLW+'_'+source](self.bore['glad_height_'+HLW+'_'+source])
+        self.bore['rmse_'+HLW+'_'+source] = '{:4.1f} mins'.format(self.stats(source=source, HLW=HLW))
 
     def load_csv(self):
         """
@@ -289,7 +303,7 @@ class Controller():
         logging.info('Bore data loaded')
 
 
-    def get_Glad_data(self, source:str='harmonic'):
+    def get_Glad_data(self, source:str='harmonic', HLW:str="HW"):
         """
         Get Gladstone HLW data from external source
         These data are reported in the bore.csv file but not consistently and it
@@ -302,8 +316,7 @@ class Controller():
                 'api' - load recent, un processed data from shoothill API
         """
         logging.info("Get Gladstone HLW data from external file")
-        HT_h = []
-        HT_t = []
+
         # load tidetable
 
         if source == "harmonic": # Load tidetable data from files
@@ -361,23 +374,44 @@ class Controller():
         else:
             logging.debug(f"Did not expect this eventuality...")
 
-        # Process the *_highs only
-        time_var = 'time_highs'
-        measure_var = 'sea_level_highs'
-        ind = [] # list of indices in the obs bore data where gladstone data is found
-
-
         self.tg = tg
+
+        ## Process the *_highs or *_lows
+        #time_var = 'time_highs'
+        #measure_var = 'sea_level_highs'
+        #ind = [] # list of indices in the obs bore data where gladstone data is found
+        if HLW == 'HW':
+            time_var = 'time_highs'
+            measure_var = 'sea_level_highs'
+        elif HLW == 'LW':
+            time_var = 'time_lows'
+            measure_var = 'sea_level_lows'
+        else:
+            print('This should not have happened...')
+
+        HT_h = []
+        HT_t = []
+
         for i in range(len(self.bore.time)):
             try:
                 HW = None
+                LW = None
                 #HLW = tg.get_tidetabletimes(self.bore.time[i].values)
+
                 HW = tg_HLW.get_tidetabletimes(
                                         time_guess=self.bore.time[i].values,
                                         time_var=time_var,
                                         measure_var=measure_var,
                                         method='nearest_1',
-                                        winsize=4 )
+                                        winsize=6 ) #4h for HW, 6h for LW
+                #LW = tg_HLW.get_tidetabletimes(
+                #                        time_guess=self.bore.time[i].values,
+                #                        time_var='time_lows',
+                #                        measure_var='sea_level_lows',
+                #                        method='nearest_1',
+                #                        winsize=6 ) #4
+
+                #HW = HW - LW.values
                 if type(HW) is xr.DataArray:
                     #print(f"HW: {HW}")
                     HT_h.append( HW.values )
@@ -408,7 +442,7 @@ class Controller():
                     #plt.xaxis_date()
                     #plt.autoscale_view()
                     if (i%12) == 12-1:
-                        plt.savefig('figs/check_get_tidetabletimes_'+str(i//12).zfill(2)+'_'+source+'.png')
+                        plt.savefig('figs/check_get_tidetabletimes_'+str(i//12).zfill(2)+'_'+HLW+'_'+source+'.png')
                         plt.close('all')
 
 
@@ -423,43 +457,38 @@ class Controller():
                 print('Issue with appending HLW data')
 
         try: # Try and print the last observation timeseries
-            plt.savefig('figs/check_get_tidetabletimes_'+str(i//12).zfill(2)+'_'+source+'.png')
+            plt.savefig('figs/check_get_tidetabletimes_'+str(i//12).zfill(2)+'_'+HLW+'_'+source+'.png')
             plt.close('all')
         except:
             logging.info(f"Did not have any extra panels to plot")
             print(f"Did not have any extra panels to plot")
 
 
-
-
-
-
-
         # Save a xarray objects
         coords = {'time': (('time'), self.bore.time.values)}
-        self.bore['glad_height_'+source] = xr.DataArray( np.array(HT_h), coords=coords, dims=['time'])
-        self.bore['glad_time_'+source] = xr.DataArray( np.array(HT_t), coords=coords, dims=['time'])
+        self.bore['glad_height_'+HLW+'_'+source] = xr.DataArray( np.array(HT_h), coords=coords, dims=['time'])
+        self.bore['glad_time_'+HLW+'_'+source] = xr.DataArray( np.array(HT_t), coords=coords, dims=['time'])
 
         #self.bore['glad_height'] = np.array(HT_h)
         #self.bore['glad_time'] = np.array(HT_t)
         print('There is a supressed plot.scatter here')
         #self.bore.plot.scatter(x='glad_time', y='glad_height'); plt.show()
 
-        logging.debug(f"len(self.bore['glad_time_'{source}]): {len(self.bore['glad_time_'+source])}")
+        logging.debug(f"len(self.bore['glad_time_'{HLW}'_'{source}]): {len(self.bore['glad_time_'+HLW+'_'+source])}")
         #logging.info(f'len(self.bore.glad_time)', len(self.bore.glad_time))
         logging.debug(f"type(HT_t): {type(HT_t)}")
         logging.debug(f"type(HT_h): {type(HT_h)}")
 
         logging.debug('log time, orig tide table, new tide table lookup')
         for i in range(len(self.bore.time)):
-            logging.debug( f"{self.bore.time[i].values}, {self.bore['Liv (Gladstone Dock) HT time (GMT)'][i].values}, {self.bore['glad_time_'+source][i].values}")
+            logging.debug( f"{self.bore.time[i].values}, {self.bore['Liv (Gladstone Dock) HT time (GMT)'][i].values}, {self.bore['glad_time_'+HLW+'_'+source][i].values}")
 
         #print('log time, orig tide table, new tide table lookup')
         #for i in range(len(self.bore.time)):
         #    print( self.bore.time[i].values, self.bore['Liv (Gladstone Dock) HT time (GMT)'][i].values, self.bore['glad_time'][i].values)
 
 
-    def calc_Glad_Saltney_time_diff(self, source:str="harmonic"):
+    def calc_Glad_Saltney_time_diff(self, source:str="harmonic", HLW:str="HW"):
         """
         Compute lag (-ve) for arrival at Saltney relative to Glastone HT
         Store lags as integer (minutes). Messing with np.datetime64 and
@@ -467,15 +496,15 @@ class Controller():
         """
         logging.info('calc_Glad_Saltney_time_diff')
         nt = len(self.bore.time)
-        lag = (self.bore['time'].values - self.bore['glad_time_'+source].values).astype('timedelta64[m]')
+        lag = (self.bore['time'].values - self.bore['glad_time_'+HLW+'_'+source].values).astype('timedelta64[m]')
         Saltney_lag    = [ lag[i].astype('int') if self.bore.location.values[i] == 'bridge' else np.NaN for i in range(nt) ]
         bluebridge_lag = [ lag[i].astype('int') if self.bore.location.values[i] == 'blue bridge' else np.NaN for i in range(nt) ]
 
         # Save a xarray objects
         coords = {'time': (('time'), self.bore.time.values)}
-        self.bore['lag_'+source] = xr.DataArray( lag, coords=coords, dims=['time'])
-        self.bore['Saltney_lag_'+source] = xr.DataArray( Saltney_lag, coords=coords, dims=['time'])
-        self.bore['bluebridge_lag_'+source] = xr.DataArray( bluebridge_lag, coords=coords, dims=['time'])
+        self.bore['lag_'+HLW+'_'+source] = xr.DataArray( lag, coords=coords, dims=['time'])
+        self.bore['Saltney_lag_'+HLW+'_'+source] = xr.DataArray( Saltney_lag, coords=coords, dims=['time'])
+        self.bore['bluebridge_lag_'+HLW+'_'+source] = xr.DataArray( bluebridge_lag, coords=coords, dims=['time'])
 
 
     def linearfit(self, X, Y):
@@ -509,51 +538,51 @@ class Controller():
         print( self.bore )
 
 
-    def plot_lag_vs_height(self, source:str="harmonic"):
+    def plot_lag_vs_height(self, source:str="harmonic", HLW:str="HW"):
         """
         Plot bore lag (as time difference before Gladstone HW) against
         Gladstone high water (m).
         Separate colours for Saltney, Bluebridge, Chester.
         """
         if source == 'all':
-            Yglad = self.bore['glad_height_bodc']
-            Xsalt = self.bore['Saltney_lag_bodc']
-            Xblue = self.bore['bluebridge_lag_bodc']
-            Yglad_api = self.bore['glad_height_api'].where( np.isnan(self.bore.glad_height_bodc))
-            Xsalt_api = self.bore['Saltney_lag_api'].where( np.isnan(self.bore.glad_height_bodc))
-            Xblue_api = self.bore['bluebridge_lag_api'].where( np.isnan(self.bore.glad_height_bodc))
-            Xfit = self.bore['linfit_lag_bodc']
+            Yglad = self.bore['glad_height_'+HLW+'_bodc']
+            Xsalt = self.bore['Saltney_lag_'+HLW+'_bodc']
+            Xblue = self.bore['bluebridge_lag_'+HLW+'_bodc']
+            Yglad_api = self.bore['glad_height_'+HLW+'_api'].where( np.isnan(self.bore['glad_height_'+HLW+'_bodc']))
+            Xsalt_api = self.bore['Saltney_lag_'+HLW+'_api'].where( np.isnan(self.bore['glad_height_'+HLW+'_bodc']))
+            Xblue_api = self.bore['bluebridge_lag_'+HLW+'_api'].where( np.isnan(self.bore['glad_height_'+HLW+'_bodc']))
+            Xfit = self.bore['linfit_lag_'+HLW+'_bodc']
             plt.plot( Xsalt,Yglad, 'r.', label='Saltney: rmse '+'{:4.1f}'.format(self.stats('bodc'))+'mins')
             plt.plot( Xblue,Yglad, 'b.', label='Bluebridge')
             plt.plot( Xfit,Yglad, 'k-')
             plt.plot( Xsalt_api,Yglad_api, 'ro', label='Saltney 2020')
             plt.plot( Xblue_api,Yglad_api, 'bo', label='Bluebridge 2020')
         else:
-            Yglad = self.bore['glad_height_'+source]
-            Xsalt = self.bore['Saltney_lag_'+source]
-            Xblue = self.bore['bluebridge_lag_'+source]
-            Xfit = self.bore['linfit_lag_'+source]
-            plt.plot( Xsalt,Yglad, 'r.', label='Saltney: rmse '+'{:4.1f}'.format(self.stats(source))+'mins')
+            Yglad = self.bore['glad_height_'+HLW+'_'+source]
+            Xsalt = self.bore['Saltney_lag_'+HLW+'_'+source]
+            Xblue = self.bore['bluebridge_lag_'+HLW+'_'+source]
+            Xfit = self.bore['linfit_lag_'+HLW+'_'+source]
+            plt.plot( Xsalt,Yglad, 'r.', label='Saltney: rmse '+'{:4.1f}'.format(self.stats(source,HLW))+'mins')
             plt.plot( Xblue,Yglad, 'b.', label='Bluebridge')
             plt.plot( Xfit,Yglad, 'k-')
-            Yglad = self.bore['glad_height_'+source].where( np.isnan(self.bore.glad_height_bodc))
-            Xsalt = self.bore['Saltney_lag_'+source].where( np.isnan(self.bore.glad_height_bodc))
-            Xblue = self.bore['bluebridge_lag_'+source].where( np.isnan(self.bore.glad_height_bodc))
+            Yglad = self.bore['glad_height_'+HLW+'_'+source].where( np.isnan(self.bore['glad_height_'+HLW+'_bodc']))
+            Xsalt = self.bore['Saltney_lag_'+HLW+'_'+source].where( np.isnan(self.bore['glad_height_'+HLW+'_bodc']))
+            Xblue = self.bore['bluebridge_lag_'+HLW+'_'+source].where( np.isnan(self.bore['glad_height_'+HLW+'_bodc']))
             plt.plot( Xsalt,Yglad, 'ro', label='Saltney 2020')
             plt.plot( Xblue,Yglad, 'bo', label='Bluebridge 2020')
 
-        plt.ylabel('Liv (Gladstone Dock) HT (m)')
-        plt.xlabel('Arrival time (mins) relative to Liv HT')
+        plt.ylabel('Liv (Gladstone Dock) '+HLW+' (m)')
+        plt.xlabel('Arrival time (mins) relative to Liv '+HLW)
         if source =='harmonic': str='predicted'
         if source =='all': str='all measured'
         if source =='bodc': str='measured only QCd'
         if source == 'api': str='measured w/o QC'
         plt.title(f"Bore arrival time at Saltney Ferry ({str} data)")
-        plt.xlim([-125, -40])   # minutes
-        plt.ylim([8.2, 10.9]) # metres
+        #plt.xlim([-125, -40])   # minutes
+        #plt.ylim([8.2, 10.9]) # metres
         plt.legend()
         #plt.show()
-        plt.savefig('figs/SaltneyArrivalLag_vs_LivHeight_'+source+'2.png')
+        plt.savefig('figs/SaltneyArrivalLag_vs_LivHeight_'+HLW+'_'+source+'.png')
 
         if(0):
             #plt.show()
@@ -572,7 +601,7 @@ class Controller():
             plt.show()
 
 
-    def plot_surge_effect(self, source:str='bodc'):
+    def plot_surge_effect(self, source:str='bodc', HLW:str="HW"):
         """
         Compare harmonic predicted highs/lag with measured highs/lag
         Plot quiver between (lag,height) for harmonic and measured Liverpool highwater
@@ -582,19 +611,19 @@ class Controller():
         from matplotlib import colors as mcolors
         import matplotlib.dates as mdates
         if source=='api':
-            I = self.bore.glad_time_api > np.datetime64('2020-09-01')
+            I = self.bore['glad_time_'+HLW+'_api'] > np.datetime64('2020-09-01')
             nval = sum(I).values
         else:
-            nval = min( len(self.bore.linfit_lag_harmonic), len(self.bore.linfit_lag_bodc) )
+            nval = min( len(self.bore['linfit_lag_'+HLW+'_harmonic']), len(self.bore['linfit_lag_'+HLW+'_bodc']) )
             I = np.arange(nval)
         segs_h = np.zeros((nval,2,2)) # line, pointA/B, t/z
         #convert dates to numbers first
 
 
-        segs_h[:,0,1] = self.bore['glad_height_'+source][I]
-        segs_h[:,1,1] = self.bore.glad_height_harmonic[I]
-        segs_h[:,0,0] = self.bore['Saltney_lag_'+source][I]
-        segs_h[:,1,0] = self.bore.Saltney_lag_harmonic[I]
+        segs_h[:,0,1] = self.bore['glad_height_'+HLW+'_'+source][I]
+        segs_h[:,1,1] = self.bore['glad_height_'+HLW+'_harmonic'][I]
+        segs_h[:,0,0] = self.bore['Saltney_lag_'+HLW+'_'+source][I]
+        segs_h[:,1,0] = self.bore['Saltney_lag_'+HLW+'_harmonic'][I]
 
         #segs_h[:,0,0] = self.bore.glad_height_bodc[:nval]
         #segs_h[:,1,0] = self.bore.glad_height_harmonic[:nval]
@@ -609,14 +638,13 @@ class Controller():
         ax.scatter(segs_h[:,0,0],segs_h[:,0,1], c='green', s=4, label='measured') # harmonic predictions
         ax.set_title('Harmonic prediction with quiver to measured high waters')
 
-        plt.ylabel('Liv (Gladstone Dock) HT (m)')
-        plt.xlabel('Arrival time (mins relative to LiV HT)')
+        plt.ylabel('Liv (Gladstone Dock) '+HLW+' (m)')
+        plt.xlabel('Arrival time (mins relative to LiV '+HLW+')')
         plt.title('Bore arrival time at Saltney Ferry. Harmonic prediction cf measured')
         plt.legend()
-        #plt.show()
-        plt.xlim([-125, -40])   # minutes
-        plt.ylim([8.2, 10.9]) # metres
-        plt.savefig('figs/SaltneyArrivalLag_vs_LivHeight_shift_'+source+'.png')
+        #plt.xlim([-125, -40])   # minutes
+        #plt.ylim([8.2, 10.9]) # metres
+        plt.savefig('figs/SaltneyArrivalLag_vs_LivHeight_shift_'+HLW+'_'+source+'.png')
         plt.close('all')
 
 
@@ -624,7 +652,7 @@ class Controller():
     #%% DIAGNOSTICS
     ############################################################################
 
-    def predict_bore(self, source:str='harmonic'):
+    def predict_bore(self, source:str='harmonic', HLW:str="HW"):
         """
         Glad_HW - float
         Glad_time - datetime64
@@ -658,14 +686,14 @@ class Controller():
 
         #plt.plot( HT.time, HT,'.' );plt.show()
         #lag_pred = self.linfit(HT)
-        lag_pred = self.bore.attrs['weights_'+source](HT)
+        lag_pred = self.bore.attrs['weights_'+HLW+'_'+source](HT)
         #lag_pred = lag_pred[np.isfinite(lag_pred)] # drop nans
 
         Saltney_time_pred = [HT.time[i].values
                              + np.timedelta64(int(round(lag_pred[i])), 'm')
                              for i in range(len(lag_pred))]
         # Iterate over high tide events to print useful information
-        print(f"Predictions based on fit to {source} data")
+        print(f"Predictions based on fit to {source} {HLW} data")
         for i in range(len(lag_pred)):
             #print( "Gladstone HT", np.datetime_as_string(HT.time[i], unit='m',timezone=pytz.timezone('UTC')),"(GMT). Height: {:.2f} m".format(  HT.values[i]))
             #print(" Saltney arrival", np.datetime_as_string(Saltney_time_pred[i], unit='m', timezone=pytz.timezone('Europe/London')),"(GMT/BST). Lag: {:.0f} mins".format( lag_pred[i] ))
@@ -681,11 +709,11 @@ class Controller():
         #plt.scatter( Saltney_time_pred, HT ,'.');plt.show()
         # problem with time stamp
 
-    def stats(self, source:str='harmonic'):
+    def stats(self, source:str='harmonic', HLW:str="HW"):
         """
         root mean square error
         """
-        rmse = np.sqrt(np.nanmean((self.bore['Saltney_lag_'+source].values - self.bore['linfit_lag_'+source].values)**2))
+        rmse = np.sqrt(np.nanmean((self.bore['Saltney_lag_'+HLW+'_'+source].values - self.bore['linfit_lag_'+HLW+'_'+source].values)**2))
         print(f"{source}: Root mean square error = {rmse}")
         return rmse
     ############################################################################
