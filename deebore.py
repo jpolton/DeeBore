@@ -237,6 +237,10 @@ class Controller():
                 print("shoothill dev")
                 self.shoothill()
 
+            elif command == "d3":
+                print('Explore combinations of HLW times and heights for best fit')
+                self.fits_to_data()
+
             elif command == "6":
                 self.predict_bore()
 
@@ -824,6 +828,41 @@ class Controller():
         plt.close('all')
 
 
+    def fits_to_data(self, source:str="bodc"):
+        """
+        Explore different combinations of HW and LW times and heights to
+        find the best fit to the data
+        """
+
+        _,rmse = self.linearfit(
+            self.bore['glad_height_HW_'+source],
+            self.bore['Saltney_lag_HW_'+source]
+            )
+        print(f"{source}| height(HW), time(HW): {rmse}")
+        #Out[45]: (poly1d([-12.26700862,  45.96440818]), ' 6.6 mins')
+
+        _,rmse = self.linearfit(
+            self.bore['glad_height_HW_'+source]-self.bore['glad_height_LW_'+source],
+            self.bore['Saltney_lag_HW_'+source]
+            )
+        print(f"{source}| height(HW-LW), time(HW): {rmse}")
+        #Out[44]: (poly1d([ -6.56953332, -15.68423086]), ' 6.9 mins')
+
+        _,rmse = self.linearfit(
+            self.bore['glad_height_HW_'+source]-self.bore['glad_height_LW_'+source],
+            self.bore['Saltney_lag_LW_'+source]
+            )
+        print(f"{source}| height(HW-LW), time(LW): {rmse}")
+        #Out[46]: (poly1d([-15.34697352, 379.18885683]), ' 9.0 mins')
+
+        _,rmse = self.linearfit(
+            self.bore['glad_height_LW_'+source],
+            self.bore['Saltney_lag_LW_'+source]
+            )
+        print(f"{source}| height(LW), time(LW): {rmse}")
+        #Out[47]: (poly1d([ 23.95624428, 222.70884297]), '12.1 mins')
+
+
 ################################################################################
 ################################################################################
 #%% Main Routine
@@ -841,6 +880,8 @@ if __name__ == "__main__":
     INSTRUCTIONS = """
 
     Choose Action:
+    all     load and process all data
+
     0       load bore observations
     h       load and process harmonic data
     b       load and process measured (bodc) data
@@ -861,6 +902,7 @@ if __name__ == "__main__":
     DEV:
     d1     load and plot HLW data
     d2     shoothill dev
+    d3     different fits to the data
     """
 
 
