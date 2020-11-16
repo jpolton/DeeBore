@@ -193,7 +193,7 @@ class Controller():
             elif command == "a":
                 print('load and process measured (API) data')
                 if not self.load_bore_flag: self.load_csv()
-                self.load_and_process(source="API")
+                self.load_and_process(source="api")
 
             elif command == "2":
                 print('show bore dataset')
@@ -204,11 +204,11 @@ class Controller():
                 plt.close('all');self.plot_lag_vs_height('bodc')
                 plt.close('all');self.plot_lag_vs_height('all')
                 plt.close('all');self.plot_lag_vs_height('harmonic')
-                plt.close('all');self.plot_lag_vs_height('API')
+                plt.close('all');self.plot_lag_vs_height('api')
 
             elif command == "4":
                 print('plot difference between predicted and measured (lag vs tidal height)')
-                plt.close('all');self.plot_surge_effect('API')
+                plt.close('all');self.plot_surge_effect('api')
                 plt.close('all');self.plot_surge_effect('bodc')
 
             elif command == "d1":
@@ -299,7 +299,7 @@ class Controller():
         inputs:
         source: 'harmonic' [default] - load HT from harmonic prediction
                 'bodc' - measured and processed data
-                'API' - load recent, un processed data from shoothill API
+                'api' - load recent, un processed data from shoothill API
         """
         logging.info("Get Gladstone HLW data from external file")
         HT_h = []
@@ -349,7 +349,7 @@ class Controller():
             # This has produced an xr.dataset with sea_level_highs and sea_level_lows
             # with time variables time_highs and time_lows.
 
-        elif source == "API": # load full tidal signal from shoothill, extract HLW
+        elif source == "api": # load full tidal signal from shoothill, extract HLW
             tg = TIDEGAUGE()
             date_start=np.datetime64('2005-04-01')
             date_end=np.datetime64('now','D')
@@ -519,9 +519,9 @@ class Controller():
             Yglad = self.bore['glad_height_bodc']
             Xsalt = self.bore['Saltney_lag_bodc']
             Xblue = self.bore['bluebridge_lag_bodc']
-            Yglad_api = self.bore['glad_height_API'].where( np.isnan(self.bore.glad_height_bodc))
-            Xsalt_api = self.bore['Saltney_lag_API'].where( np.isnan(self.bore.glad_height_bodc))
-            Xblue_api = self.bore['bluebridge_lag_API'].where( np.isnan(self.bore.glad_height_bodc))
+            Yglad_api = self.bore['glad_height_api'].where( np.isnan(self.bore.glad_height_bodc))
+            Xsalt_api = self.bore['Saltney_lag_api'].where( np.isnan(self.bore.glad_height_bodc))
+            Xblue_api = self.bore['bluebridge_lag_api'].where( np.isnan(self.bore.glad_height_bodc))
             Xfit = self.bore['linfit_lag_bodc']
             plt.plot( Xsalt,Yglad, 'r.', label='Saltney: rmse '+'{:4.1f}'.format(self.stats('bodc'))+'mins')
             plt.plot( Xblue,Yglad, 'b.', label='Bluebridge')
@@ -547,7 +547,7 @@ class Controller():
         if source =='harmonic': str='predicted'
         if source =='all': str='all measured'
         if source =='bodc': str='measured only QCd'
-        if source == 'API': str='measured w/o QC'
+        if source == 'api': str='measured w/o QC'
         plt.title(f"Bore arrival time at Saltney Ferry ({str} data)")
         plt.xlim([-125, -40])   # minutes
         plt.ylim([8.2, 10.9]) # metres
@@ -581,8 +581,8 @@ class Controller():
         from matplotlib.collections import LineCollection
         from matplotlib import colors as mcolors
         import matplotlib.dates as mdates
-        if source=='API':
-            I = self.bore.glad_time_API > np.datetime64('2020-09-01')
+        if source=='api':
+            I = self.bore.glad_time_api > np.datetime64('2020-09-01')
             nval = sum(I).values
         else:
             nval = min( len(self.bore.linfit_lag_harmonic), len(self.bore.linfit_lag_bodc) )
