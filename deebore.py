@@ -572,7 +572,7 @@ class Controller():
             plt.show()
 
 
-    def plot_surge_effect(self):
+    def plot_surge_effect(self, source:str='bodc'):
         """
         Compare harmonic predicted highs/lag with measured highs/lag
         Plot quiver between (lag,height) for harmonic and measured Liverpool highwater
@@ -581,22 +581,32 @@ class Controller():
         from matplotlib.collections import LineCollection
         from matplotlib import colors as mcolors
         import matplotlib.dates as mdates
-
-        nval = min( len(self.bore.linfit_lag_harmonic), len(self.bore.linfit_lag_bodc) )
+        if source=='API':
+            I = self.bore.glad_time_API > np.datetime64('2020-09-01')
+            nval = sum(I).values
+        else:
+            nval = min( len(self.bore.linfit_lag_harmonic), len(self.bore.linfit_lag_bodc) )
+            I = np.arange(nval)
         segs_h = np.zeros((nval,2,2)) # line, pointA/B, t/z
         #convert dates to numbers first
 
-        segs_h[:,0,0] = self.bore.glad_height_bodc[:nval]
-        segs_h[:,1,0] = self.bore.glad_height_harmonic[:nval]
-        segs_h[:,0,1] = self.bore.Saltney_lag_bodc[:nval]
-        segs_h[:,1,1] = self.bore.Saltney_lag_harmonic[:nval]
+
+        segs_h[:,0,0] = self.bore['glad_height_'+source][I]
+        segs_h[:,1,0] = self.bore.glad_height_harmonic[I]
+        segs_h[:,0,1] = self.bore['Saltney_lag_'+source][I]
+        segs_h[:,1,1] = self.bore.Saltney_lag_harmonic[I]
+
+        #segs_h[:,0,0] = self.bore.glad_height_bodc[:nval]
+        #segs_h[:,1,0] = self.bore.glad_height_harmonic[:nval]
+        #segs_h[:,0,1] = self.bore.Saltney_lag_bodc[:nval]
+        #segs_h[:,1,1] = self.bore.Saltney_lag_harmonic[:nval]
 
         fig, ax = plt.subplots()
         ax.set_ylim(np.nanmin(segs_h[:,:,1]), np.nanmax(segs_h[:,:,1]))
         line_segments_HW = LineCollection(segs_h, cmap='plasma', linewidth=1)
         ax.add_collection(line_segments_HW)
-        ax.scatter(segs_h[:,0,0],segs_h[:,0,1], c='red', s=2, label='measured') # harmonic predictions
-        ax.scatter(segs_h[:,1,0],segs_h[:,1,1], c='blue', s=2, label='harmonic') # harmonic predictions
+        ax.scatter(segs_h[:,1,0],segs_h[:,1,1], c='red', s=4, label='harmonic') # harmonic predictions
+        ax.scatter(segs_h[:,0,0],segs_h[:,0,1], c='green', s=4, label='measured') # harmonic predictions
         ax.set_title('Harmonic prediction with quiver to measured high waters')
 
         plt.xlabel('Liv (Gladstone Dock) HT (m)')
@@ -604,8 +614,9 @@ class Controller():
         plt.title('Bore arrival time at Saltney Ferry. Harmonic prediction cf measured')
         plt.legend()
         #plt.show()
-        ax.autoscale_view()
-        plt.savefig('figs/SaltneyArrivalLag_vs_LivHeight_shift.png')
+        plt.ylim([40, 125])   # minutes
+        plt.xlim([8.2, 10.9]) # metres
+        plt.savefig('figs/SaltneyArrivalLag_vs_LivHeight_shift_'+source+'.png')
         plt.close('all')
 
 
