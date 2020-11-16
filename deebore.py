@@ -190,6 +190,11 @@ class Controller():
                 if not self.load_bore_flag: self.load_csv()
                 self.load_and_process(source="bodc")
 
+            elif command == "a":
+                print('load and process measured (API) data')
+                if not self.load_bore_flag: self.load_csv()
+                self.load_and_process(source="API")
+
             elif command == "2":
                 print('show bore dataset')
                 self.show()
@@ -203,7 +208,8 @@ class Controller():
 
             elif command == "4":
                 print('plot difference between predicted and measured (lag vs tidal height)')
-                self.plot_surge_effect()
+                plt.close('all');self.plot_surge_effect('API')
+                plt.close('all');self.plot_surge_effect('bodc')
 
             elif command == "d1":
                 print('load and plot HLW data')
@@ -789,6 +795,7 @@ if __name__ == "__main__":
     0       load bore observations
     h       load and process harmonic data
     b       load and process measured (bodc) data
+    a       load and process measured (API) data
     2       show bore dataset
     3       plot bore data (lag vs tidal height)
     4       plot difference between predicted and measured (lag vs tidal height)
