@@ -260,7 +260,7 @@ class Controller():
         self.load_bore_flag = True
         df =  pd.read_csv('data/master-Table 1.csv')
         df.drop(columns=['date + logged time','Unnamed: 2','Unnamed: 11', \
-                                'Unnamed: 12','Unnamed: 13', 'Unnamed: 15'], \
+                                'Unnamed: 12','Unnamed: 13'], \
                                  inplace=True)
         df.rename(columns={"date + logged time (GMT)":"time"}, inplace=True)
         df['time'] = pd.to_datetime(df['time'], format="%d/%m/%Y %H:%M")
