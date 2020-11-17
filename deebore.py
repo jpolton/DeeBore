@@ -241,6 +241,10 @@ class Controller():
                 print('Explore combinations of HLW times and heights for best fit')
                 self.fits_to_data()
 
+            elif command == "d4":
+                print('Plot combinations of HLW times, heights and rivers')
+                self.combinations_lag_HLW_river()
+
             elif command == "6":
                 self.predict_bore()
 
@@ -621,9 +625,11 @@ class Controller():
 
             s = plt.scatter( self.bore['Saltney_lag_HW_bodc'], \
                 self.bore['glad_height_HW_bodc'], \
-                c=self.bore['Chester Weir height: CHESTER WEIR 15 MIN SG'], cmap='nipy_spectral' )
+                c=self.bore['Chester Weir height: CHESTER WEIR 15 MIN SG'],
+                cmap='magma',
+                vmin=4.4,
+                vmax=4.6 )
             cbar = plt.colorbar(s)
-            cbar.set_clim(4.4, 4.7)
             # Linear fit
             #x = self.df['Liv (Gladstone Dock) HT height (m)']
             #plt.plot( x, self.df['linfit_lag'], '-' )
@@ -686,6 +692,35 @@ class Controller():
         plt.savefig('figs/SaltneyArrivalLag_vs_LivHeight_shift_'+HLW+'_'+source+'.png')
         plt.close('all')
 
+
+    def plot_scatter_river(self, source:str='bodc', HLW:str="HW"):
+        """
+        """
+        plt.close('all')
+        fig = plt.figure()
+        if HLW=="dLW":
+            X = self.bore['Saltney_lag_LW_'+source]
+            Y = self.bore['glad_height_HW_'+source] - self.bore['glad_height_LW_'+source]
+        elif HLW=="dHW":
+            X = self.bore['Saltney_lag_HW_'+source]
+            Y = self.bore['glad_height_HW_'+source] - self.bore['glad_height_LW_'+source]
+        else:
+            X = self.bore['Saltney_lag_'+HLW+'_'+source]
+            Y = self.bore['glad_height_'+HLW+'_'+source]
+        s = plt.scatter( X, Y, \
+            c=self.bore['Chester Weir height: CHESTER WEIR 15 MIN SG'],
+            cmap='magma',
+            vmin=4.4,
+            vmax=4.6 )
+        cbar = plt.colorbar(s)
+        # Linear fit
+        #x = self.df['Liv (Gladstone Dock) HT height (m)']
+        #plt.plot( x, self.df['linfit_lag'], '-' )
+        cbar.set_label('River height at weir (m)')
+        plt.title('Bore arrival time at Saltney Ferry')
+        plt.xlabel('Arrival time (mins) relative to Liv '+HLW)
+        plt.ylabel('Liv (Gladstone Dock) '+HLW+' height (m)')
+        plt.savefig('figs/SaltneyArrivalLag_vs_LivHeight_river_'+HLW+'_'+source+'.png')
 
     ############################################################################
     #%% DIAGNOSTICS
@@ -887,6 +922,15 @@ class Controller():
         print(f"{source}| height(LW), time(LW): {rmse}")
         #Out[47]: (poly1d([ 23.95624428, 222.70884297]), '12.1 mins')
 
+    def combinations_lag_HLW_river(self):
+        """
+        Plot different combinations of Lag,HLW w/ rivers
+        """
+        self.plot_scatter_river(source='bodc', HLW="HW")
+        self.plot_scatter_river(source='bodc', HLW="LW")
+        self.plot_scatter_river(source='bodc', HLW="dLW")
+        self.plot_scatter_river(source='bodc', HLW="dHW")
+
 
 ################################################################################
 ################################################################################
@@ -927,7 +971,8 @@ if __name__ == "__main__":
     DEV:
     d1     load and plot HLW data
     d2     shoothill dev
-    d3     different fits to the data
+    d3     Explore different RMSE fits to the data
+    d4     Plot different combinations of Lag,HLW w/ rivers
     """
 
 
