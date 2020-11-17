@@ -138,7 +138,7 @@ class Controller():
 
 
     def pickle_bore(self):
-        """ save copy of self.bore into pickle file """
+        """ save copy of self.bore into pickle file, if requested """
         print('Pickle data.')
         os.system('rm -f '+DATABUCKET_FILE)
         if(1):
@@ -266,10 +266,16 @@ class Controller():
 
     def load_and_process(self, source:str="harmonic", HLW:str="HW"):
         """
-        Performs sequential steps to build the bore object.
+        Performs sequential steps to build into the bore object.
         1. Load Gladstone Dock data (though this might also be loaded from the obs logs)
         2. Calculate the time lag between Gladstone and Saltney events.
         3. Perform a linear fit to the time lag.
+
+        Inputs:
+        source: 'harmonic' [default] - load HLW from harmonic prediction
+                'bodc' - measured and processed data
+                'api' - load recent, un processed data from shoothill API
+        HLW: [LW/HW] - the data is either processed for High or Low water events
         """
         print('loading '+source+' tide data')
         self.get_Glad_data(source=source, HLW=HLW)
@@ -277,11 +283,12 @@ class Controller():
         print('Calculating the Gladstone to Saltney time difference')
         self.calc_Glad_Saltney_time_diff(source=source, HLW=HLW)
         print('Calculating linear fit')
-        #source = 'harmonic'
-        self.bore.attrs['weights_'+HLW+'_'+source], self.bore['rmse_'+HLW+'_'+source] = self.linearfit(
+        # Get linear fit with rmse
+        self.bore.attrs['weights_'+HLW+'_'+source], self.bore.attrs['rmse_'+HLW+'_'+source] = self.linearfit(
                 self.bore['glad_height_'+HLW+'_'+source],
                 self.bore['Saltney_lag_'+HLW+'_'+source]
                 )
+        # Apply linear model
         self.bore['linfit_lag_'+HLW+'_'+source] = self.bore.attrs['weights_'+HLW+'_'+source](self.bore['glad_height_'+HLW+'_'+source])
         #self.bore['rmse_'+HLW+'_'+source] = '{:4.1f} mins'.format(self.stats(source=source, HLW=HLW))
 
@@ -322,14 +329,12 @@ class Controller():
         It was considered a good idea to automate this step.
 
         inputs:
-        source: 'harmonic' [default] - load HT from harmonic prediction
+        source: 'harmonic' [default] - load HLW from harmonic prediction
                 'bodc' - measured and processed data
                 'api' - load recent, un processed data from shoothill API
+        HLW: [LW/HW] - the data is either processed for High or Low water events
         """
-        logging.info("Get Gladstone HLW data from external file")
-
-        # load tidetable
-
+        logging.info("Get Gladstone HLW data")
         if source == "harmonic": # Load tidetable data from files
             filnam1 = '/Users/jeff/GitHub/DeeBore/data/Liverpool_2005_2014_HLW.txt'
             filnam2 = '/Users/jeff/GitHub/DeeBore/data/Liverpool_2015_2020_HLW.txt'
@@ -340,9 +345,9 @@ class Controller():
             tg2.dataset = tg2.read_HLW_to_xarray(filnam2)#, self.bore.time.min().values, self.bore.time.max().values)
             tg.dataset = xr.concat([ tg1.dataset, tg2.dataset], dim='time')
 
-            tg_HLW = tg.find_high_and_low_water(var_str='sea_level')
-            # This has produced an xr.dataset with sea_level_highs and sea_level_lows
+            # This produces an xr.dataset with sea_level_highs and sea_level_lows
             # with time variables time_highs and time_lows.
+            tg_HLW = tg.find_high_and_low_water(var_str='sea_level')
 
         elif source == "bodc": # load full 15min data from BODC files, extract HLW
             dir = '/Users/jeff/GitHub/DeeBore/data/BODC_processed/'
@@ -369,18 +374,18 @@ class Controller():
             tg.dataset['start_date'] = tg.dataset.time.min().values
             tg.dataset['end_date'] = tg.dataset.time.max().values
 
-            tg_HLW = tg.find_high_and_low_water(var_str='sea_level')
-            # This has produced an xr.dataset with sea_level_highs and sea_level_lows
+            # This produces an xr.dataset with sea_level_highs and sea_level_lows
             # with time variables time_highs and time_lows.
+            tg_HLW = tg.find_high_and_low_water(var_str='sea_level')
 
         elif source == "api": # load full tidal signal from shoothill, extract HLW
             tg = TIDEGAUGE()
             date_start=np.datetime64('2005-04-01')
             date_end=np.datetime64('now','D')
             tg.dataset = tg.read_shoothill_to_xarray(date_start=date_start, date_end=date_end)
-            tg_HLW = tg.find_high_and_low_water(var_str='sea_level')
-            # This has produced an xr.dataset with sea_level_highs and sea_level_lows
+            # This produces an xr.dataset with sea_level_highs and sea_level_lows
             # with time variables time_highs and time_lows.
+            tg_HLW = tg.find_high_and_low_water(var_str='sea_level')
 
         else:
             logging.debug(f"Did not expect this eventuality...")
@@ -400,8 +405,8 @@ class Controller():
         else:
             print('This should not have happened...')
 
-        HT_h = []
-        HT_t = []
+        HT_h = [] # Extrema - height
+        HT_t = [] # Extrema - time
 
         for i in range(len(self.bore.time)):
             try:
@@ -480,8 +485,6 @@ class Controller():
         self.bore['glad_height_'+HLW+'_'+source] = xr.DataArray( np.array(HT_h), coords=coords, dims=['time'])
         self.bore['glad_time_'+HLW+'_'+source] = xr.DataArray( np.array(HT_t), coords=coords, dims=['time'])
 
-        #self.bore['glad_height'] = np.array(HT_h)
-        #self.bore['glad_time'] = np.array(HT_t)
         print('There is a supressed plot.scatter here')
         #self.bore.plot.scatter(x='glad_time', y='glad_height'); plt.show()
 
@@ -501,9 +504,15 @@ class Controller():
 
     def calc_Glad_Saltney_time_diff(self, source:str="harmonic", HLW:str="HW"):
         """
-        Compute lag (-ve) for arrival at Saltney relative to Glastone HT
-        Store lags as integer (minutes). Messing with np.datetime64 and
-        np.timedelta64 is problematic with polyfitting.
+        Compute lag (obs - tide) for arrival at Saltney relative to Glastone HT
+        Store lags as integer (minutes) since np.datetime64 and
+        np.timedelta64 objects are problematic with polyfitting.
+
+        inputs:
+        source: 'harmonic' [default] - load HLW from harmonic prediction
+                'bodc' - measured and processed data
+                'api' - load recent, un processed data from shoothill API
+        HLW: [LW/HW] - the data is either processed for High or Low water events
         """
         logging.info('calc_Glad_Saltney_time_diff')
         nt = len(self.bore.time)
@@ -520,7 +529,7 @@ class Controller():
 
     def linearfit(self, X, Y):
         """
-        Linear regression. Calculates linear fit weights.
+        Linear regression. Calculates linear fit weights and RMSE
 
         Is used after computing the lag between Gladstone and Saltney events,
             during load_and_process(), to find a fit between Liverpool heights
@@ -530,6 +539,8 @@ class Controller():
         E.g.
         X=range(10)
         np.poly1d(weights)( range(10) )
+
+        Also returns RMSE
         """
         idx = np.isfinite(X).values & np.isfinite(Y).values
         weights = np.polyfit( X[idx], Y[idx], 1)
@@ -554,9 +565,16 @@ class Controller():
 
     def plot_lag_vs_height(self, source:str="harmonic", HLW:str="HW"):
         """
-        Plot bore lag (as time difference before Gladstone HW) against
-        Gladstone high water (m).
+        Plot bore lag (obs time - Gladstone tide time) against
+        Gladstone extreme water water (m).
         Separate colours for Saltney, Bluebridge, Chester.
+
+        inputs:
+        source: 'harmonic' [default] - load HLW from harmonic prediction
+                'bodc' - measured and processed data
+                'api' - load recent, un processed data from shoothill API
+                'all' - Use bodc + api data
+        HLW: [LW/HW] - the data is either processed for High or Low water events
         """
         if source == 'all':
             Yglad = self.bore['glad_height_'+HLW+'_bodc']
@@ -601,24 +619,31 @@ class Controller():
         if(0):
             #plt.show()
 
-            s = plt.scatter( self.bore['glad_height'], \
-                self.bore['Saltney_lag']) #, \
-                #c=self.bore['Chester Weir height: CHESTER WEIR 15 MIN SG'] )
+            s = plt.scatter( self.bore['Saltney_lag_HW_bodc'], \
+                self.bore['glad_height_HW_bodc'], \
+                c=self.bore['Chester Weir height: CHESTER WEIR 15 MIN SG'], cmap='nipy_spectral' )
             cbar = plt.colorbar(s)
+            cbar.set_clim(4.4, 4.7)
             # Linear fit
             #x = self.df['Liv (Gladstone Dock) HT height (m)']
             #plt.plot( x, self.df['linfit_lag'], '-' )
             cbar.set_label('River height at weir (m)')
             plt.title('Bore arrival time at Saltney Ferry')
-            plt.ylabel('Arrival time (mins before Liv HT)')
-            plt.xlabel('Liv (Gladstone Dock) HT height (m)')
+            plt.xlabel('Arrival time (mins before Liv HT)')
+            plt.ylabel('Liv (Gladstone Dock) HT height (m)')
             plt.show()
 
 
     def plot_surge_effect(self, source:str='bodc', HLW:str="HW"):
         """
-        Compare harmonic predicted highs/lag with measured highs/lag
-        Plot quiver between (lag,height) for harmonic and measured Liverpool highwater
+        Compare harmonic predicted HLW+lag with measured HLW+lag
+        Plot quiver between harmonic and measured values.
+
+        inputs:
+        source:
+                'bodc' - measured and processed data
+                'api' - load recent, un processed data from shoothill API
+        HLW: [LW/HW] - the data is either processed for High or Low water events
         """
         # Example plot
         from matplotlib.collections import LineCollection
@@ -668,23 +693,23 @@ class Controller():
 
     def predict_bore(self, source:str='harmonic', HLW:str="HW"):
         """
-        Glad_HW - float
-        Glad_time - datetime64
-        Saltney_time - datetime64
-        Saltney_lag - int
+        Predict the bore timing at Saltney for a request input date (given in
+        days relative to now).
+        Implements a linear fit model to predicted tides.
+        Can select which linear fit model (weights) to use with by specifying
+         'source' and 'HLW'
 
-        Predict the bore timing at Saltney for a input date
-        Parameters
-        ----------
+        INPUTS: which define the weights used.
+        -------
+        source: 'harmonic' [default] - from harmonic prediction
+                'bodc' - from measured and processed data
+                'api' - from recent, un processed data from shoothill API
+        HLW: [LW/HW] - processed from either High or Low water events
+
+        Requested parameters
+        --------------------
         day : day
          DESCRIPTION.
-
-        Returns
-        -------
-        Glad_HW - float
-        Glad_time - datetime64
-        Saltney_time - datetime64
-        Saltney_lag - int
 
         """
         print('Predict bore event for date')
