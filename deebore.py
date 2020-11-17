@@ -289,11 +289,11 @@ class Controller():
         print('Calculating linear fit')
         # Get linear fit with rmse
         self.bore.attrs['weights_'+HLW+'_'+source], self.bore.attrs['rmse_'+HLW+'_'+source] = self.linearfit(
-                self.bore['glad_height_'+HLW+'_'+source],
+                self.bore['liv_height_'+HLW+'_'+source],
                 self.bore['Saltney_lag_'+HLW+'_'+source]
                 )
         # Apply linear model
-        self.bore['linfit_lag_'+HLW+'_'+source] = self.bore.attrs['weights_'+HLW+'_'+source](self.bore['glad_height_'+HLW+'_'+source])
+        self.bore['linfit_lag_'+HLW+'_'+source] = self.bore.attrs['weights_'+HLW+'_'+source](self.bore['liv_height_'+HLW+'_'+source])
         #self.bore['rmse_'+HLW+'_'+source] = '{:4.1f} mins'.format(self.stats(source=source, HLW=HLW))
 
     def load_csv(self):
@@ -509,24 +509,24 @@ class Controller():
 
         # Save a xarray objects
         coords = {'time': (('time'), self.bore.time.values)}
-        self.bore['glad_height_'+HLW+'_'+source] = xr.DataArray( np.array(HT_h), coords=coords, dims=['time'])
-        self.bore['glad_time_'+HLW+'_'+source] = xr.DataArray( np.array(HT_t), coords=coords, dims=['time'])
+        self.bore['liv_height_'+HLW+'_'+source] = xr.DataArray( np.array(HT_h), coords=coords, dims=['time'])
+        self.bore['liv_time_'+HLW+'_'+source] = xr.DataArray( np.array(HT_t), coords=coords, dims=['time'])
 
         print('There is a supressed plot.scatter here')
-        #self.bore.plot.scatter(x='glad_time', y='glad_height'); plt.show()
+        #self.bore.plot.scatter(x='liv_time', y='liv_height'); plt.show()
 
-        logging.debug(f"len(self.bore['glad_time_'{HLW}'_'{source}]): {len(self.bore['glad_time_'+HLW+'_'+source])}")
-        #logging.info(f'len(self.bore.glad_time)', len(self.bore.glad_time))
+        logging.debug(f"len(self.bore['liv_time_'{HLW}'_'{source}]): {len(self.bore['liv_time_'+HLW+'_'+source])}")
+        #logging.info(f'len(self.bore.liv_time)', len(self.bore.liv_time))
         logging.debug(f"type(HT_t): {type(HT_t)}")
         logging.debug(f"type(HT_h): {type(HT_h)}")
 
         logging.debug('log time, orig tide table, new tide table lookup')
         for i in range(len(self.bore.time)):
-            logging.debug( f"{self.bore.time[i].values}, {self.bore['Liv (Gladstone Dock) HT time (GMT)'][i].values}, {self.bore['glad_time_'+HLW+'_'+source][i].values}")
+            logging.debug( f"{self.bore.time[i].values}, {self.bore['Liv (Gladstone Dock) HT time (GMT)'][i].values}, {self.bore['liv_time_'+HLW+'_'+source][i].values}")
 
         #print('log time, orig tide table, new tide table lookup')
         #for i in range(len(self.bore.time)):
-        #    print( self.bore.time[i].values, self.bore['Liv (Gladstone Dock) HT time (GMT)'][i].values, self.bore['glad_time'][i].values)
+        #    print( self.bore.time[i].values, self.bore['Liv (Gladstone Dock) HT time (GMT)'][i].values, self.bore['liv_time'][i].values)
 
 
     def calc_Glad_Saltney_time_diff(self, source:str="harmonic", HLW:str="HW"):
@@ -543,7 +543,7 @@ class Controller():
         """
         logging.info('calc_Glad_Saltney_time_diff')
         nt = len(self.bore.time)
-        lag = (self.bore['time'].values - self.bore['glad_time_'+HLW+'_'+source].values).astype('timedelta64[m]')
+        lag = (self.bore['time'].values - self.bore['liv_time_'+HLW+'_'+source].values).astype('timedelta64[m]')
         Saltney_lag    = [ lag[i].astype('int') if self.bore.location.values[i] == 'bridge' else np.NaN for i in range(nt) ]
         bluebridge_lag = [ lag[i].astype('int') if self.bore.location.values[i] == 'blue bridge' else np.NaN for i in range(nt) ]
 
@@ -604,31 +604,31 @@ class Controller():
         HLW: [LW/HW] - the data is either processed for High or Low water events
         """
         if source == 'all':
-            Yglad = self.bore['glad_height_'+HLW+'_bodc']
+            Yliv = self.bore['liv_height_'+HLW+'_bodc']
             Xsalt = self.bore['Saltney_lag_'+HLW+'_bodc']
             Xblue = self.bore['bluebridge_lag_'+HLW+'_bodc']
-            Yglad_api = self.bore['glad_height_'+HLW+'_api'].where( np.isnan(self.bore['glad_height_'+HLW+'_bodc']))
-            Xsalt_api = self.bore['Saltney_lag_'+HLW+'_api'].where( np.isnan(self.bore['glad_height_'+HLW+'_bodc']))
-            Xblue_api = self.bore['bluebridge_lag_'+HLW+'_api'].where( np.isnan(self.bore['glad_height_'+HLW+'_bodc']))
+            Yliv_api = self.bore['liv_height_'+HLW+'_api'].where( np.isnan(self.bore['liv_height_'+HLW+'_bodc']))
+            Xsalt_api = self.bore['Saltney_lag_'+HLW+'_api'].where( np.isnan(self.bore['liv_height_'+HLW+'_bodc']))
+            Xblue_api = self.bore['bluebridge_lag_'+HLW+'_api'].where( np.isnan(self.bore['liv_height_'+HLW+'_bodc']))
             Xfit = self.bore['linfit_lag_'+HLW+'_bodc']
-            plt.plot( Xsalt,Yglad, 'r.', label='Saltney: rmse '+'{:4.1f}'.format(self.stats('bodc'))+'mins')
-            plt.plot( Xblue,Yglad, 'b.', label='Bluebridge')
-            plt.plot( Xfit,Yglad, 'k-')
-            plt.plot( Xsalt_api,Yglad_api, 'ro', label='Saltney 2020')
-            plt.plot( Xblue_api,Yglad_api, 'bo', label='Bluebridge 2020')
+            plt.plot( Xsalt,Yliv, 'r.', label='Saltney: rmse '+'{:4.1f}'.format(self.stats('bodc'))+'mins')
+            plt.plot( Xblue,Yliv, 'b.', label='Bluebridge')
+            plt.plot( Xfit,Yliv, 'k-')
+            plt.plot( Xsalt_api,Yliv_api, 'ro', label='Saltney 2020')
+            plt.plot( Xblue_api,Yliv_api, 'bo', label='Bluebridge 2020')
         else:
-            Yglad = self.bore['glad_height_'+HLW+'_'+source]
+            Yliv = self.bore['liv_height_'+HLW+'_'+source]
             Xsalt = self.bore['Saltney_lag_'+HLW+'_'+source]
             Xblue = self.bore['bluebridge_lag_'+HLW+'_'+source]
             Xfit = self.bore['linfit_lag_'+HLW+'_'+source]
-            plt.plot( Xsalt,Yglad, 'r.', label='Saltney: rmse '+'{:4.1f}'.format(self.stats(source,HLW))+'mins')
-            plt.plot( Xblue,Yglad, 'b.', label='Bluebridge')
-            plt.plot( Xfit,Yglad, 'k-')
-            Yglad = self.bore['glad_height_'+HLW+'_'+source].where( np.isnan(self.bore['glad_height_'+HLW+'_bodc']))
-            Xsalt = self.bore['Saltney_lag_'+HLW+'_'+source].where( np.isnan(self.bore['glad_height_'+HLW+'_bodc']))
-            Xblue = self.bore['bluebridge_lag_'+HLW+'_'+source].where( np.isnan(self.bore['glad_height_'+HLW+'_bodc']))
-            plt.plot( Xsalt,Yglad, 'ro', label='Saltney 2020')
-            plt.plot( Xblue,Yglad, 'bo', label='Bluebridge 2020')
+            plt.plot( Xsalt,Yliv, 'r.', label='Saltney: rmse '+'{:4.1f}'.format(self.stats(source,HLW))+'mins')
+            plt.plot( Xblue,Yliv, 'b.', label='Bluebridge')
+            plt.plot( Xfit,Yliv, 'k-')
+            Yliv = self.bore['liv_height_'+HLW+'_'+source].where( np.isnan(self.bore['liv_height_'+HLW+'_bodc']))
+            Xsalt = self.bore['Saltney_lag_'+HLW+'_'+source].where( np.isnan(self.bore['liv_height_'+HLW+'_bodc']))
+            Xblue = self.bore['bluebridge_lag_'+HLW+'_'+source].where( np.isnan(self.bore['liv_height_'+HLW+'_bodc']))
+            plt.plot( Xsalt,Yliv, 'ro', label='Saltney 2020')
+            plt.plot( Xblue,Yliv, 'bo', label='Bluebridge 2020')
 
         plt.ylabel('Liv (Gladstone Dock) '+HLW+' (m)')
         plt.xlabel('Arrival time (mins) relative to Liv '+HLW)
@@ -647,7 +647,7 @@ class Controller():
             #plt.show()
 
             s = plt.scatter( self.bore['Saltney_lag_HW_bodc'], \
-                self.bore['glad_height_HW_bodc'], \
+                self.bore['liv_height_HW_bodc'], \
                 c=self.bore['Chester Weir height: CHESTER WEIR 15 MIN SG'],
                 cmap='magma',
                 vmin=4.4,
@@ -679,7 +679,7 @@ class Controller():
         from matplotlib import colors as mcolors
         import matplotlib.dates as mdates
         if source=='api':
-            I = self.bore['glad_time_'+HLW+'_api'] > np.datetime64('2020-09-01')
+            I = self.bore['liv_time_'+HLW+'_api'] > np.datetime64('2020-09-01')
             nval = sum(I).values
         else:
             nval = min( len(self.bore['linfit_lag_'+HLW+'_harmonic']), len(self.bore['linfit_lag_'+HLW+'_bodc']) )
@@ -688,13 +688,13 @@ class Controller():
         #convert dates to numbers first
 
 
-        segs_h[:,0,1] = self.bore['glad_height_'+HLW+'_'+source][I]
-        segs_h[:,1,1] = self.bore['glad_height_'+HLW+'_harmonic'][I]
+        segs_h[:,0,1] = self.bore['liv_height_'+HLW+'_'+source][I]
+        segs_h[:,1,1] = self.bore['liv_height_'+HLW+'_harmonic'][I]
         segs_h[:,0,0] = self.bore['Saltney_lag_'+HLW+'_'+source][I]
         segs_h[:,1,0] = self.bore['Saltney_lag_'+HLW+'_harmonic'][I]
 
-        #segs_h[:,0,0] = self.bore.glad_height_bodc[:nval]
-        #segs_h[:,1,0] = self.bore.glad_height_harmonic[:nval]
+        #segs_h[:,0,0] = self.bore.liv_height_bodc[:nval]
+        #segs_h[:,1,0] = self.bore.liv_height_harmonic[:nval]
         #segs_h[:,0,1] = self.bore.Saltney_lag_bodc[:nval]
         #segs_h[:,1,1] = self.bore.Saltney_lag_harmonic[:nval]
 
@@ -723,13 +723,13 @@ class Controller():
         fig = plt.figure()
         if HLW=="dLW":
             X = self.bore['Saltney_lag_LW_'+source]
-            Y = self.bore['glad_height_HW_'+source] - self.bore['glad_height_LW_'+source]
+            Y = self.bore['liv_height_HW_'+source] - self.bore['liv_height_LW_'+source]
         elif HLW=="dHW":
             X = self.bore['Saltney_lag_HW_'+source]
-            Y = self.bore['glad_height_HW_'+source] - self.bore['glad_height_LW_'+source]
+            Y = self.bore['liv_height_HW_'+source] - self.bore['liv_height_LW_'+source]
         else:
             X = self.bore['Saltney_lag_'+HLW+'_'+source]
-            Y = self.bore['glad_height_'+HLW+'_'+source]
+            Y = self.bore['liv_height_'+HLW+'_'+source]
         s = plt.scatter( X, Y, \
             c=self.bore['Chester Weir height: CHESTER WEIR 15 MIN SG'],
             cmap='magma',
@@ -918,28 +918,28 @@ class Controller():
         """
 
         _,rmse = self.linearfit(
-            self.bore['glad_height_HW_'+source],
+            self.bore['liv_height_HW_'+source],
             self.bore['Saltney_lag_HW_'+source]
             )
         print(f"{source}| height(HW), time(HW): {rmse}")
         #Out[45]: (poly1d([-12.26700862,  45.96440818]), ' 6.6 mins')
 
         _,rmse = self.linearfit(
-            self.bore['glad_height_HW_'+source]-self.bore['glad_height_LW_'+source],
+            self.bore['liv_height_HW_'+source]-self.bore['liv_height_LW_'+source],
             self.bore['Saltney_lag_HW_'+source]
             )
         print(f"{source}| height(HW-LW), time(HW): {rmse}")
         #Out[44]: (poly1d([ -6.56953332, -15.68423086]), ' 6.9 mins')
 
         _,rmse = self.linearfit(
-            self.bore['glad_height_HW_'+source]-self.bore['glad_height_LW_'+source],
+            self.bore['liv_height_HW_'+source]-self.bore['liv_height_LW_'+source],
             self.bore['Saltney_lag_LW_'+source]
             )
         print(f"{source}| height(HW-LW), time(LW): {rmse}")
         #Out[46]: (poly1d([-15.34697352, 379.18885683]), ' 9.0 mins')
 
         _,rmse = self.linearfit(
-            self.bore['glad_height_LW_'+source],
+            self.bore['liv_height_LW_'+source],
             self.bore['Saltney_lag_LW_'+source]
             )
         print(f"{source}| height(LW), time(LW): {rmse}")
