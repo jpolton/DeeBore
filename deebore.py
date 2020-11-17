@@ -286,7 +286,11 @@ class Controller():
         #self.compare_Glad_HLW()
         print('Calculating the Gladstone to Saltney time difference')
         self.calc_Glad_Saltney_time_diff(source=source, HLW=HLW)
-        print('Calculating linear fit')
+        print('Process linear fit. Calc and save')
+        self.process_fit(source=source, HLW=HLW)
+
+
+    def process_fit(self, source:str="harmonic", HLW:str="HW"):
         # Get linear fit with rmse
         self.bore.attrs['weights_'+HLW+'_'+source], self.bore.attrs['rmse_'+HLW+'_'+source] = self.linearfit(
                 self.bore['liv_height_'+HLW+'_'+source],
@@ -734,8 +738,11 @@ class Controller():
             c=self.bore['Chester Weir height: CHESTER WEIR 15 MIN SG'],
             cmap='magma',
             vmin=4.4,
-            vmax=4.6 )
+            vmax=4.6,
+            label="RMSE:"+self.bore.attrs['rmse_'+HLW+'_'+source]
+            )
         cbar = plt.colorbar(s)
+        plt.legend()
         # Linear fit
         #x = self.df['Liv (Gladstone Dock) HT height (m)']
         #plt.plot( x, self.df['linfit_lag'], '-' )
@@ -916,34 +923,45 @@ class Controller():
         Explore different combinations of HW and LW times and heights to
         find the best fit to the data
         """
-
-        _,rmse = self.linearfit(
+        HLW="HW"
+        weights,rmse = self.linearfit(
             self.bore['liv_height_HW_'+source],
             self.bore['Saltney_lag_HW_'+source]
             )
         print(f"{source}| height(HW), time(HW): {rmse}")
         #Out[45]: (poly1d([-12.26700862,  45.96440818]), ' 6.6 mins')
+        self.bore.attrs['weights_'+HLW+'_'+source] = weights
+        self.bore.attrs['rmse_'+HLW+'_'+source] = rmse
 
-        _,rmse = self.linearfit(
+        HLW="dHW"
+        weights,rmse = self.linearfit(
             self.bore['liv_height_HW_'+source]-self.bore['liv_height_LW_'+source],
             self.bore['Saltney_lag_HW_'+source]
             )
         print(f"{source}| height(HW-LW), time(HW): {rmse}")
         #Out[44]: (poly1d([ -6.56953332, -15.68423086]), ' 6.9 mins')
+        self.bore.attrs['weights_'+HLW+'_'+source] = weights
+        self.bore.attrs['rmse_'+HLW+'_'+source] = rmse
 
-        _,rmse = self.linearfit(
+        HLW="dLW"
+        weights,rmse = self.linearfit(
             self.bore['liv_height_HW_'+source]-self.bore['liv_height_LW_'+source],
             self.bore['Saltney_lag_LW_'+source]
             )
         print(f"{source}| height(HW-LW), time(LW): {rmse}")
         #Out[46]: (poly1d([-15.34697352, 379.18885683]), ' 9.0 mins')
+        self.bore.attrs['weights_'+HLW+'_'+source] = weights
+        self.bore.attrs['rmse_'+HLW+'_'+source] = rmse
 
-        _,rmse = self.linearfit(
+        HLW="LW"
+        weights,rmse = self.linearfit(
             self.bore['liv_height_LW_'+source],
             self.bore['Saltney_lag_LW_'+source]
             )
         print(f"{source}| height(LW), time(LW): {rmse}")
         #Out[47]: (poly1d([ 23.95624428, 222.70884297]), '12.1 mins')
+        self.bore.attrs['weights_'+HLW+'_'+source] = weights
+        self.bore.attrs['rmse_'+HLW+'_'+source] = rmse
 
     def combinations_lag_HLW_river(self):
         """
