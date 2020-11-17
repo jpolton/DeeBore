@@ -324,6 +324,29 @@ class Controller():
         self.bore = bore
         logging.info('Bore data loaded')
 
+    def get_CTR_data(self, source:str='api', HLW:str="HW"):
+        """
+        Get Chester weir data
+        """
+        if source != "api":
+            print('Reset source="api"')
+            source='api'
+        logging.info("Get Chester weir data")
+        try:
+            rg = TIDEGAUGE()
+            date_start=np.datetime64('2020-11-01')
+            date_end=np.datetime64('now','D')
+            rg.dataset = rg.read_shoothill_to_xarray(stationId="7899",
+                date_start=date_start,
+                date_end=date_end)
+            # This produces an xr.dataset with sea_level_highs and sea_level_lows
+            # with time variables time_highs and time_lows.
+            rg_HLW = rg.find_high_and_low_water(var_str='sea_level')
+            self.rg = rg
+            self.rg_HLW = rg_HLW
+        except:
+            pass
+
 
     def get_Glad_data(self, source:str='harmonic', HLW:str="HW"):
         """
