@@ -192,6 +192,8 @@ class Controller():
                 print('load and process measured (API) data')
                 self.load_and_process(source="api", HLW="HW")
                 self.load_and_process(source="api", HLW="LW")
+                print('load and process CTR data. Obs + API')
+                self.get_CTR_data(HLW="LW")
 
 
             elif command == "0":
@@ -328,28 +330,27 @@ class Controller():
         self.bore = bore
         logging.info('Bore data loaded')
 
-    def get_CTR_data(self, source:str='api', HLW:str="HW"):
+    def get_CTR_data(self, HLW:str="LW"):
         """
-        Get Chester weir data
+        Get Chester weir data. Consolidate CTR data.
+        Data from the table takes precident. Gaps are filled by the API.
         """
-        if source != "api":
-            print('Reset source="api"')
-            source='api'
-        logging.info("Get Chester weir data")
-        try:
-            rg = TIDEGAUGE()
-            date_start=np.datetime64('2020-11-01')
-            date_end=np.datetime64('now','D')
-            rg.dataset = rg.read_shoothill_to_xarray(stationId="7899",
-                date_start=date_start,
-                date_end=date_end)
-            # This produces an xr.dataset with sea_level_highs and sea_level_lows
-            # with time variables time_highs and time_lows.
-            rg_HLW = rg.find_high_and_low_water(var_str='sea_level')
-            self.rg = rg
-            self.rg_HLW = rg_HLW
-        except:
-            pass
+
+        if HLW != "LW":
+            print('Not expecting that possibility here')
+        else:
+            # Obtain CTR data for LW for the observations times.
+            self.get_Glad_data(source='ctr',HLW="LW")
+            alph = self.bore['Chester Weir height: CHESTER WEIR 15 MIN SG']
+            beta = self.bore['ctr_height_LW_ctr']
+            self.bore['ctr_height_LW'] = alph
+            self.bore['ctr_height_LW'].values = [alph[i].values if np.isfinite(alph[i].values) else beta[i].values for i in range(len(alph))]
+            # 2015-06-20T12:16:00 has a -ve value. Only keep +ve values
+            self.bore['ctr_height_LW'] = self.bore['ctr_height_LW'].where( self.bore['ctr_height_LW'].values>0)
+            #plt.plot( ctr_h_csv, 'b+' )
+            #plt.plot( self.bore['ctr_height_LW_ctr'], 'ro')
+            #plt.plot( self.bore['ctr_height_LW'], 'g.')
+            del self.bore['ctr_height_LW_ctr'], self.bore['ctr_time_LW_ctr']
 
 
     def get_Glad_data(self, source:str='harmonic', HLW:str="HW"):
@@ -365,6 +366,8 @@ class Controller():
                 'api' - load recent, un processed data from shoothill API
         HLW: [LW/HW] - the data is either processed for High or Low water events
         """
+        loc = "liv" # default location - Liverpool
+
         logging.info("Get Gladstone HLW data")
         if source == "harmonic": # Load tidetable data from files
             filnam1 = '/Users/jeff/GitHub/DeeBore/data/Liverpool_2005_2014_HLW.txt'
@@ -418,6 +421,16 @@ class Controller():
             # with time variables time_highs and time_lows.
             tg_HLW = tg.find_high_and_low_water(var_str='sea_level')
 
+        elif source == "ctr": # use api to load chester weir. Reset loc variable
+            loc = "ctr"
+            tg = TIDEGAUGE()
+            date_start=np.datetime64('2014-01-01')
+            date_end=np.datetime64('now','D')
+            tg.dataset = tg.read_shoothill_to_xarray(stationId="7899" ,date_start=date_start, date_end=date_end)
+
+            # This produces an xr.dataset with sea_level_highs and sea_level_lows
+            # with time variables time_highs and time_lows.
+            tg_HLW = tg.find_high_and_low_water(var_str='sea_level')
         else:
             logging.debug(f"Did not expect this eventuality...")
 
@@ -483,7 +496,8 @@ class Controller():
                     plt.xlim([HT_t[-1] - np.timedelta64(5,'h'),
                               HT_t[-1] + np.timedelta64(5,'h')])
                     plt.ylim([0,11])
-                    plt.text( HT_t[-1]-np.timedelta64(6,'h'),1,  HT_t[-1].astype('M8[ns]').astype('M8[ms]').item().strftime('%Y-%m-%d'))
+                    plt.text( HT_t[-1]-np.timedelta64(5,'h'),10, self.bore.location[i].values)
+                    plt.text( HT_t[-1]-np.timedelta64(5,'h'),1,  HT_t[-1].astype('M8[ns]').astype('M8[ms]').item().strftime('%Y-%m-%d'))
                     # Turn off tick labels
                     plt.gca().axes.get_xaxis().set_visible(False)
                     #plt.xaxis_date()
@@ -513,20 +527,22 @@ class Controller():
 
         # Save a xarray objects
         coords = {'time': (('time'), self.bore.time.values)}
-        self.bore['liv_height_'+HLW+'_'+source] = xr.DataArray( np.array(HT_h), coords=coords, dims=['time'])
-        self.bore['liv_time_'+HLW+'_'+source] = xr.DataArray( np.array(HT_t), coords=coords, dims=['time'])
+        self.bore[loc+'_height_'+HLW+'_'+source] = xr.DataArray( np.array(HT_h), coords=coords, dims=['time'])
+        self.bore[loc+'_time_'+HLW+'_'+source] = xr.DataArray( np.array(HT_t), coords=coords, dims=['time'])
 
         print('There is a supressed plot.scatter here')
         #self.bore.plot.scatter(x='liv_time', y='liv_height'); plt.show()
 
-        logging.debug(f"len(self.bore['liv_time_'{HLW}'_'{source}]): {len(self.bore['liv_time_'+HLW+'_'+source])}")
+        logging.debug(f"len(self.bore[loc+'_time_'{HLW}'_'{source}]): {len(self.bore[loc+'_time_'+HLW+'_'+source])}")
         #logging.info(f'len(self.bore.liv_time)', len(self.bore.liv_time))
         logging.debug(f"type(HT_t): {type(HT_t)}")
         logging.debug(f"type(HT_h): {type(HT_h)}")
 
-        logging.debug('log time, orig tide table, new tide table lookup')
-        for i in range(len(self.bore.time)):
-            logging.debug( f"{self.bore.time[i].values}, {self.bore['Liv (Gladstone Dock) HT time (GMT)'][i].values}, {self.bore['liv_time_'+HLW+'_'+source][i].values}")
+        if loc=='liv':
+            logging.debug('log time, orig tide table, new tide table lookup')
+            for i in range(len(self.bore.time)):
+                logging.debug( f"{self.bore.time[i].values}, {self.bore['Liv (Gladstone Dock) HT time (GMT)'][i].values}, {self.bore['liv_time_'+HLW+'_'+source][i].values}")
+
 
         #print('log time, orig tide table, new tide table lookup')
         #for i in range(len(self.bore.time)):
@@ -735,7 +751,7 @@ class Controller():
             X = self.bore['Saltney_lag_'+HLW+'_'+source]
             Y = self.bore['liv_height_'+HLW+'_'+source]
         s = plt.scatter( X, Y, \
-            c=self.bore['Chester Weir height: CHESTER WEIR 15 MIN SG'],
+            c=self.bore['ctr_height_LW'],
             cmap='magma',
             vmin=4.4,
             vmax=4.6,
