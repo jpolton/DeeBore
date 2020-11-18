@@ -2,6 +2,7 @@
 *log
 figs/
 data/*
+!data/master-Table\ 1.csv  #Except for master-Table 1.csv
 
 *pkl
 __pycache__/
