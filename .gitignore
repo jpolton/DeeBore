@@ -4,6 +4,8 @@ figs/
 data/*
 !data/master-Table\ 1.csv  #Except master-Table 1.csv
 
+# Shoothil API keys
+config_keys.py
+
 *pkl
 __pycache__/
-config_keys.py # Shoothill API keys
