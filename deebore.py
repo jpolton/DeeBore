@@ -403,7 +403,10 @@ class Controller():
                     tg.dataset = xr.concat([ tg.dataset, tg0.dataset], dim='time')
             # Use QC to drop null values
             #tg.dataset['sea_level'] = tg.dataset.sea_level.where( np.logical_or(tg.dataset.qc_flags=='', tg.dataset.qc_flags=='T'), drop=True)
-            tg.dataset['sea_level'] = tg.dataset.sea_level.where( tg.dataset.qc_flags!='N', drop=True)
+            tg.dataset['sea_level_orig'] = tg.dataset.sea_level.where( tg.dataset.qc_flags!='N', drop=True)
+            print('Rewrite sea_level is the derivative wrt time')
+            tg.dataset['sea_level'] = tg.dataset['sea_level_orig'].diff('time')
+
             # Fix some attributes (others might not be correct for all data)
             tg.dataset['start_date'] = tg.dataset.time.min().values
             tg.dataset['end_date'] = tg.dataset.time.max().values
@@ -1038,3 +1041,7 @@ if __name__ == "__main__":
 
 
     c = Controller()
+    
+    # Experiment with dH/dt as time series
+    c.load_and_process(source="bodc")
+    c.plot_scatter_river(source='bodc', HLW="HW")
