@@ -170,11 +170,11 @@ class Controller():
             if command == "q":
                 print("run_interface: quit")
                 logging.info("quit") # Function call.
-                ans = input('Save as pickle file?[Y/n]')
-                if ans == "n":
+                ans = input('Save as pickle file?[y/N]')
+                if ans == "y":
+                    self.pickle_bore()
                     break
                 else:
-                    self.pickle_bore()
                     break
 
             elif command == "i":
@@ -405,6 +405,7 @@ class Controller():
             #tg.dataset['sea_level'] = tg.dataset.sea_level.where( np.logical_or(tg.dataset.qc_flags=='', tg.dataset.qc_flags=='T'), drop=True)
             tg.dataset['sea_level_orig'] = tg.dataset.sea_level.where( tg.dataset.qc_flags!='N', drop=True)
             print('Rewrite sea_level is the derivative wrt time')
+            tg.dataset.resample(time="45min").mean().resample(time="15min").interpolate("linear")
             tg.dataset['sea_level'] = tg.dataset['sea_level_orig'].diff('time')
 
             # Fix some attributes (others might not be correct for all data)
@@ -1041,7 +1042,28 @@ if __name__ == "__main__":
 
 
     c = Controller()
-    
+
     # Experiment with dH/dt as time series
-    c.load_and_process(source="bodc")
+    c.load_and_process(source="bodc
+    c.get_CTR_data(HLW="LW")
     c.plot_scatter_river(source='bodc', HLW="HW")
+
+    # Plot harmonic height against lag since height inflection. Colour by river height
+    source='bodc'; HLW='HW'
+    X = c.bore['Saltney_lag_HW_bodc']
+    Y = c.bore['Liv (Gladstone Dock) HT height (m)']
+    plt.close('all')
+    fig = plt.figure()
+    s = plt.scatter( X, Y, \
+        c=c.bore['ctr_height_LW'],
+        cmap='magma',
+        vmin=4.4,
+        vmax=4.6,
+        )
+    cbar = plt.colorbar(s)
+    plt.legend()
+    cbar.set_label('River height at weir (m)')
+    plt.title('Bore arrival time at Saltney Ferry')
+    plt.xlabel('Arrival time (mins) relative to Liv '+HLW)
+    plt.ylabel('Liv (Gladstone Dock) '+HLW+' height (m)')
+    plt.savefig('figs/SaltneyArrivalLag_vs_LivHeight_river_'+HLW+'_'+source+'.png')
