@@ -232,6 +232,114 @@ class GAUGE(TIDEGAUGE):
         return dataset
 
 
+############ anyTide harmonic reconstruction method ###########################
+    @classmethod
+    def anyTide_to_xarray(cls,
+                                ndays: int=5,
+                                date_start: np.datetime64=None,
+                                date_end: np.datetime64=None,
+                                loc="Glad",
+                                plot_flag=False):
+        """
+        Construct harmonic timeseries using anyTide code. 
+        Either loads last ndays, or from date_start:date_end
+
+        INPUTS:
+            ndays : int
+            date_start : datetime. UTC format string "yyyy-MM-ddThh:mm:ssZ" E.g 2020-01-05T08:20:01.5011423+00:00
+            date_end : datetime
+            loc : str (name of harmonics file). ONLY GLADSTONE AT PRESENT
+            plot_flag : bool
+        OUTPUT:
+            sea_level, time : xr.Dataset
+        """
+    
+        anytidedir = os.path.dirname('/Users/jeff/GitHub/anyTide/')
+        sys.path.insert(0, anytidedir)
+    
+        from NOCtidepred import get_port
+        from NOCtidepred import test_port
+    
+        #from NOCtidepred import UtcNow
+        from NOCtidepred import date2mjd
+        from NOCtidepred import phamp0fast
+        from NOCtidepred import set_names_phases
+    
+        if loc != "Glad":
+            print("Can only process Gladstone Dock at present. Proceeding...")
+            info("Can only process Gladstone Dock at present. Proceeding...")
+            
+        if date_start == None:
+            date_start = np.datetime64('now')
+        if date_end == None:
+            date_end = date_start + np.timedelta64(ndays,"D")
+            
+            
+        cls.ndays=ndays
+        cls.date_start=date_start
+        cls.date_end=date_end
+        cls.loc=loc # harmonics file
+    
+        #info("load gauge")
+    
+        # Settings
+        rad    = np.pi/180
+        deg    = 1.0 / rad
+    
+    
+    
+        # Set the dates
+        # Create a vector of predictions times. Assume 5 min increments
+        nvals = round((date_end - date_start)/np.timedelta64(5,"m"))
+        dates = [date_start + np.timedelta64(5*mm,"m") for mm in range(0, nvals)]
+        if type(dates[1]) != datetime.datetime: 
+            mjd = date2mjd( [dates[i].astype(datetime.datetime)for i in range(nvals)] )
+        else:
+            mjd = date2mjd( dates ) # convert to modified julian dates
+    
+    
+        ## Compute reconstuction on port data.
+        #####################################
+        ssh = test_port(mjd) # reconstuct ssh for the time vector
+        print('plot time series reconstruction of port data')
+    
+        ssh = np.ma.masked_where( ssh > 1E6, ssh) # get rid of nasties        
+    
+        # Plot time series
+        if plot_flag:
+            # Plot sea level time series
+            fig, ax = plt.subplots()
+            ax.plot(np.array(dates),[ssh[i] for i in range(len(dates))],'+-')
+            ax.set_ylabel('Height (m)')
+            ax.set_xlabel('Hours since '+dates[0].strftime("%Y-%m-%d"))
+            ax.set_title('Harmonic tide prediction')
+            
+            # Pain plotting time on the x-axis
+            myFmt = mdates.DateFormatter('%H')
+            ax.xaxis.set_major_formatter(myFmt)
+        
+            plt.show()
+        
+        
+    
+        #%% Process timeseries data
+        dataset = xr.Dataset()
+        time = []
+        sea_level = []
+        time = dates #np.array([np.datetime64(request['values'][i]['time']) for i in range(nvals)])
+        sea_level = ssh #np.array([request['values'][i]['value'] for i in range(nvals)])
+    
+        #%% Assign arrays to Dataset
+        dataset['sea_level'] = xr.DataArray(sea_level, dims=['time'])
+        dataset = dataset.assign_coords(time = ('time', time))
+        #dataset.attrs = header_dict
+        #debug(f"NOCpredict API request 1st time: {time[0]} and value: {sea_level[0]}")
+    
+        # Assign local dataset to object-scope dataset
+        return dataset
+
+        
+
 class Controller():
     """
     This is where the main things happen.
