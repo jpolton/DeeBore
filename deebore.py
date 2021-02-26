@@ -676,6 +676,15 @@ class Controller():
             # This produces an xr.dataset with sea_level_highs and sea_level_lows
             # with time variables time_highs and time_lows.
             tg_HLW = tg.find_high_and_low_water(var_str='sea_level')
+        
+        elif source == 'anyTide': # load full tidal signal using anyTide code, extract HLW
+            tg = GAUGE()
+            date_start=np.datetime64('now')
+            ndays = 5
+            tg.dataset = tg.anyTide_to_xarray(date_start=date_start, ndays=5)
+            # This produces an xr.dataset with sea_level_highs and sea_level_lows
+            # with time variables time_highs and time_lows.
+            tg_HLW = tg.find_high_and_low_water(var_str='sea_level')            
         else:
             logging.debug(f"Did not expect this eventuality...")
 
