@@ -1044,8 +1044,14 @@ class Controller():
         nd = input('Make predictions for N days from hence (int):?')
         day = np.datetime64('now', 'D') + np.timedelta64(int(nd), 'D')
         dayp1 = day + np.timedelta64(24, 'h')
-        tg = TIDEGAUGE()
-        tg.dataset = tg.read_HLW_to_xarray(filnam, day, dayp1)
+        
+        if np.datetime64('now', 'Y') < np.datetime64(2021,'Y'): # year 2020
+            tg = TIDEGAUGE()
+            tg.dataset = tg.read_HLW_to_xarray(filnam, day, dayp1)
+        else: # year 2021 (no tide table data)
+            tg = GAUGE()
+            tg.dataset = tg.get_Glad_data(source='anyTide',date_start=day, date_end=dayp1)
+        
         HT = tg.dataset['sea_level'].where(tg.dataset['sea_level']\
                                     .values > 7).dropna('time') #, drop=True)
 
