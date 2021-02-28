@@ -617,12 +617,15 @@ class Controller():
         if source == "harmonic": # Load tidetable data from files
             filnam1 = '/Users/jeff/GitHub/DeeBore/data/Liverpool_2005_2014_HLW.txt'
             filnam2 = '/Users/jeff/GitHub/DeeBore/data/Liverpool_2015_2020_HLW.txt'
+            filnam3 = '/Users/jeff/GitHub/DeeBore/data/Liverpool_2021_2021_HLW.txt'
             tg  = TIDEGAUGE()
             tg1 = TIDEGAUGE()
             tg2 = TIDEGAUGE()
+            tg3 = TIDEGAUGE()
             tg1.dataset = tg1.read_HLW_to_xarray(filnam1)#, self.bore.time.min().values, self.bore.time.max().values)
             tg2.dataset = tg2.read_HLW_to_xarray(filnam2)#, self.bore.time.min().values, self.bore.time.max().values)
-            tg.dataset = xr.concat([ tg1.dataset, tg2.dataset], dim='time')
+            tg3.dataset = tg3.read_HLW_to_xarray(filnam3)#, self.bore.time.min().values, self.bore.time.max().values)
+            tg.dataset = xr.concat([ tg1.dataset, tg2.dataset, tg3.dataset], dim='time')
 
             # This produces an xr.dataset with sea_level_highs and sea_level_lows
             # with time variables time_highs and time_lows.
@@ -1048,21 +1051,31 @@ class Controller():
 
         """
         print('Predict bore event for date')
-        filnam = '/Users/jeff/GitHub/DeeBore/data/Liverpool_2015_2020_HLW.txt'
+        #filnam = '/Users/jeff/GitHub/DeeBore/data/Liverpool_2015_2020_HLW.txt'
+        filnam = '/Users/jeff/GitHub/DeeBore/data/Liverpool_2021_2021_HLW.txt'
 
         nd = input('Make predictions for N days from hence (int):?')
         day = np.datetime64('now', 'D') + np.timedelta64(int(nd), 'D')
         dayp1 = day + np.timedelta64(24, 'h')
         
-        if np.datetime64('now', 'Y') < np.datetime64(2021,'Y'): # year 2020
+        if(1): # np.datetime64('now', 'Y') < np.datetime64('2021'): # year 2020
             tg = TIDEGAUGE()
             tg.dataset = tg.read_HLW_to_xarray(filnam, day, dayp1)
-        else: # year 2021 (no tide table data)
-            tg = GAUGE()
-            tg.dataset = tg.get_Glad_data(source='anyTide',date_start=day, date_end=dayp1)
-        
-        HT = tg.dataset['sea_level'].where(tg.dataset['sea_level']\
+            
+            HT = tg.dataset['sea_level'].where(tg.dataset['sea_level']\
                                     .values > 7).dropna('time') #, drop=True)
+        else: # year 2021 (no tide table data)
+            source = 'harmonic_rec'
+            print('source=',source)
+            tg = GAUGE()
+            tg_tmp = GAUGE()
+            tg_tmp.dataset = tg_tmp.anyTide_to_xarray(date_start=day, date_end=dayp1)
+            tg = tg_tmp.find_high_and_low_water(var_str='sea_level')            
+            #tg.dataset = tg.get_Glad_data(source='harmonic_rec',date_start=day, date_end=dayp1)
+        
+            HT = tg.dataset['sea_level_highs'].where(tg.dataset['sea_level_highs']\
+                                    .values > 7).dropna('time_highs')\
+                                    .rename({'time_highs':'time'}) 
 
         #plt.plot( HT.time, HT,'.' );plt.show()
         #lag_pred = self.linfit(HT)
