@@ -119,6 +119,7 @@ ax1.set_ylabel('water level (m)', color='k')
 ax1b.set_ylabel('water level (m)', color='b')
 for tl in ax1b.get_yticklabels():
     tl.set_color('b')
+    
 ax1.legend(markerscale=6)
 ax1b.legend(markerscale=6)
 
@@ -143,6 +144,10 @@ ax2.xaxis.set_major_formatter(myFmt)
 #ax2.set_xlabel( date_start.astype(datetime.datetime).strftime('%d%b%y') + \
 #               '-' + date_end.astype(datetime.datetime).strftime('%d%b%y') )
 ax2.set_xlabel(date_end.astype(datetime.datetime).strftime('%d%b%y'))
+# Add empty data to ax1 to get "green flow data" in the legend
+ax2 = scatter_plot(ax2, [], [], 'g', 1, "Flow, above weir")
+
+# plot the legend
 ax2.legend(markerscale=6)
 
 plt.savefig('Chester_river_levels.png')
