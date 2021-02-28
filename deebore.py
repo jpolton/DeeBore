@@ -431,6 +431,9 @@ class Controller():
                 print('load and process harmonic data')
                 self.load_and_process(source="harmonic", HLW="HW")
                 self.load_and_process(source="harmonic", HLW="LW")
+                print('load and process harmonic reconstructed data')
+                self.load_and_process(source="harmonic_rec", HLW="HW")
+                self.load_and_process(source="harmonic_rec", HLW="LW")
                 print('load and process measured (bodc) data')
                 self.load_and_process(source="bodc", HLW="HW")
                 self.load_and_process(source="bodc", HLW="LW")
@@ -449,6 +452,11 @@ class Controller():
                 print('load and process harmonic data')
                 if not self.load_bore_flag: self.load_csv()
                 self.load_and_process(source="harmonic")
+            
+            elif command == "hrec":
+                print('load and process harmonic reconstructed data')
+                if not self.load_bore_flag: self.load_csv()
+                self.load_and_process(source="harmonic_rec")
 
             elif command == "b":
                 print('load and process measured (bodc) data')
@@ -469,6 +477,7 @@ class Controller():
                 plt.close('all');self.plot_lag_vs_height('bodc')
                 plt.close('all');self.plot_lag_vs_height('all')
                 plt.close('all');self.plot_lag_vs_height('harmonic')
+                plt.close('all');self.plot_lag_vs_height('harmonic_rec')
                 plt.close('all');self.plot_lag_vs_height('api')
 
             elif command == "4":
@@ -524,6 +533,7 @@ class Controller():
 
         Inputs:
         source: 'harmonic' [default] - load HLW from harmonic prediction
+                'harmonic_rec' - reconstruct time series from harmonic constants
                 'bodc' - measured and processed data
                 'api' - load recent, un processed data from shoothill API
         HLW: [LW/HW] - the data is either processed for High or Low water events
@@ -607,6 +617,7 @@ class Controller():
 
         inputs:
         source: 'harmonic' [default] - load HLW from harmonic prediction
+                'harmonic_rec' - reconstruct time series from harmonic constants
                 'bodc' - measured and processed data
                 'api' - load recent, un processed data from shoothill API
         HLW: [LW/HW] - the data is either processed for High or Low water events
@@ -655,7 +666,6 @@ class Controller():
             # Fix some attributes (others might not be correct for all data)
             tg.dataset['start_date'] = tg.dataset.time.min().values
             tg.dataset['end_date'] = tg.dataset.time.max().values
-
             # This produces an xr.dataset with sea_level_highs and sea_level_lows
             # with time variables time_highs and time_lows.
             tg_HLW = tg.find_high_and_low_water(var_str='sea_level')
@@ -680,11 +690,14 @@ class Controller():
             # with time variables time_highs and time_lows.
             tg_HLW = tg.find_high_and_low_water(var_str='sea_level')
         
-        elif source == 'anyTide': # load full tidal signal using anyTide code, extract HLW
+        elif source == 'harmonic_rec': # load full tidal signal using anyTide code, extract HLW
             tg = GAUGE()
-            date_start=np.datetime64('now')
-            ndays = 5
-            tg.dataset = tg.anyTide_to_xarray(date_start=date_start, ndays=5)
+            #date_start=np.datetime64('now')
+            #ndays = 5
+            #tg.dataset = tg.anyTide_to_xarray(date_start=date_start, ndays=5)
+            date_start=np.datetime64('2005-04-01')
+            date_end=np.datetime64('now','D')
+            tg.dataset = tg.anyTide_to_xarray(date_start=date_start, date_end=date_end)
             # This produces an xr.dataset with sea_level_highs and sea_level_lows
             # with time variables time_highs and time_lows.
             tg_HLW = tg.find_high_and_low_water(var_str='sea_level')            
@@ -875,6 +888,7 @@ class Controller():
 
         inputs:
         source: 'harmonic' [default] - load HLW from harmonic prediction
+                'harmonic_rec' - data from harmonic reconstruction
                 'bodc' - measured and processed data
                 'api' - load recent, un processed data from shoothill API
                 'all' - Use bodc + api data
@@ -906,10 +920,13 @@ class Controller():
             Xblue = self.bore['bluebridge_lag_'+HLW+'_'+source].where( np.isnan(self.bore['liv_height_'+HLW+'_bodc']))
             plt.plot( Xsalt,Yliv, 'ro', label='Saltney 2020')
             plt.plot( Xblue,Yliv, 'bo', label='Bluebridge 2020')
+            plt.plot( Xsalt[0],Yliv[0], 'go', label='Saltney recent')
+            #plt.plot( Xblue[0],Yliv[0], 'b+', label='Bluebridge recent')
 
         plt.ylabel('Liv (Gladstone Dock) '+HLW+' (m)')
         plt.xlabel('Arrival time (mins) relative to Liv '+HLW)
-        if source =='harmonic': str='predicted'
+        if source =='harmonic': str='tide table predicted'
+        if source =='harmonic_rec': str='harmonic reconstructed'
         if source =='all': str='all measured'
         if source =='bodc': str='measured only QCd'
         if source == 'api': str='measured w/o QC'
@@ -1092,11 +1109,14 @@ class Controller():
             #print(" Saltney arrival", np.datetime_as_string(Saltney_time_pred[i], unit='m', timezone=pytz.timezone('Europe/London')),"(GMT/BST). Lag: {:.0f} mins".format( lag_pred[i] ))
             print("Predictions for ", dayoweek(Saltney_time_pred[i]), Saltney_time_pred[i].astype('datetime64[s]').astype(datetime.datetime).strftime('%Y/%m/%d') )
             print("Saltney FB:", np.datetime_as_string(Saltney_time_pred[i], unit='m', timezone=pytz.timezone('Europe/London')) )
-            Glad_HLW = tg.get_tidetabletimes( Saltney_time_pred[i], method='nearest_2' )
-            # Extract the High Tide value
-            print('Liv HT:    ', np.datetime_as_string(Glad_HLW[ np.argmax(Glad_HLW.values) ].time.values, unit='m', timezone=pytz.timezone('Europe/London')), Glad_HLW[ np.argmax(Glad_HLW.values) ].values, 'm' )
-            # Extract the Low Tide value
-            print('Liv LT:    ', np.datetime_as_string(Glad_HLW[ np.argmin(Glad_HLW.values) ].time.values, unit='m', timezone=pytz.timezone('Europe/London')), Glad_HLW[ np.argmin(Glad_HLW.values) ].values, 'm' )
+            try:
+                Glad_HLW = tg.get_tidetabletimes( Saltney_time_pred[i], method='nearest_2' )
+                # Extract the High Tide value
+                print('Liv HT:    ', np.datetime_as_string(Glad_HLW[ np.argmax(Glad_HLW.values) ].time.values, unit='m', timezone=pytz.timezone('Europe/London')), Glad_HLW[ np.argmax(Glad_HLW.values) ].values, 'm' )
+                # Extract the Low Tide value
+                print('Liv LT:    ', np.datetime_as_string(Glad_HLW[ np.argmin(Glad_HLW.values) ].time.values, unit='m', timezone=pytz.timezone('Europe/London')), Glad_HLW[ np.argmin(Glad_HLW.values) ].values, 'm' )
+            except:
+                pass
             print("")
 
         #plt.scatter( Saltney_time_pred, HT ,'.');plt.show()
@@ -1283,6 +1303,7 @@ if __name__ == "__main__":
 
     0       load bore observations
     h       load and process harmonic data
+    hrec    load and process harmonic reconstructed data
     b       load and process measured (bodc) data
     a       load and process measured (API) data
     2       show bore dataset
