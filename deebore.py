@@ -94,7 +94,7 @@ class GAUGE(TIDEGAUGE):
         new_object.dataset = new_dataset
 
         return new_object
-    
+
 ############ shoothill gauge methods ##############################################
     @classmethod
     def read_shoothill_to_xarray(cls,
@@ -131,7 +131,7 @@ class GAUGE(TIDEGAUGE):
         try:
             import config_keys # Load secret keys
         except:
-            info('Need a Shoothil API Key. Use e.g. create_shoothill_key(SHOOTHILL_PublicApiKey) having obtained a public key')
+            logging.info('Need a Shoothil API Key. Use e.g. create_shoothill_key(SHOOTHILL_PublicApiKey) having obtained a public key')
             print('Expected a config_keys.py file of the form:')
             print('')
             print('# API keys excluded from github repo')
@@ -145,7 +145,7 @@ class GAUGE(TIDEGAUGE):
         cls.stationId=stationId # Shoothill id
         cls.dataType=dataType
 
-        info("load gauge")
+        logging.info("load gauge")
 
         if cls.stationId == "7708":
             id_ref = "Gladston Dock"
@@ -157,13 +157,13 @@ class GAUGE(TIDEGAUGE):
             id_ref = "Ironbridge (Dee)"
         else:
             id_ref = "No label"
-            debug(f"Not ready for that station id. {cls.stationId}")
+            logging.debug(f"Not ready for that station id. {cls.stationId}")
 
         headers = {'content-type': 'application/json', 'SessionHeaderId': cls.SessionHeaderId}
 
         #%% Construct station info API request
         # Obtain and process header information
-        info("load station info")
+        logging.info("load station info")
         htmlcall_stationId = 'http://riverlevelsapi.shoothill.com/TimeSeries/GetTimeSeriesStationById/?stationId='
         url  = htmlcall_stationId+str(stationId)
         try:
@@ -179,18 +179,18 @@ class GAUGE(TIDEGAUGE):
             #header_dict['latitude'] = header_dict['items']['lat']
             #header_dict['longitude'] = header_dict['items']['long']
         except:
-            info(f"possible missing some header info: site_name,latitude,longitude")
+            logging.info(f"possible missing some header info: site_name,latitude,longitude")
 
         #%% Construct data API request
         if (cls.date_start == None) & (cls.date_end == None):
-            info(f"GETting ndays= {cls.ndays} of data")
+            logging.info(f"GETting ndays= {cls.ndays} of data")
 
             htmlcall_stationId = 'http://riverlevelsapi.shoothill.com/TimeSeries/GetTimeSeriesRecentDatapoints/?stationId='
             url  = htmlcall_stationId+str(cls.stationId)+'&dataType='+str(int(cls.dataType))+'&numberDays='+str(int(cls.ndays))
         else:
             # Check date_start and date_end are timetime objects
             if (type(cls.date_start) is np.datetime64) & (type(cls.date_end) is np.datetime64):
-                info(f"GETting data from {cls.date_start} to {cls.date_end}")
+                logging.info(f"GETting data from {cls.date_start} to {cls.date_end}")
                 startTime = cls.date_start.item().strftime('%Y-%m-%dT%H:%M:%SZ')
                 endTime = cls.date_end.item().strftime('%Y-%m-%dT%H:%M:%SZ')
 
@@ -198,15 +198,15 @@ class GAUGE(TIDEGAUGE):
                 url   = htmlcall_stationId+str(cls.stationId)+'&dataType='+str(int(cls.dataType))+'&endTime='+endTime+'&startTime='+startTime
 
             else:
-                debug('Expecting date_start and date_end as datetime objects')
+                logging.debug('Expecting date_start and date_end as datetime objects')
 
         #%% Get the data
         request_raw = requests.get(url, headers=headers)
         request = json.loads(request_raw.content)
-        debug(f"Shoothil API request: {request_raw.text}")
+        logging.debug(f"Shoothil API request: {request_raw.text}")
         # Check the output
-        info(f"Gauge id is {request['gauge']['geoEntityId']}")
-        info(f"timestamp and value of the zero index is {[ str(request['values'][0]['time']), request['values'][0]['value'] ]}")
+        logging.info(f"Gauge id is {request['gauge']['geoEntityId']}")
+        logging.info(f"timestamp and value of the zero index is {[ str(request['values'][0]['time']), request['values'][0]['value'] ]}")
 
         #print(request)
         #%% Process header information
@@ -225,8 +225,8 @@ class GAUGE(TIDEGAUGE):
         dataset['sea_level'] = xr.DataArray(sea_level, dims=['time'])
         dataset = dataset.assign_coords(time = ('time', time))
         dataset.attrs = header_dict
-        debug(f"Shoothil API request headers: {header_dict}")
-        debug(f"Shoothil API request 1st time: {time[0]} and value: {sea_level[0]}")
+        logging.debug(f"Shoothil API request headers: {header_dict}")
+        logging.debug(f"Shoothil API request 1st time: {time[0]} and value: {sea_level[0]}")
 
         # Assign local dataset to object-scope dataset
         return dataset
@@ -241,7 +241,7 @@ class GAUGE(TIDEGAUGE):
                                 loc="Glad",
                                 plot_flag=False):
         """
-        Construct harmonic timeseries using anyTide code. 
+        Construct harmonic timeseries using anyTide code.
         Either loads last ndays, or from date_start:date_end
 
         INPUTS:
@@ -253,58 +253,58 @@ class GAUGE(TIDEGAUGE):
         OUTPUT:
             sea_level, time : xr.Dataset
         """
-    
+
         anytidedir = os.path.dirname('/Users/jeff/GitHub/anyTide/')
         sys.path.insert(0, anytidedir)
-    
+
         from NOCtidepred import get_port
         from NOCtidepred import test_port
-    
+
         #from NOCtidepred import UtcNow
         from NOCtidepred import date2mjd
         from NOCtidepred import phamp0fast
         from NOCtidepred import set_names_phases
-    
+
         if loc != "Glad":
             print("Can only process Gladstone Dock at present. Proceeding...")
             info("Can only process Gladstone Dock at present. Proceeding...")
-            
+
         if date_start == None:
             date_start = np.datetime64('now')
         if date_end == None:
             date_end = date_start + np.timedelta64(ndays,"D")
-            
-            
+
+
         cls.ndays=ndays
         cls.date_start=date_start
         cls.date_end=date_end
         cls.loc=loc # harmonics file
-    
+
         #info("load gauge")
-    
+
         # Settings
         rad    = np.pi/180
         deg    = 1.0 / rad
-    
-    
-    
+
+
+
         # Set the dates
         # Create a vector of predictions times. Assume 5 min increments
         nvals = round((date_end - date_start)/np.timedelta64(5,"m"))
         dates = [date_start + np.timedelta64(5*mm,"m") for mm in range(0, nvals)]
-        if type(dates[1]) != datetime.datetime: 
+        if type(dates[1]) != datetime.datetime:
             mjd = date2mjd( [dates[i].astype(datetime.datetime)for i in range(nvals)] )
         else:
             mjd = date2mjd( dates ) # convert to modified julian dates
-    
-    
+
+
         ## Compute reconstuction on port data.
         #####################################
         ssh = test_port(mjd) # reconstuct ssh for the time vector
         print('plot time series reconstruction of port data')
-    
-        ssh = np.ma.masked_where( ssh > 1E6, ssh) # get rid of nasties        
-    
+
+        ssh = np.ma.masked_where( ssh > 1E6, ssh) # get rid of nasties
+
         # Plot time series
         if plot_flag:
             # Plot sea level time series
@@ -313,32 +313,32 @@ class GAUGE(TIDEGAUGE):
             ax.set_ylabel('Height (m)')
             ax.set_xlabel('Hours since '+dates[0].strftime("%Y-%m-%d"))
             ax.set_title('Harmonic tide prediction')
-            
+
             # Pain plotting time on the x-axis
             myFmt = mdates.DateFormatter('%H')
             ax.xaxis.set_major_formatter(myFmt)
-        
+
             plt.show()
-        
-        
-    
+
+
+
         #%% Process timeseries data
         dataset = xr.Dataset()
         time = []
         sea_level = []
         time = dates #np.array([np.datetime64(request['values'][i]['time']) for i in range(nvals)])
         sea_level = ssh #np.array([request['values'][i]['value'] for i in range(nvals)])
-    
+
         #%% Assign arrays to Dataset
         dataset['sea_level'] = xr.DataArray(sea_level, dims=['time'])
         dataset = dataset.assign_coords(time = ('time', time))
         #dataset.attrs = header_dict
         #debug(f"NOCpredict API request 1st time: {time[0]} and value: {sea_level[0]}")
-    
+
         # Assign local dataset to object-scope dataset
         return dataset
 
-        
+
 
 class Controller():
     """
@@ -452,7 +452,7 @@ class Controller():
                 print('load and process harmonic data')
                 if not self.load_bore_flag: self.load_csv()
                 self.load_and_process(source="harmonic")
-            
+
             elif command == "hrec":
                 print('load and process harmonic reconstructed data')
                 if not self.load_bore_flag: self.load_csv()
@@ -596,7 +596,7 @@ class Controller():
         else:
             # Obtain CTR data for LW for the observations times.
             self.get_Glad_data(source='ctr',HLW="LW")
-            alph = self.bore['Chester Weir height: CHESTER WEIR 15 MIN SG']
+            alph = self.bore['Chester Weir height: CHESTER WEIR 15 MIN SG'] #*np.NaN
             beta = self.bore['ctr_height_LW_ctr']
             self.bore['ctr_height_LW'] = alph
             self.bore['ctr_height_LW'].values = [alph[i].values if np.isfinite(alph[i].values) else beta[i].values for i in range(len(alph))]
@@ -628,7 +628,7 @@ class Controller():
         if source == "harmonic": # Load tidetable data from files
             filnam1 = '/Users/jeff/GitHub/DeeBore/data/Liverpool_2005_2014_HLW.txt'
             filnam2 = '/Users/jeff/GitHub/DeeBore/data/Liverpool_2015_2020_HLW.txt'
-            filnam3 = '/Users/jeff/GitHub/DeeBore/data/Liverpool_2021_2021_HLW.txt'
+            filnam3 = '/Users/jeff/GitHub/DeeBore/data/Liverpool_2021_2022_HLW.txt'
             tg  = TIDEGAUGE()
             tg1 = TIDEGAUGE()
             tg2 = TIDEGAUGE()
@@ -651,7 +651,8 @@ class Controller():
             '2012LIV.txt', '2013LIV.txt',
             '2014LIV.txt', '2015LIV.txt',
             '2016LIV.txt', '2017LIV.txt',
-            '2018LIV.txt', '2019LIV.txt']
+            '2018LIV.txt', '2019LIV.txt',
+            '2020LIV.txt']
             tg  = TIDEGAUGE()
             for file in filelist:
                 tg0=TIDEGAUGE()
@@ -668,28 +669,38 @@ class Controller():
             tg.dataset['end_date'] = tg.dataset.time.max().values
             # This produces an xr.dataset with sea_level_highs and sea_level_lows
             # with time variables time_highs and time_lows.
-            tg_HLW = tg.find_high_and_low_water(var_str='sea_level')
+            tg_HLW = tg.find_high_and_low_water(var_str='sea_level',method='cubic') #'cubic')
 
         elif source == "api": # load full tidal signal from shoothill, extract HLW
             tg = TIDEGAUGE()
             date_start=np.datetime64('2005-04-01')
             date_end=np.datetime64('now','D')
+
+            # Load local file
+            #tg.dataset = xr.open_dataset('data/glad_shoothill.nc')
+            #tg.dataset.close() # close file associated with this object
+
             tg.dataset = tg.read_shoothill_to_xarray(date_start=date_start, date_end=date_end)
             # This produces an xr.dataset with sea_level_highs and sea_level_lows
             # with time variables time_highs and time_lows.
             tg_HLW = tg.find_high_and_low_water(var_str='sea_level')
+
+            #tg.dataset.to_netcdf('data/glad_shoothill.nc', mode="a", format="NETCDF4")
+
 
         elif source == "ctr": # use api to load chester weir. Reset loc variable
             loc = "ctr"
             tg = TIDEGAUGE()
             date_start=np.datetime64('2014-01-01')
             date_end=np.datetime64('now','D')
-            tg.dataset = tg.read_shoothill_to_xarray(stationId="7899" ,date_start=date_start, date_end=date_end)
+            #stationId = 7900 # below weir
+            stationId = 7899 # above weir
+            tg.dataset = tg.read_shoothill_to_xarray(stationId=stationId ,date_start=date_start, date_end=date_end)
 
             # This produces an xr.dataset with sea_level_highs and sea_level_lows
             # with time variables time_highs and time_lows.
             tg_HLW = tg.find_high_and_low_water(var_str='sea_level')
-        
+
         elif source == 'harmonic_rec': # load full tidal signal using anyTide code, extract HLW
             tg = GAUGE()
             #date_start=np.datetime64('now')
@@ -700,7 +711,7 @@ class Controller():
             tg.dataset = tg.anyTide_to_xarray(date_start=date_start, date_end=date_end)
             # This produces an xr.dataset with sea_level_highs and sea_level_lows
             # with time variables time_highs and time_lows.
-            tg_HLW = tg.find_high_and_low_water(var_str='sea_level')            
+            tg_HLW = tg.find_high_and_low_water(var_str='sea_level')
         else:
             logging.debug(f"Did not expect this eventuality...")
 
@@ -962,6 +973,9 @@ class Controller():
         Compare harmonic predicted HLW+lag with measured HLW+lag
         Plot quiver between harmonic and measured values.
 
+        NB should probably have linfit predicted lag instead of
+        Saltney_lag_*_harmonic for the predicted value.
+
         inputs:
         source:
                 'bodc' - measured and processed data
@@ -973,7 +987,11 @@ class Controller():
         from matplotlib import colors as mcolors
         import matplotlib.dates as mdates
         if source=='api':
-            I = self.bore['liv_time_'+HLW+'_api'] > np.datetime64('2020-09-01')
+            last_bodc_time = self.bore['liv_time_'+HLW+'_bodc']\
+                .where(np.isfinite(self.bore['liv_height_'+HLW+'_bodc'].values))\
+                .dropna('time')\
+                .max().values
+            I = self.bore['liv_time_'+HLW+'_api'] > last_bodc_time #np.datetime64('2020-09-01')
             nval = sum(I).values
         else:
             nval = min( len(self.bore['linfit_lag_'+HLW+'_harmonic']), len(self.bore['linfit_lag_'+HLW+'_bodc']) )
@@ -1068,17 +1086,17 @@ class Controller():
 
         """
         print('Predict bore event for date')
-        #filnam = '/Users/jeff/GitHub/DeeBore/data/Liverpool_2015_2020_HLW.txt'
-        filnam = '/Users/jeff/GitHub/DeeBore/data/Liverpool_2021_2021_HLW.txt'
+        filnam = '/Users/jeff/GitHub/DeeBore/data/Liverpool_2021_2022_HLW.txt'
 
         nd = input('Make predictions for N days from hence (int):?')
         day = np.datetime64('now', 'D') + np.timedelta64(int(nd), 'D')
         dayp1 = day + np.timedelta64(24, 'h')
-        
+
         if(1): # np.datetime64('now', 'Y') < np.datetime64('2021'): # year 2020
+            print("predict_bore(): should check is table data is available. If not use harm reconstructed data")
             tg = TIDEGAUGE()
             tg.dataset = tg.read_HLW_to_xarray(filnam, day, dayp1)
-            
+
             HT = tg.dataset['sea_level'].where(tg.dataset['sea_level']\
                                     .values > 7).dropna('time') #, drop=True)
         else: # year 2021 (no tide table data)
@@ -1087,12 +1105,12 @@ class Controller():
             tg = GAUGE()
             tg_tmp = GAUGE()
             tg_tmp.dataset = tg_tmp.anyTide_to_xarray(date_start=day, date_end=dayp1)
-            tg = tg_tmp.find_high_and_low_water(var_str='sea_level')            
+            tg = tg_tmp.find_high_and_low_water(var_str='sea_level')
             #tg.dataset = tg.get_Glad_data(source='harmonic_rec',date_start=day, date_end=dayp1)
-        
+
             HT = tg.dataset['sea_level_highs'].where(tg.dataset['sea_level_highs']\
                                     .values > 7).dropna('time_highs')\
-                                    .rename({'time_highs':'time'}) 
+                                    .rename({'time_highs':'time'})
 
         #plt.plot( HT.time, HT,'.' );plt.show()
         #lag_pred = self.linfit(HT)
