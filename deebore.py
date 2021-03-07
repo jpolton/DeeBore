@@ -565,7 +565,7 @@ class Controller():
         logging.info('Load bore data from csv file')
         self.load_bore_flag = True
         df =  pd.read_csv('data/master-Table 1.csv')
-        df.drop(columns=['date + logged time','Unnamed: 2','Unnamed: 11', \
+        df.drop(columns=['date + logged time','Unnamed: 11', \
                                 'Unnamed: 12','Unnamed: 13'], \
                                  inplace=True)
         df.rename(columns={"date + logged time (GMT)":"time"}, inplace=True)
@@ -905,6 +905,7 @@ class Controller():
                 'all' - Use bodc + api data
         HLW: [LW/HW] - the data is either processed for High or Low water events
         """
+        I = self.bore['Quality'] == "A"
         if source == 'all':
             Yliv = self.bore['liv_height_'+HLW+'_bodc']
             Xsalt = self.bore['Saltney_lag_'+HLW+'_bodc']
@@ -914,24 +915,29 @@ class Controller():
             Xblue_api = self.bore['bluebridge_lag_'+HLW+'_api'].where( np.isnan(self.bore['liv_height_'+HLW+'_bodc']))
             Xfit = self.bore['linfit_lag_'+HLW+'_bodc']
             plt.plot( Xsalt,Yliv, 'r.', label='Saltney: rmse '+'{:4.1f}'.format(self.stats('bodc'))+'mins')
+            plt.plot( Xsalt[I],Yliv[I], 'k+', label='1st hand')
             plt.plot( Xblue,Yliv, 'b.', label='Bluebridge')
             plt.plot( Xfit,Yliv, 'k-')
-            plt.plot( Xsalt_api,Yliv_api, 'ro', label='Saltney 2020')
-            plt.plot( Xblue_api,Yliv_api, 'bo', label='Bluebridge 2020')
+            plt.plot( Xsalt_api,Yliv_api, 'ro', label='Saltney API')
+            plt.plot( Xblue_api,Yliv_api, 'bo', label='Bluebridge API')
+            plt.plot( Xsalt_api[0],Yliv_api[0], 'go', label='Saltney latest')
+            plt.plot( Xsalt_api[I],Yliv_api[I], 'k+')
         else:
             Yliv = self.bore['liv_height_'+HLW+'_'+source]
             Xsalt = self.bore['Saltney_lag_'+HLW+'_'+source]
             Xblue = self.bore['bluebridge_lag_'+HLW+'_'+source]
             Xfit = self.bore['linfit_lag_'+HLW+'_'+source]
             plt.plot( Xsalt,Yliv, 'r.', label='Saltney: rmse '+'{:4.1f}'.format(self.stats(source,HLW))+'mins')
+            plt.plot( Xsalt[I],Yliv[I], 'k+', label='1st hand')
             plt.plot( Xblue,Yliv, 'b.', label='Bluebridge')
             plt.plot( Xfit,Yliv, 'k-')
             Yliv = self.bore['liv_height_'+HLW+'_'+source].where( np.isnan(self.bore['liv_height_'+HLW+'_bodc']))
             Xsalt = self.bore['Saltney_lag_'+HLW+'_'+source].where( np.isnan(self.bore['liv_height_'+HLW+'_bodc']))
             Xblue = self.bore['bluebridge_lag_'+HLW+'_'+source].where( np.isnan(self.bore['liv_height_'+HLW+'_bodc']))
-            plt.plot( Xsalt,Yliv, 'ro', label='Saltney 2020')
-            plt.plot( Xblue,Yliv, 'bo', label='Bluebridge 2020')
-            plt.plot( Xsalt[0],Yliv[0], 'go', label='Saltney recent')
+            plt.plot( Xsalt,Yliv, 'ro', label='Saltney 2021')
+            plt.plot( Xblue,Yliv, 'bo', label='Bluebridge 2021')
+            plt.plot( Xsalt[0],Yliv[0], 'go', label='Saltney latest')
+            plt.plot( Xsalt[I],Yliv[I], 'k+')
             #plt.plot( Xblue[0],Yliv[0], 'b+', label='Bluebridge recent')
 
         plt.ylabel('Liv (Gladstone Dock) '+HLW+' (m)')
@@ -1042,14 +1048,18 @@ class Controller():
         else:
             X = self.bore['Saltney_lag_'+HLW+'_'+source]
             Y = self.bore['liv_height_'+HLW+'_'+source]
-        s = plt.scatter( X, Y, \
+
+        S = [40 if self.bore['Quality'][i] == "A" else 5 for i in range(len(self.bore['Quality']))]
+
+        ss= plt.scatter( X, Y, \
             c=self.bore['ctr_height_LW'],
+            s=S,
             cmap='magma',
             vmin=4.4,
             vmax=4.6,
             label="RMSE:"+self.bore.attrs['rmse_'+HLW+'_'+source]
             )
-        cbar = plt.colorbar(s)
+        cbar = plt.colorbar(ss)
         plt.legend()
         # Linear fit
         #x = self.df['Liv (Gladstone Dock) HT height (m)']
