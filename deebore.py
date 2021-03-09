@@ -997,7 +997,7 @@ class Controller():
                 .where(np.isfinite(self.bore['liv_height_'+HLW+'_bodc'].values))\
                 .dropna('time')\
                 .max().values
-            I = self.bore['liv_time_'+HLW+'_api'] > last_bodc_time #np.datetime64('2020-09-01')
+            I = self.bore['liv_time_'+HLW+'_api'] > last_bodc_time + np.timedelta64(1,'D') #np.datetime64('2020-09-01')
             nval = sum(I).values
         else:
             nval = min( len(self.bore['linfit_lag_'+HLW+'_harmonic']), len(self.bore['linfit_lag_'+HLW+'_bodc']) )
