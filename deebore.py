@@ -1011,6 +1011,13 @@ class Controller():
         segs_h[:,0,0] = self.bore['Saltney_lag_'+HLW+'_'+source][I]
         segs_h[:,1,0] = self.bore['Saltney_lag_'+HLW+'_harmonic'][I]
 
+        if source=='api':
+            print('liv_height_'+HLW+'_'+source, segs_h[:,0,1])
+            print('liv_height_'+HLW+'_harmonic', segs_h[:,1,1])
+            print('Saltney_lag_'+HLW+'_'+source, segs_h[:,0,0])
+            print('Saltney_lag_'+HLW+'_harmonic', segs_h[:,1,0])
+
+        II = self.bore['Quality'][I] == "A"
         #segs_h[:,0,0] = self.bore.liv_height_bodc[:nval]
         #segs_h[:,1,0] = self.bore.liv_height_harmonic[:nval]
         #segs_h[:,0,1] = self.bore.Saltney_lag_bodc[:nval]
@@ -1022,6 +1029,7 @@ class Controller():
         ax.add_collection(line_segments_HW)
         ax.scatter(segs_h[:,1,0],segs_h[:,1,1], c='red', s=4, label='predicted') # harmonic predictions
         ax.scatter(segs_h[:,0,0],segs_h[:,0,1], c='green', s=4, label='measured') # harmonic predictions
+        ax.scatter(segs_h[II,0,0],segs_h[II,0,1], c='green', s=16) # 1st hand
         ax.set_title('Harmonic prediction with quiver to measured high waters')
 
         plt.ylabel('Liv (Gladstone Dock) '+HLW+' (m)')
@@ -1050,6 +1058,7 @@ class Controller():
             Y = self.bore['liv_height_'+HLW+'_'+source]
 
         S = [40 if self.bore['Quality'][i] == "A" else 5 for i in range(len(self.bore['Quality']))]
+        lab = [ self.bore.time[i].values.astype('datetime64[D]').astype(object).strftime('%d%b%y') if self.bore['Quality'][i] == "A" else "" for i in range(len(self.bore['Quality']))]
 
         ss= plt.scatter( X, Y, \
             c=self.bore['ctr_height_LW'],
@@ -1060,6 +1069,17 @@ class Controller():
             label="RMSE:"+self.bore.attrs['rmse_'+HLW+'_'+source]
             )
         cbar = plt.colorbar(ss)
+
+        for ind in range(len(self.bore['Quality'])):
+        # zip joins x and y coordinates in pairs
+
+
+            plt.annotate(lab[ind], # this is the text
+                         (X[ind],Y[ind]), # this is the point to label
+                         textcoords="offset points", # how to position the text
+                         xytext=(0,6), # distance from text to points (x,y)
+                         ha='center', # horizontal alignment can be left, right or center
+                         fontsize=6)
         plt.legend()
         # Linear fit
         #x = self.df['Liv (Gladstone Dock) HT height (m)']
@@ -1304,6 +1324,7 @@ class Controller():
         """
         Plot different combinations of Lag,HLW w/ rivers
         """
+        self.plot_scatter_river(source='harmonic', HLW="HW")
         self.plot_scatter_river(source='bodc', HLW="HW")
         self.plot_scatter_river(source='bodc', HLW="LW")
         self.plot_scatter_river(source='bodc', HLW="dLW")
