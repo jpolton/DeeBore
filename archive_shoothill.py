@@ -25,6 +25,28 @@ To discover the StationId for a particular measurement site check the
  integer id in the url or its twitter page having identified it via
   https://www.gaugemap.co.uk/#!Map
 E.g  Liverpool (Gladstone Dock stationId="13482", which is read by default.
+
+Env: workshop_env with coast and requests installed,
+E.g.
+## Create an environment with coast installed
+yes | conda env remove --name workshop_env
+yes | conda create --name workshop_env python=3.8
+conda activate workshop_env
+yes | conda install -c bodc coast=1.2.7
+# enforce the GSW package number (something fishy with the build process bumped up this version number)
+yes | conda install -c conda-forge gsw=3.3.1
+# install cartopy, not part of coast package
+yes | conda install -c conda-forge cartopy=0.20.1
+
+## install request for shoothill server requests
+conda install requests
+
+Usage:
+    Edit year variable
+    python archive_shoothill.py
+
+To do:
+    * tidy implementation of year selection
 '''
 
 # Begin by importing coast and other packages
@@ -35,10 +57,8 @@ import matplotlib.dates as mdates
 
 import xarray as xr
 
-import os,sys
-coastdir = os.path.dirname('/Users/jeff/GitHub/COAsT/coast')
-sys.path.insert(0, coastdir)
-import coast
+from shoothill_api.shoothill_api import GAUGE
+
 
 #%% Save method
 def save_method(loc, ofile=None):
@@ -60,7 +80,7 @@ def save_method(loc, ofile=None):
 
     # Check the exported file is as you expect.
     # Load file as see that the xarray structure is preserved.
-    ofile = ofile + ".nc"
+    ofile = "archive_shoothill/" + ofile + ".nc"
     try:
         object = xr.open_dataset(ofile)
         object.close() # close file associated with this object
@@ -106,7 +126,7 @@ for year in range(2021,2021+1):
 
     # Load in data from the Shoothill API. Gladstone dock is loaded by default
     try:
-        liv = coast.Tidegauge()
+        liv = GAUGE()
         liv.dataset = liv.read_shoothill_to_xarray(date_start=date_start, date_end=date_end)
         #liv.plot_timeseries()
         save_method(liv, ofile='liv_'+str(year))
@@ -114,40 +134,40 @@ for year in range(2021,2021+1):
         print(str(year) + 'failed for liv')
 
     try:
-        ctrf = coast.Tidegauge()
-        ctrf.dataset = ctrf.read_shoothill_to_xarray(stationId="7899" ,date_start=date_start, date_end=date_end, dataType=15)
+        ctrf = GAUGE()
+        ctrf.dataset = ctrf.read_shoothill_to_xarray(station_id="7899" ,date_start=date_start, date_end=date_end, dataType=15)
         #ctrf.plot_timeseries()
         save_method(ctrf, ofile='ctrf_'+str(year))
     except:
         print(str(year) + 'failed for ctrf')
 
     try:
-        ctr = coast.Tidegauge()
-        ctr.dataset = ctr.read_shoothill_to_xarray(stationId="7899" ,date_start=date_start, date_end=date_end)
+        ctr = GAUGE()
+        ctr.dataset = ctr.read_shoothill_to_xarray(station_id="7899" ,date_start=date_start, date_end=date_end)
         #ctr.plot_timeseries()
         save_method(ctr, ofile='ctr_'+str(year))
     except:
         print(str(year) + 'failed for ctr')
 
     try:
-        ctr2 = coast.Tidegauge()
-        ctr2.dataset = ctr.read_shoothill_to_xarray(stationId="7900" ,date_start=date_start, date_end=date_end)
+        ctr2 = GAUGE()
+        ctr2.dataset = ctr.read_shoothill_to_xarray(station_id="7900" ,date_start=date_start, date_end=date_end)
         #ctr2.plot_timeseries()
         save_method(ctr2, ofile='ctr2_'+str(year))
     except:
         print(str(year) + 'failed for ctr2')
 
     try:
-        iron = coast.Tidegauge()
-        iron.dataset = ctr.read_shoothill_to_xarray(stationId="968" ,date_start=date_start, date_end=date_end)
+        iron = GAUGE()
+        iron.dataset = ctr.read_shoothill_to_xarray(station_id="968" ,date_start=date_start, date_end=date_end)
         #iron.plot_timeseries()
         save_method(iron, ofile='iron_'+str(year))
     except:
         print(str(year) + 'failed for iron')
 
     try:
-        farn = coast.Tidegauge()
-        farn.dataset = ctr.read_shoothill_to_xarray(stationId="972" ,date_start=date_start, date_end=date_end)
+        farn = GAUGE()
+        farn.dataset = ctr.read_shoothill_to_xarray(station_id="972" ,date_start=date_start, date_end=date_end)
         #farn.plot_timeseries()
         save_method(farn, ofile='farn_'+str(year))
     except:
