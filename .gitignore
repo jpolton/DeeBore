@@ -9,3 +9,6 @@ __pycache__/
 config_keys.py # Shoothill API keys
 
 archive_shoothill/
+
+
+saltney_arrival_compare/*.png
