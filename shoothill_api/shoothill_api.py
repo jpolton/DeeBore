@@ -145,16 +145,19 @@ class GAUGE(coast.Tidegauge):
 
         headers = {'content-type': 'application/json', 'SessionHeaderId': cls.SessionHeaderId}
 
-        ## Construct station info API request
+        #%% Construct station info API request
         # Obtain and process header information
         logging.info("load station info")
-        print("load station info")
         htmlcall_station_id = 'http://riverlevelsapi.shoothill.com/TimeSeries/GetTimeSeriesStationById/?stationId='
         url  = htmlcall_station_id+str(station_id)
         try:
             request_raw = requests.get(url, headers=headers)
             header_dict = json.loads(request_raw.content)
-            logging.debug(f"{header_dict}")
+            # NB dataType is empty from the header request. Fill now
+            header_dict['dataType'] = cls.dataType
+            # convert attrs to str so that can be saved to netCDF
+            header_dict['gaugeList'] = str(header_dict['gaugeList'])
+            header_dict['additionalDataObject'] = str(header_dict['additionalDataObject'])
         except ValueError:
             print(f"Failed request for station {cls.station_id}")
             return
