@@ -3,7 +3,8 @@ Read in a process Dee Bore data
 Author: jpolton
 Date: 26 Sept 2020
 
-Currently developing in coast_env
+Was developed in coast_dev
+Also work in an environment with coast installed: workshop_env
 """
 
 import os
@@ -18,11 +19,17 @@ import pytz
 import pickle
 
 
-coastdir = os.path.dirname('/Users/jeff/GitHub/COAsT/coast')
-sys.path.insert(0, coastdir)
-from coast.TIDEGAUGE import TIDEGAUGE
-from coast.general_utils import dayoweek
-from coast.stats_util import find_maxima
+if(0): # Use the COAsT files, in e.g. coast_dev
+    coastdir = os.path.dirname('/Users/jeff/GitHub/COAsT/coast')
+    sys.path.insert(0, coastdir)
+    from coast.tidegauge import Tidegauge
+    from coast.general_utils import day_of_week
+    from coast.stats_util import find_maxima
+else: # Use the COAsT package in e.g. workshop_env
+    from coast.tidegauge import Tidegauge
+    from coast.general_utils import day_of_week
+    from coast.stats_util import find_maxima
+
 
 import scipy.signal # find_peaks
 
@@ -32,9 +39,9 @@ logging.getLogger().setLevel(logging.DEBUG)
 
 
 #%% ################################################################################
-class GAUGE(TIDEGAUGE):
+class GAUGE(Tidegauge):
     """ Inherit from COAsT. Add new methods """
-    def __init__(self, ndays: int=5, startday: datetime=None, endday: datetime=None, stationId="7708"):
+    def __init__(self, ndays: int=5, startday: datetime=None, endday: datetime=None, station_id="7708"):
         try:
             import config_keys # Load secret keys
         except:
@@ -44,9 +51,9 @@ class GAUGE(TIDEGAUGE):
         self.ndays=ndays
         self.startday=startday
         self.endday=endday
-        self.stationId=stationId # Shoothill id
+        self.station_id=station_id # Shoothill id
 
-        #self.dataset = self.read_shoothill_to_xarray(stationId="13482") # Liverpool
+        #self.dataset = self.read_shoothill_to_xarray(station_id="13482") # Liverpool
 
         pass
 
@@ -65,7 +72,7 @@ class GAUGE(TIDEGAUGE):
         """
         Finds high and low water for a given variable, in close proximity to
         input xrray of times.
-        Returns in a new TIDEGAUGE object with similar data format to
+        Returns in a new Tidegauge object with similar data format to
         a TIDETABLE, and same size as target_times.
 
         winsize: +/- hours search radius
@@ -90,7 +97,7 @@ class GAUGE(TIDEGAUGE):
         print(values_max)
         new_dataset[var_str + '_highs'] = (var_str+'_highs', values_max)
 
-        new_object = TIDEGAUGE()
+        new_object = Tidegauge()
         new_object.dataset = new_dataset
 
         return new_object
@@ -101,7 +108,7 @@ class GAUGE(TIDEGAUGE):
                                 ndays: int=5,
                                 date_start: np.datetime64=None,
                                 date_end: np.datetime64=None,
-                                stationId="7708",
+                                station_id="7708",
                                 dataType=3):
         """
         load gauge data via shoothill API
@@ -111,17 +118,17 @@ class GAUGE(TIDEGAUGE):
         They provide a public key. Then SHOOTHILL_KEY can be generated using
         SHOOTHILL_KEY = create_shoothill_key(SHOOTHILL_PublicApiKey)
 
-        To discover the StationId for a particular measurement site check the
+        To discover the station_id for a particular measurement site check the
          integer id in the url or its twitter page having identified it via
           https://www.gaugemap.co.uk/#!Map
-         E.g  Liverpool (Gladstone Dock stationId="13482".
-        Liverpool, or stationId="13482", is assumed by default.
+         E.g  Liverpool (Gladstone Dock station_id="13482".
+        Liverpool, or station_id="13482", is assumed by default.
 
         INPUTS:
             ndays : int
             date_start : datetime. UTC format string "yyyy-MM-ddThh:mm:ssZ" E.g 2020-01-05T08:20:01.5011423+00:00
             date_end : datetime
-            stationId : str (station id)
+            station_id : str (station id)
             dataType: int (3 level, 15 flow)
         OUTPUT:
             sea_level, time : xr.Dataset
@@ -142,35 +149,35 @@ class GAUGE(TIDEGAUGE):
         cls.ndays=ndays
         cls.date_start=date_start
         cls.date_end=date_end
-        cls.stationId=stationId # Shoothill id
+        cls.station_id=station_id # Shoothill id
         cls.dataType=dataType
 
         logging.info("load gauge")
 
-        if cls.stationId == "7708":
+        if cls.station_id == "7708":
             id_ref = "Gladston Dock"
-        elif cls.stationId == "7899":
+        elif cls.station_id == "7899":
             id_ref = "Chester weir"
-        elif cls.stationId == "972":
+        elif cls.station_id == "972":
             id_ref = "Farndon"
-        elif cls.stationId == "968":
+        elif cls.station_id == "968":
             id_ref = "Ironbridge (Dee)"
         else:
             id_ref = "No label"
-            logging.debug(f"Not ready for that station id. {cls.stationId}")
+            logging.debug(f"Not ready for that station id. {cls.station_id}")
 
         headers = {'content-type': 'application/json', 'SessionHeaderId': cls.SessionHeaderId}
 
         #%% Construct station info API request
         # Obtain and process header information
         logging.info("load station info")
-        htmlcall_stationId = 'http://riverlevelsapi.shoothill.com/TimeSeries/GetTimeSeriesStationById/?stationId='
-        url  = htmlcall_stationId+str(stationId)
+        htmlcall_station_id = 'http://riverlevelsapi.shoothill.com/TimeSeries/GetTimeSeriesStationById/?stationId='
+        url  = htmlcall_station_id+str(station_id)
         try:
             request_raw = requests.get(url, headers=headers)
             header_dict = json.loads(request_raw.content)
         except ValueError:
-            print(f"Failed request for station {cls.stationId}")
+            print(f"Failed request for station {cls.station_id}")
             return
 
         # Assign expected header_dict information
@@ -185,8 +192,8 @@ class GAUGE(TIDEGAUGE):
         if (cls.date_start == None) & (cls.date_end == None):
             logging.info(f"GETting ndays= {cls.ndays} of data")
 
-            htmlcall_stationId = 'http://riverlevelsapi.shoothill.com/TimeSeries/GetTimeSeriesRecentDatapoints/?stationId='
-            url  = htmlcall_stationId+str(cls.stationId)+'&dataType='+str(int(cls.dataType))+'&numberDays='+str(int(cls.ndays))
+            htmlcall_station_id = 'http://riverlevelsapi.shoothill.com/TimeSeries/GetTimeSeriesRecentDatapoints/?stationId='
+            url  = htmlcall_station_id+str(cls.station_id)+'&dataType='+str(int(cls.dataType))+'&numberDays='+str(int(cls.ndays))
         else:
             # Check date_start and date_end are timetime objects
             if (type(cls.date_start) is np.datetime64) & (type(cls.date_end) is np.datetime64):
@@ -194,8 +201,8 @@ class GAUGE(TIDEGAUGE):
                 startTime = cls.date_start.item().strftime('%Y-%m-%dT%H:%M:%SZ')
                 endTime = cls.date_end.item().strftime('%Y-%m-%dT%H:%M:%SZ')
 
-                htmlcall_stationId = 'http://riverlevelsapi.shoothill.com/TimeSeries/GetTimeSeriesDatapointsDateTime/?stationId='
-                url   = htmlcall_stationId+str(cls.stationId)+'&dataType='+str(int(cls.dataType))+'&endTime='+endTime+'&startTime='+startTime
+                htmlcall_station_id = 'http://riverlevelsapi.shoothill.com/TimeSeries/GetTimeSeriesDatapointsDateTime/?stationId='
+                url   = htmlcall_station_id+str(cls.station_id)+'&dataType='+str(int(cls.dataType))+'&endTime='+endTime+'&startTime='+startTime
 
             else:
                 logging.debug('Expecting date_start and date_end as datetime objects')
@@ -363,6 +370,7 @@ class Controller():
         """
         Auto load databucket from pickle file if it exists.
         """
+        #global DATABUCKET_FILE
         #databucket = DataBucket()
         logging.info("Auto load databucket from pickle file if it exists")
         print("Add to pickle file, if it exists")
@@ -487,7 +495,7 @@ class Controller():
 
             elif command == "d1":
                 print('load and plot HLW data')
-                self.load_and_plot_HLW_data()
+                self.load_and_plot_hlw_data()
 
             elif command == "d2":
                 print("shoothill dev")
@@ -495,11 +503,12 @@ class Controller():
 
             elif command == "d3":
                 print('Explore combinations of HLW times and heights for best fit')
-                self.fits_to_data()
+                self.fits_to_data(qc_flag=True)
+                self.fits_to_data(qc_flag=False)
 
             elif command == "d4":
                 print('Plot combinations of HLW times, heights and rivers')
-                self.combinations_lag_HLW_river()
+                self.combinations_lag_hlw_river()
 
             elif command == "6":
                 self.predict_bore()
@@ -580,7 +589,7 @@ class Controller():
         bore = df.to_xarray()
 
         # Set the t_dim to be a dimension and 'time' to be a coordinate
-        bore = bore.rename_dims( {'index':'t_dim'} ).assign_coords( time=("t_dim", bore.time))
+        bore = bore.rename_dims( {'index':'t_dim'} ).assign_coords( time=("t_dim", bore.time.data))
         bore = bore.swap_dims( {'t_dim':'time'} )
         self.bore = bore
         logging.info('Bore data loaded')
@@ -629,13 +638,13 @@ class Controller():
             filnam1 = '/Users/jeff/GitHub/DeeBore/data/Liverpool_2005_2014_HLW.txt'
             filnam2 = '/Users/jeff/GitHub/DeeBore/data/Liverpool_2015_2020_HLW.txt'
             filnam3 = '/Users/jeff/GitHub/DeeBore/data/Liverpool_2021_2022_HLW.txt'
-            tg  = TIDEGAUGE()
-            tg1 = TIDEGAUGE()
-            tg2 = TIDEGAUGE()
-            tg3 = TIDEGAUGE()
-            tg1.dataset = tg1.read_HLW_to_xarray(filnam1)#, self.bore.time.min().values, self.bore.time.max().values)
-            tg2.dataset = tg2.read_HLW_to_xarray(filnam2)#, self.bore.time.min().values, self.bore.time.max().values)
-            tg3.dataset = tg3.read_HLW_to_xarray(filnam3)#, self.bore.time.min().values, self.bore.time.max().values)
+            tg  = Tidegauge()
+            tg1 = Tidegauge()
+            tg2 = Tidegauge()
+            tg3 = Tidegauge()
+            tg1.dataset = tg1.read_hlw_to_xarray(filnam1)#, self.bore.time.min().values, self.bore.time.max().values)
+            tg2.dataset = tg2.read_hlw_to_xarray(filnam2)#, self.bore.time.min().values, self.bore.time.max().values)
+            tg3.dataset = tg3.read_hlw_to_xarray(filnam3)#, self.bore.time.min().values, self.bore.time.max().values)
             tg.dataset = xr.concat([ tg1.dataset, tg2.dataset, tg3.dataset], dim='time')
 
             # This produces an xr.dataset with sea_level_highs and sea_level_lows
@@ -653,9 +662,9 @@ class Controller():
             '2016LIV.txt', '2017LIV.txt',
             '2018LIV.txt', '2019LIV.txt',
             '2020LIV.txt']
-            tg  = TIDEGAUGE()
+            tg  = Tidegauge()
             for file in filelist:
-                tg0=TIDEGAUGE()
+                tg0=Tidegauge()
                 tg0.dataset = tg0.read_bodc_to_xarray(dir+file)
                 if tg.dataset is None:
                     tg.dataset = tg0.dataset
@@ -672,7 +681,7 @@ class Controller():
             tg_HLW = tg.find_high_and_low_water(var_str='sea_level',method='cubic') #'cubic')
 
         elif source == "api": # load full tidal signal from shoothill, extract HLW
-            tg = TIDEGAUGE()
+            tg = Tidegauge()
             date_start=np.datetime64('2005-04-01')
             date_end=np.datetime64('now','D')
 
@@ -690,12 +699,12 @@ class Controller():
 
         elif source == "ctr": # use api to load chester weir. Reset loc variable
             loc = "ctr"
-            tg = TIDEGAUGE()
+            tg = Tidegauge()
             date_start=np.datetime64('2014-01-01')
             date_end=np.datetime64('now','D')
-            #stationId = 7900 # below weir
-            stationId = 7899 # above weir
-            tg.dataset = tg.read_shoothill_to_xarray(stationId=stationId ,date_start=date_start, date_end=date_end)
+            #station_id = 7900 # below weir
+            station_id = 7899 # above weir
+            tg.dataset = tg.read_shoothill_to_xarray(station_id=station_id ,date_start=date_start, date_end=date_end)
 
             # This produces an xr.dataset with sea_level_highs and sea_level_lows
             # with time variables time_highs and time_lows.
@@ -739,7 +748,7 @@ class Controller():
                 LW = None
                 #HLW = tg.get_tidetabletimes(self.bore.time[i].values)
 
-                HW = tg_HLW.get_tidetabletimes(
+                HW = tg_HLW.get_tide_table_times(
                                         time_guess=self.bore.time[i].values,
                                         time_var=time_var,
                                         measure_var=measure_var,
@@ -1053,6 +1062,9 @@ class Controller():
         elif HLW=="dHW":
             X = self.bore['Saltney_lag_HW_'+source]
             Y = self.bore['liv_height_HW_'+source] - self.bore['liv_height_LW_'+source]
+        elif HLW=="XX":
+            X = self.bore['Saltney_lag_HW_'+source]
+            Y = self.bore['liv_height_LW_'+source]
         else:
             X = self.bore['Saltney_lag_'+HLW+'_'+source]
             Y = self.bore['liv_height_'+HLW+'_'+source]
@@ -1124,8 +1136,8 @@ class Controller():
 
         if(1): # np.datetime64('now', 'Y') < np.datetime64('2021'): # year 2020
             print("predict_bore(): should check is table data is available. If not use harm reconstructed data")
-            tg = TIDEGAUGE()
-            tg.dataset = tg.read_HLW_to_xarray(filnam, day, dayp1)
+            tg = Tidegauge()
+            tg.dataset = tg.read_hlw_to_xarray(filnam, day, dayp1)
 
             HT = tg.dataset['sea_level'].where(tg.dataset['sea_level']\
                                     .values > 7).dropna('time') #, drop=True)
@@ -1155,7 +1167,7 @@ class Controller():
         for i in range(len(lag_pred)):
             #print( "Gladstone HT", np.datetime_as_string(HT.time[i], unit='m',timezone=pytz.timezone('UTC')),"(GMT). Height: {:.2f} m".format(  HT.values[i]))
             #print(" Saltney arrival", np.datetime_as_string(Saltney_time_pred[i], unit='m', timezone=pytz.timezone('Europe/London')),"(GMT/BST). Lag: {:.0f} mins".format( lag_pred[i] ))
-            print("Predictions for ", dayoweek(Saltney_time_pred[i]), Saltney_time_pred[i].astype('datetime64[s]').astype(datetime.datetime).strftime('%Y/%m/%d') )
+            print("Predictions for ", day_of_week(Saltney_time_pred[i]), Saltney_time_pred[i].astype('datetime64[s]').astype(datetime.datetime).strftime('%Y/%m/%d') )
             print("Saltney FB:", np.datetime_as_string(Saltney_time_pred[i], unit='m', timezone=pytz.timezone('Europe/London')) )
             try:
                 Glad_HLW = tg.get_tidetabletimes( Saltney_time_pred[i], method='nearest_2' )
@@ -1192,13 +1204,13 @@ class Controller():
     #%% Development / Misc methods
     ############################################################################
 
-    def load_and_plot_HLW_data(self):
+    def load_and_plot_hlw_data(self):
         """ Simply load HLW file and plot """
         filnam = 'data/Liverpool_2015_2020_HLW.txt'
         date_start = datetime.datetime(2020, 1, 1)
         date_end = datetime.datetime(2020, 12, 31)
-        tg = TIDEGAUGE()
-        tg.dataset = tg.read_HLW_to_xarray(filnam, date_start, date_end)
+        tg = Tidegauge()
+        tg.dataset = tg.read_hlw_to_xarray(filnam, date_start, date_end)
         # Exaple plot
         plt.figure()
         tg.dataset.plot.scatter(x="time", y="sea_level")
@@ -1218,12 +1230,12 @@ class Controller():
         date_start = np.datetime64('2020-09-01')
         date_end = np.datetime64('2020-09-30')
 
-        # E.g  Liverpool (Gladstone Dock stationId="13482", which is read by default.
+        # E.g  Liverpool (Gladstone Dock station_id="13482", which is read by default.
         # Load in data from the Shoothill API
-        sg = TIDEGAUGE()
+        sg = Tidegauge()
         sg.dataset = sg.read_shoothill_to_xarray(date_start=date_start, date_end=date_end)
 
-        #sg = GAUGE(startday=date_start, endday=date_end) # create modified TIDEGAUGE object
+        #sg = GAUGE(startday=date_start, endday=date_end) # create modified Tidegauge object
         sg_HLW = sg.find_high_and_low_water(var_str='sea_level')
         #g.dataset
         #g_HLW.dataset
@@ -1241,7 +1253,7 @@ class Controller():
         # Compare tide predictions with measured HLW
         filnam = 'data/Liverpool_2015_2020_HLW.txt'
         tg = GAUGE()
-        tg.dataset = tg.read_HLW_to_xarray(filnam, date_start, date_end)
+        tg.dataset = tg.read_hlw_to_xarray(filnam, date_start, date_end)
         tg_HLW = tg.find_high_and_low_water(var_str='sea_level')
 
         sg = GAUGE()
@@ -1275,50 +1287,88 @@ class Controller():
         plt.close('all')
 
 
-    def fits_to_data(self, source:str="bodc"):
+    def fits_to_data(self, source:str="bodc", qc_flag:bool=False):
         """
         Explore different combinations of HW and LW times and heights to
         find the best fit to the data
+
+        qc_flag: if True, only fit bore['Quality'] == "A" data, else fit all data
         """
-        HLW="HW"
-        weights,rmse = self.linearfit(
-            self.bore['liv_height_HW_'+source],
-            self.bore['Saltney_lag_HW_'+source]
-            )
-        print(f"{source}| height(HW), time(HW): {rmse}")
-        #Out[45]: (poly1d([-12.26700862,  45.96440818]), ' 6.6 mins')
-        self.bore.attrs['weights_'+HLW+'_'+source] = weights
-        self.bore.attrs['rmse_'+HLW+'_'+source] = rmse
 
-        HLW="dHW"
-        weights,rmse = self.linearfit(
-            self.bore['liv_height_HW_'+source]-self.bore['liv_height_LW_'+source],
-            self.bore['Saltney_lag_HW_'+source]
-            )
-        print(f"{source}| height(HW-LW), time(HW): {rmse}")
-        #Out[44]: (poly1d([ -6.56953332, -15.68423086]), ' 6.9 mins')
-        self.bore.attrs['weights_'+HLW+'_'+source] = weights
-        self.bore.attrs['rmse_'+HLW+'_'+source] = rmse
+        args_list = []
 
-        HLW="dLW"
-        weights,rmse = self.linearfit(
-            self.bore['liv_height_HW_'+source]-self.bore['liv_height_LW_'+source],
-            self.bore['Saltney_lag_LW_'+source]
-            )
-        print(f"{source}| height(HW-LW), time(LW): {rmse}")
-        #Out[46]: (poly1d([-15.34697352, 379.18885683]), ' 9.0 mins')
-        self.bore.attrs['weights_'+HLW+'_'+source] = weights
-        self.bore.attrs['rmse_'+HLW+'_'+source] = rmse
+        self.bore.attrs['weights_HW_'+source] = []
+        self.bore.attrs['rmse_HW_'+source] = []
+        args_list.append( {"HLW":"HW",
+                "source":source,
+                'xvar':self.bore['liv_height_HW_'+source],
+                'yvar':self.bore['Saltney_lag_HW_'+source],
+                'label':'height(HW), time(HW)',
+                'wvar':'weights_HW'+'_'+source,
+                'rvar':'rmse_HW'+'_'+source}
+                )
 
-        HLW="LW"
-        weights,rmse = self.linearfit(
-            self.bore['liv_height_LW_'+source],
-            self.bore['Saltney_lag_LW_'+source]
-            )
-        print(f"{source}| height(LW), time(LW): {rmse}")
-        #Out[47]: (poly1d([ 23.95624428, 222.70884297]), '12.1 mins')
-        self.bore.attrs['weights_'+HLW+'_'+source] = weights
-        self.bore.attrs['rmse_'+HLW+'_'+source] = rmse
+        self.bore.attrs['weights_dHW_'+source] = []
+        self.bore.attrs['rmse_dHW_'+source] = []
+        args_list.append( {"HLW":"dHW",
+                "source":source,
+                'xvar':self.bore['liv_height_HW_'+source]-self.bore['liv_height_LW_'+source],
+                'yvar':self.bore['Saltney_lag_HW_'+source],
+                'label':'height(HW-LW), time(HW)',
+                'wvar':'weights_dHW_'+source,
+                'rvar':'rmse_dHW'+'_'+source}
+                )
+
+        self.bore.attrs['weights_dLW_'+source] = []
+        self.bore.attrs['rmse_dLW_'+source] = []
+        args_list.append( {"HLW":"dLW",
+                "source":source,
+                'xvar':self.bore['liv_height_HW_'+source]-self.bore['liv_height_LW_'+source],
+                'yvar':self.bore['Saltney_lag_LW_'+source],
+                'label':'height(HW-LW), time(LW)',
+                'wvar':'weights_dLW'+'_'+source,
+                'rvar':'rmse_dLW'+'_'+source}
+                )
+
+        self.bore.attrs['weights_LW_'+source] = []
+        self.bore.attrs['rmse_LW_'+source] = []
+        args_list.append( {"HLW":"LW",
+                "source":source,
+                'xvar':self.bore['liv_height_LW_'+source],
+                'yvar':self.bore['Saltney_lag_LW_'+source],
+                'label':'height(LW), time(LW)',
+                'wvar':'weights_LW'+'_'+source,
+                'rvar':'rmse_LW'+'_'+source}
+                )
+
+        #self.bore.attrs['weights_XX_'+source] = []
+        #self.bore.attrs['rmse_XX_'+source] = []
+        args_list.append( {"HLW":"XX",
+                "source":source,
+                'xvar':self.bore['liv_height_LW_'+source],
+                'yvar':self.bore['Saltney_lag_HW_'+source],
+                'label':'height(LW), time(HW)',
+                'wvar':'weights_XX'+'_'+source,
+                'rvar':'rmse_XX'+'_'+source}
+                )
+
+        for args in args_list:
+            self.bore.attrs[args['wvar']] = []
+            self.bore.attrs[args['rvar']] = []
+            if qc_flag:
+                weights,rmse = self.linearfit( args['xvar'].where( self.bore['Quality'].values=="A"),
+                            args['yvar'].where( self.bore['Quality'].values=="A" ) )
+                print(f"{source} class A| {args['label']}: {rmse}")
+                self.bore.attrs[args['wvar']] = weights
+                self.bore.attrs[args['rvar']] = rmse
+            else:
+                weights,rmse = self.linearfit( args['xvar'], args['yvar'] )
+                print(f"{source}| {args['label']}: {rmse}")
+                self.bore.attrs[args['wvar']] = weights
+                self.bore.attrs[args['rvar']] = rmse
+        ###
+
+
 
     def combinations_lag_HLW_river(self):
         """
@@ -1329,6 +1379,7 @@ class Controller():
         self.plot_scatter_river(source='bodc', HLW="LW")
         self.plot_scatter_river(source='bodc', HLW="dLW")
         self.plot_scatter_river(source='bodc', HLW="dHW")
+        self.plot_scatter_river(source='bodc', HLW="XX")
 
 
 ################################################################################
