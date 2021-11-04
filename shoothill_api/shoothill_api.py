@@ -59,13 +59,11 @@ logging.getLogger().setLevel(logging.INFO)
 #%% ################################################################################
 class GAUGE(coast.Tidegauge):
     """ Inherit from COAsT. Add new methods """
-
     def __init__(self, ndays: int=5, startday: datetime=None, endday: datetime=None, station_id="7708"):
         try:
             import config_keys # Load secret keys
         except:
             logging.info('Need a Shoothil API Key. Use e.g. create_shoothill_key() having obtained a public key')
-            print('Need a Shoothil API Key. Use e.g. create_shoothill_key() having obtained a public key')
 
         #self.SessionHeaderId=config_keys.SHOOTHILL_KEY #'4b6...snip...a5ea'
         self.ndays=ndays
@@ -75,9 +73,52 @@ class GAUGE(coast.Tidegauge):
 
         #self.dataset = self.read_shoothill_to_xarray(station_id="13482") # Liverpool
 
-
         pass
 
+    def get_mean_crossing_time_as_xarray(self, date_start=None, date_end=None):
+        """
+        Get the height (constant) and times of crossing the mean height as xarray
+        """
+        pass
+
+    def get_HW_to_xarray(self, date_start=None, date_end=None):
+        """ Extract actual HW value and time as an xarray """
+        pass
+
+
+    def find_nearby_high_and_low_water(self, var_str, target_times:xr.DataArray=None, winsize:int=2, method='comp'):
+        """
+        Finds high and low water for a given variable, in close proximity to
+        input xrray of times.
+        Returns in a new Tidegauge object with similar data format to
+        a TIDETABLE, and same size as target_times.
+
+        winsize: +/- hours search radius
+        target_times: xr.DataArray of target times to search around (e.g. harmonic predictions)
+        var_str: root of var name for new variable.
+        """
+        x = self.dataset.time
+        y = self.dataset[var_str]
+
+        nt = len(target_times)
+        time_max = np.zeros(nt)
+        values_max = np.zeros(nt)
+        for i in range(nt):
+            HLW = self.get_tidetabletimes( target_times[i].values, method='window', winsize=winsize )
+            logging.debug(f"{i}: {find_maxima(HLW.time.values, HLW.values, method=method)}")
+            time_max[i], values_max[i] = find_maxima(HLW.time.values, HLW.values, method=method)
+
+        new_dataset = xr.Dataset()
+        new_dataset.attrs = self.dataset.attrs
+        new_dataset['time_highs'] = ('time_highs', time_max)
+        print(time_max)
+        print(values_max)
+        new_dataset[var_str + '_highs'] = (var_str+'_highs', values_max)
+
+        new_object = Tidegauge()
+        new_object.dataset = new_dataset
+
+        return new_object
 
 ############ shoothill gauge methods ##############################################
     @classmethod
@@ -170,7 +211,7 @@ class GAUGE(coast.Tidegauge):
         except:
             logging.info(f"possible missing some header info: site_name,latitude,longitude")
 
-        ## Construct data API request
+        #%% Construct data API request
         if (cls.date_start == None) & (cls.date_end == None):
             logging.info(f"GETting ndays= {cls.ndays} of data")
 
@@ -189,21 +230,22 @@ class GAUGE(coast.Tidegauge):
             else:
                 logging.debug('Expecting date_start and date_end as datetime objects')
 
-        ## Get the data
+        #%% Get the data
         request_raw = requests.get(url, headers=headers)
         request = json.loads(request_raw.content)
         logging.debug(f"Shoothil API request: {request_raw.text}")
-
         # Check the output
-        #logging.info(f"Gauge id is {request['gauge']['geoEntityId']}")
-        #logging.info(f"timestamp and value of the zero index is {[ str(request['values'][0]['time']), request['values'][0]['value'] ]}")
-
+        logging.info(f"Gauge id is {request['gauge']['geoEntityId']}")
+        try:
+            logging.info(f"timestamp and value of the zero index is {[ str(request['values'][0]['time']), request['values'][0]['value'] ]}")
+        except:
+            logging.info(f"timestamp and value of the zero index: problem")
         #print(request)
-        ## Process header information
+        #%% Process header information
         #header_dict = request['gauge']
         #header_dict['site_name'] = id_ref
 
-        ## Process timeseries data
+        #%% Process timeseries data
         dataset = xr.Dataset()
         time = []
         sea_level = []
@@ -211,12 +253,123 @@ class GAUGE(coast.Tidegauge):
         time = np.array([np.datetime64(request['values'][i]['time']) for i in range(nvals)])
         sea_level = np.array([request['values'][i]['value'] for i in range(nvals)])
 
-        ## Assign arrays to Dataset
+        #%% Assign arrays to Dataset
         dataset['sea_level'] = xr.DataArray(sea_level, dims=['time'])
         dataset = dataset.assign_coords(time = ('time', time))
+
         dataset.attrs = header_dict
-        #logging.debug(f"Shoothil API request headers: {header_dict}")
-        #logging.debug(f"Shoothil API request 1st time: {time[0]} and value: {sea_level[0]}")
+        logging.debug(f"Shoothil API request headers: {header_dict}")
+        try:
+            logging.debug(f"Shoothil API request 1st time: {time[0]} and value: {sea_level[0]}")
+        except:
+            logging.debug(f"Shoothil API request 1st time: problem")
+        # Assign local dataset to object-scope dataset
+        return dataset
+
+
+############ anyTide harmonic reconstruction method ###########################
+    @classmethod
+    def anyTide_to_xarray(cls,
+                                ndays: int=5,
+                                date_start: np.datetime64=None,
+                                date_end: np.datetime64=None,
+                                loc="Glad",
+                                plot_flag=False):
+        """
+        Construct harmonic timeseries using anyTide code.
+        Either loads last ndays, or from date_start:date_end
+
+        INPUTS:
+            ndays : int
+            date_start : datetime. UTC format string "yyyy-MM-ddThh:mm:ssZ" E.g 2020-01-05T08:20:01.5011423+00:00
+            date_end : datetime
+            loc : str (name of harmonics file). ONLY GLADSTONE AT PRESENT
+            plot_flag : bool
+        OUTPUT:
+            sea_level, time : xr.Dataset
+        """
+        import os, sys
+
+        anytidedir = os.path.dirname('/Users/jeff/GitHub/anyTide/')
+        sys.path.insert(0, anytidedir)
+
+        from NOCtidepred import get_port
+        from NOCtidepred import test_port
+
+        #from NOCtidepred import UtcNow
+        from NOCtidepred import date2mjd
+        from NOCtidepred import phamp0fast
+        from NOCtidepred import set_names_phases
+
+        if loc != "Glad":
+            print("Can only process Gladstone Dock at present. Proceeding...")
+            info("Can only process Gladstone Dock at present. Proceeding...")
+
+        if date_start == None:
+            date_start = np.datetime64('now')
+        if date_end == None:
+            date_end = date_start + np.timedelta64(ndays,"D")
+
+
+        cls.ndays=ndays
+        cls.date_start=date_start
+        cls.date_end=date_end
+        cls.loc=loc # harmonics file
+
+        #info("load gauge")
+
+        # Settings
+        rad    = np.pi/180
+        deg    = 1.0 / rad
+
+
+
+        # Set the dates
+        # Create a vector of predictions times. Assume 5 min increments
+        nvals = round((date_end - date_start)/np.timedelta64(5,"m"))
+        dates = [date_start + np.timedelta64(5*mm,"m") for mm in range(0, nvals)]
+        if type(dates[1]) != datetime.datetime:
+            mjd = date2mjd( [dates[i].astype(datetime.datetime)for i in range(nvals)] )
+        else:
+            mjd = date2mjd( dates ) # convert to modified julian dates
+
+
+        ## Compute reconstuction on port data.
+        #####################################
+        ssh = test_port(mjd) # reconstuct ssh for the time vector
+        print('plot time series reconstruction of port data')
+
+        ssh = np.ma.masked_where( ssh > 1E6, ssh) # get rid of nasties
+
+        # Plot time series
+        if plot_flag:
+            # Plot sea level time series
+            fig, ax = plt.subplots()
+            ax.plot(np.array(dates),[ssh[i] for i in range(len(dates))],'+-')
+            ax.set_ylabel('Height (m)')
+            ax.set_xlabel('Hours since '+dates[0].strftime("%Y-%m-%d"))
+            ax.set_title('Harmonic tide prediction')
+
+            # Pain plotting time on the x-axis
+            myFmt = mdates.DateFormatter('%H')
+            ax.xaxis.set_major_formatter(myFmt)
+
+            plt.show()
+
+
+
+        #%% Process timeseries data
+        dataset = xr.Dataset()
+        time = []
+        sea_level = []
+        time = dates #np.array([np.datetime64(request['values'][i]['time']) for i in range(nvals)])
+        sea_level = ssh #np.array([request['values'][i]['value'] for i in range(nvals)])
+
+        #%% Assign arrays to Dataset
+        dataset['sea_level'] = xr.DataArray(sea_level, dims=['time'])
+        dataset = dataset.assign_coords(time = ('time', time))
+        #dataset.attrs = header_dict
+        #debug(f"NOCpredict API request 1st time: {time[0]} and value: {sea_level[0]}")
 
         # Assign local dataset to object-scope dataset
         return dataset
