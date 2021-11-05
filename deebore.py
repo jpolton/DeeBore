@@ -3,8 +3,31 @@ Read in a process Dee Bore data
 Author: jpolton
 Date: 26 Sept 2020
 
-Was developed in coast_dev
-Also work in an environment with coast installed: workshop_env
+Conda environment:
+    coast + requests,
+    (E.g. workshop_env w/ requests)
+
+    ### Build python environment:
+    ## Create an environment with coast installed
+    yes | conda env remove --name workshop_env
+    yes | conda create --name workshop_env python=3.8
+    conda activate workshop_env
+    yes | conda install -c bodc coast=1.2.7
+    # enforce the GSW package number (something fishy with the build process bumped up this version number)
+    yes | conda install -c conda-forge gsw=3.3.1
+    # install cartopy, not part of coast package
+    yes | conda install -c conda-forge cartopy=0.20.1
+
+    ## install request for shoothill server requests
+    conda install requests
+
+Example usage:
+    python deebore.py
+
+
+To do:
+    * Try loading shoothill data from file before making api request
+    * Workflow for updating all measured data
 """
 
 import os
@@ -26,7 +49,8 @@ if(0): # Use the COAsT files, in e.g. coast_dev
     from coast.general_utils import day_of_week
     from coast.stats_util import find_maxima
 else: # Use the COAsT package in e.g. workshop_env
-    from coast.tidegauge import Tidegauge
+    #from coast.tidegauge import Tidegauge
+    from shoothill_api.shoothill_api import GAUGE
     from coast.general_utils import day_of_week
     from coast.stats_util import find_maxima
 
@@ -38,8 +62,10 @@ logging.basicConfig(filename='bore.log', filemode='w+')
 logging.getLogger().setLevel(logging.DEBUG)
 
 
+
 #%% ################################################################################
-class GAUGE(Tidegauge):
+import coast # only for GAUGE_safe
+class GAUGE_safe(coast.Tidegauge):
     """ Inherit from COAsT. Add new methods """
     def __init__(self, ndays: int=5, startday: datetime=None, endday: datetime=None, station_id="7708"):
         try:
@@ -97,7 +123,7 @@ class GAUGE(Tidegauge):
         print(values_max)
         new_dataset[var_str + '_highs'] = (var_str+'_highs', values_max)
 
-        new_object = Tidegauge()
+        new_object = GAUGE()
         new_object.dataset = new_dataset
 
         return new_object
@@ -638,10 +664,10 @@ class Controller():
             filnam1 = '/Users/jeff/GitHub/DeeBore/data/Liverpool_2005_2014_HLW.txt'
             filnam2 = '/Users/jeff/GitHub/DeeBore/data/Liverpool_2015_2020_HLW.txt'
             filnam3 = '/Users/jeff/GitHub/DeeBore/data/Liverpool_2021_2022_HLW.txt'
-            tg  = Tidegauge()
-            tg1 = Tidegauge()
-            tg2 = Tidegauge()
-            tg3 = Tidegauge()
+            tg  = GAUGE()
+            tg1 = GAUGE()
+            tg2 = GAUGE()
+            tg3 = GAUGE()
             tg1.dataset = tg1.read_hlw_to_xarray(filnam1)#, self.bore.time.min().values, self.bore.time.max().values)
             tg2.dataset = tg2.read_hlw_to_xarray(filnam2)#, self.bore.time.min().values, self.bore.time.max().values)
             tg3.dataset = tg3.read_hlw_to_xarray(filnam3)#, self.bore.time.min().values, self.bore.time.max().values)
@@ -662,9 +688,9 @@ class Controller():
             '2016LIV.txt', '2017LIV.txt',
             '2018LIV.txt', '2019LIV.txt',
             '2020LIV.txt']
-            tg  = Tidegauge()
+            tg  = GAUGE()
             for file in filelist:
-                tg0=Tidegauge()
+                tg0=GAUGE()
                 tg0.dataset = tg0.read_bodc_to_xarray(dir+file)
                 if tg.dataset is None:
                     tg.dataset = tg0.dataset
@@ -681,7 +707,7 @@ class Controller():
             tg_HLW = tg.find_high_and_low_water(var_str='sea_level',method='cubic') #'cubic')
 
         elif source == "api": # load full tidal signal from shoothill, extract HLW
-            tg = Tidegauge()
+            tg = GAUGE()
             date_start=np.datetime64('2005-04-01')
             date_end=np.datetime64('now','D')
 
@@ -699,7 +725,7 @@ class Controller():
 
         elif source == "ctr": # use api to load chester weir. Reset loc variable
             loc = "ctr"
-            tg = Tidegauge()
+            tg = GAUGE()
             date_start=np.datetime64('2014-01-01')
             date_end=np.datetime64('now','D')
             #station_id = 7900 # below weir
@@ -1141,7 +1167,7 @@ class Controller():
 
         if(1): # np.datetime64('now', 'Y') < np.datetime64('2021'): # year 2020
             print("predict_bore(): should check is table data is available. If not use harm reconstructed data")
-            tg = Tidegauge()
+            tg = GAUGE()
             tg.dataset = tg.read_hlw_to_xarray(filnam, day, dayp1)
 
             HT = tg.dataset['sea_level'].where(tg.dataset['sea_level']\
@@ -1214,7 +1240,7 @@ class Controller():
         filnam = 'data/Liverpool_2015_2020_HLW.txt'
         date_start = datetime.datetime(2020, 1, 1)
         date_end = datetime.datetime(2020, 12, 31)
-        tg = Tidegauge()
+        tg = GAUGE()
         tg.dataset = tg.read_hlw_to_xarray(filnam, date_start, date_end)
         # Exaple plot
         plt.figure()
@@ -1237,7 +1263,7 @@ class Controller():
 
         # E.g  Liverpool (Gladstone Dock station_id="13482", which is read by default.
         # Load in data from the Shoothill API
-        sg = Tidegauge()
+        sg = GAUGE()
         sg.dataset = sg.read_shoothill_to_xarray(date_start=date_start, date_end=date_end)
 
         #sg = GAUGE(startday=date_start, endday=date_end) # create modified Tidegauge object
