@@ -923,13 +923,16 @@ class Controller():
             Xsalt_api = self.bore['Saltney_lag_'+HLW+'_api'].where( np.isnan(self.bore['liv_height_'+HLW+'_bodc']))
             Xblue_api = self.bore['bluebridge_lag_'+HLW+'_api'].where( np.isnan(self.bore['liv_height_'+HLW+'_bodc']))
             Xfit = self.bore['linfit_lag_'+HLW+'_bodc']
+            Xsalt_api_latest = Xsalt_api.where( xr.ufuncs.isfinite(Xsalt_api), drop=True)[0]
+            Yliv_api_latest  = Yliv_api.where( xr.ufuncs.isfinite(Xsalt_api), drop=True)[0]
+
             plt.plot( Xsalt,Yliv, 'r.', label='Saltney: rmse '+'{:4.1f}'.format(self.stats('bodc'))+'mins')
             plt.plot( Xsalt[I],Yliv[I], 'k+', label='1st hand')
             plt.plot( Xblue,Yliv, 'b.', label='Bluebridge')
             plt.plot( Xfit,Yliv, 'k-')
             plt.plot( Xsalt_api,Yliv_api, 'ro', label='Saltney API')
             plt.plot( Xblue_api,Yliv_api, 'bo', label='Bluebridge API')
-            plt.plot( Xsalt_api[0],Yliv_api[0], 'go', label='Saltney latest')
+            plt.plot( Xsalt_api_latest,Yliv_api_latest, 'go', label='Saltney latest')
             plt.plot( Xsalt_api[I],Yliv_api[I], 'k+')
         else:
             Yliv = self.bore['liv_height_'+HLW+'_'+source]
@@ -943,9 +946,11 @@ class Controller():
             Yliv = self.bore['liv_height_'+HLW+'_'+source].where( np.isnan(self.bore['liv_height_'+HLW+'_bodc']))
             Xsalt = self.bore['Saltney_lag_'+HLW+'_'+source].where( np.isnan(self.bore['liv_height_'+HLW+'_bodc']))
             Xblue = self.bore['bluebridge_lag_'+HLW+'_'+source].where( np.isnan(self.bore['liv_height_'+HLW+'_bodc']))
-            plt.plot( Xsalt,Yliv, 'ro', label='Saltney 2021')
-            plt.plot( Xblue,Yliv, 'bo', label='Bluebridge 2021')
-            plt.plot( Xsalt[0],Yliv[0], 'go', label='Saltney latest')
+            Xsalt_latest = Xsalt.where( xr.ufuncs.isfinite(Xsalt), drop=True)[0]
+            Yliv_latest  = Yliv.where( xr.ufuncs.isfinite(Xsalt), drop=True)[0]
+            plt.plot( Xsalt,Yliv, 'ro', label='Saltney 2022')
+            plt.plot( Xblue,Yliv, 'bo', label='Bluebridge 2022')
+            plt.plot( Xsalt_latest,Yliv_latest, 'go', label='Saltney latest')
             plt.plot( Xsalt[I],Yliv[I], 'k+')
             #plt.plot( Xblue[0],Yliv[0], 'b+', label='Bluebridge recent')
 
