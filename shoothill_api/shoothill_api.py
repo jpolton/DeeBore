@@ -104,9 +104,9 @@ class GAUGE(coast.Tidegauge):
         time_max = np.zeros(nt)
         values_max = np.zeros(nt)
         for i in range(nt):
-            HLW = self.get_tidetabletimes( target_times[i].values, method='window', winsize=winsize )
-            logging.debug(f"{i}: {find_maxima(HLW.time.values, HLW.values, method=method)}")
-            time_max[i], values_max[i] = find_maxima(HLW.time.values, HLW.values, method=method)
+            HLW = self.get_tide_table_times( target_times[i].values, method='window', winsize=winsize )
+            logging.debug(f"{i}: {coast.stats_util.find_maxima(HLW.time.values, HLW.values, method=method)}")
+            time_max[i], values_max[i] = coast.stats_util.find_maxima(HLW.time.values, HLW.values, method=method)
 
         new_dataset = xr.Dataset()
         new_dataset.attrs = self.dataset.attrs
@@ -115,7 +115,7 @@ class GAUGE(coast.Tidegauge):
         print(values_max)
         new_dataset[var_str + '_highs'] = (var_str+'_highs', values_max)
 
-        new_object = Tidegauge()
+        new_object = coast.Tidegauge()
         new_object.dataset = new_dataset
 
         return new_object
