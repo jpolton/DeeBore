@@ -1401,7 +1401,7 @@ class Controller():
 
 
 
-    def combinations_lag_HLW_river(self):
+    def combinations_lag_hlw_river(self):
         """
         Plot different combinations of Lag,HLW w/ rivers
         """
