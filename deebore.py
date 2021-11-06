@@ -166,7 +166,7 @@ class Controller():
                 self.load_and_process(source="api", HLW="HW")
                 self.load_and_process(source="api", HLW="LW")
                 print('load and process CTR data. Obs + API')
-                self.get_CTR_data(HLW="LW")
+                self.get_river_data(HLW="LW")
 
 
             elif command == "0":
@@ -192,6 +192,11 @@ class Controller():
                 print('load and process measured (API) data')
                 if not self.load_bore_flag: self.load_csv()
                 self.load_and_process(source="api")
+
+            elif command == "r":
+                print('load and process measured (API) river data')
+                if not self.load_bore_flag: self.load_csv()
+                self.get_river_data()
 
             elif command == "2":
                 print('show bore dataset')
@@ -311,7 +316,7 @@ class Controller():
         self.bore = bore
         logging.info('Bore data loaded')
 
-    def get_CTR_data(self, HLW:str="LW"):
+    def get_river_data(self, HLW:str="LW"):
         """
         Get Chester weir data. Consolidate CTR data.
         Data from the table takes precident. Gaps are filled by the API.
@@ -1128,6 +1133,7 @@ if __name__ == "__main__":
     hrec    load and process harmonic reconstructed data
     b       load and process measured (bodc) data
     a       load and process measured (API) data
+    r       load and process measured (API) river data
     2       show bore dataset
     3       plot bore data (lag vs tidal height)
     4       plot difference between predicted and measured (lag vs tidal height)
