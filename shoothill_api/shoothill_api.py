@@ -70,6 +70,7 @@ class GAUGE(coast.Tidegauge):
         self.startday=startday
         self.endday=endday
         self.station_id=station_id # Shoothill id
+        self.dataset = None
 
         #self.dataset = self.read_shoothill_to_xarray(station_id="13482") # Liverpool
 
