@@ -1133,6 +1133,7 @@ class Controller():
         self.plot_scatter_river(source='bodc', HLW="dLW")
         self.plot_scatter_river(source='bodc', HLW="dHW")
         self.plot_scatter_river(source='bodc', HLW="XX")
+        self.plot_scatter_river(source='api', HLW="HW")
 
 
 ################################################################################
