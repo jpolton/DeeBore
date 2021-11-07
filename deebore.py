@@ -989,7 +989,7 @@ class Controller():
         sg.dataset = sg.read_shoothill_to_xarray(date_start=date_start, date_end=date_end)
 
         #sg = GAUGE(startday=date_start, endday=date_end) # create modified Tidegauge object
-        sg_HLW = sg.find_high_and_low_water(var_str='sea_level')
+        sg_HLW = sg.find_high_and_low_water(var_str='sea_level', method='cubic')
         #g.dataset
         #g_HLW.dataset
 
@@ -1011,7 +1011,7 @@ class Controller():
 
         sg = GAUGE()
         sg.dataset = sg.read_shoothill_to_xarray(date_start=date_start, date_end=date_end)
-        sg_HW = sg.find_nearby_high_and_low_water(var_str='sea_level', target_times=tg_HLW.dataset.time_highs, method='comp')
+        sg_HW = sg.find_nearby_high_and_low_water(var_str='sea_level', target_times=tg_HLW.dataset.time_highs, method='cubic')
 
         # Example plot
         from matplotlib.collections import LineCollection
@@ -1037,6 +1037,44 @@ class Controller():
         ax.xaxis_date()
         ax.autoscale_view()
         plt.savefig('figs/Liverpool_shoothill_vs_table.png')
+        plt.close('all')
+
+        """
+        Compare QC's BODC measured highs with API highs (check reference levels)
+        """
+        bg=GAUGE()
+        bg.dataset = bg.read_bodc_to_xarray("data/BODC_processed/2020LIV.txt")
+        # Use QC to drop null values
+        bg.dataset['sea_level'] = bg.dataset.sea_level.where( bg.dataset.qc_flags!='N', drop=True)
+        # Trim dataset
+        bg.dataset = bg.dataset.sel(time=slice(date_start, date_end))
+        # Fix some attributes (others might not be correct for all data)
+        bg.dataset['start_date'] = bg.dataset.time.min().values
+        bg.dataset['end_date'] = bg.dataset.time.max().values
+        # This produces an xr.dataset with sea_level_highs and sea_level_lows
+        # with time variables time_highs and time_lows.
+        bg_HW = bg.find_nearby_high_and_low_water(var_str='sea_level', target_times=tg_HLW.dataset.time_highs, method='cubic')
+        #bg_HLW = bg.find_high_and_low_water(var_str='sea_level',method='cubic') #'cubic')
+
+        nval = min( len(sg_HW.dataset.time_highs), len(bg_HW.dataset.time_highs) )
+        segs_h = np.zeros((nval,2,2)) # line, pointA/B, t/z
+        #convert dates to numbers first
+        segs_h[:,0,0] = mdates.date2num( bg_HW.dataset.time_highs[:nval].astype('M8[ns]').astype('M8[ms]') )
+        segs_h[:,1,0] = mdates.date2num( sg_HW.dataset.time_highs[:nval].astype('M8[ns]').astype('M8[ms]') )
+        segs_h[:,0,1] = bg_HW.dataset.sea_level_highs[:nval]
+        segs_h[:,1,1] = sg_HW.dataset.sea_level_highs[:nval]
+
+
+        fig, ax = plt.subplots()
+        ax.set_ylim(segs_h[:,:,1].min(), segs_h[:,:,1].max())
+        line_segments_HW = LineCollection(segs_h, cmap='plasma', linewidth=1)
+        ax.add_collection(line_segments_HW)
+        ax.scatter(segs_h[:,0,0],segs_h[:,0,1], c='green', s=2) # harmonic predictions
+        ax.set_title('BODC QCd quiver to API measured high waters')
+
+        ax.xaxis_date()
+        ax.autoscale_view()
+        plt.savefig('figs/Liverpool_shoothill_vs_bodc.png')
         plt.close('all')
 
 
