@@ -327,8 +327,9 @@ class Controller():
         else:
             # Obtain CTR data for LW for the observations times.
             self.get_Glad_data(source='ctr',HLW="LW")
-            alph = self.bore['Chester Weir height: CHESTER WEIR 15 MIN SG'] #*np.NaN
+            alph = self.bore['Chester Weir height: CHESTER WEIR 15 MIN SG'] *np.NaN
             beta = self.bore['ctr_height_LW_ctr']
+            #print( self.bore['ctr_height_LW_ctr'][0:10] )
             self.bore['ctr_height_LW'] = alph
             self.bore['ctr_height_LW'].values = [alph[i].values if np.isfinite(alph[i].values) else beta[i].values for i in range(len(alph))]
             # 2015-06-20T12:16:00 has a -ve value. Only keep +ve values
@@ -403,20 +404,34 @@ class Controller():
             tg_HLW = tg.find_high_and_low_water(var_str='sea_level',method='cubic') #'cubic')
 
         elif source == "api": # load full tidal signal from shoothill, extract HLW
-            tg = GAUGE()
             date_start=np.datetime64('2005-04-01')
             date_end=np.datetime64('now','D')
+            fn_archive = "liv" # File head for netcdf archive of api call
 
-            # Load local file
-            #tg.dataset = xr.open_dataset('data/glad_shoothill.nc')
-            #tg.dataset.close() # close file associated with this object
+            # Load timeseries from local file if it exists
+            try:
+                tg1 = GAUGE()
+                tg2 = GAUGE()
+                tg = GAUGE()
 
-            tg.dataset = tg.read_shoothill_to_xarray(date_start=date_start, date_end=date_end)
+                # Load local file. Created with archive_shoothill.py
+                dir = "archive_shoothill/"
+                tg1.dataset = xr.open_mfdataset(dir + fn_archive + "_????.nc") # Tidal port Gladstone Dock, Liverpool
+                tg1.dataset = tg1.dataset.sel(time=slice(date_start, date_end))
+                print(f"{len(tg1.dataset.time)} pts loaded from netcdf")
+                if (tg1.dataset.time[-1].values < date_end):
+                    tg2 = GAUGE()
+                    tg2.dataset = tg2.read_shoothill_to_xarray(date_start=tg1.dataset.time[-1].values, date_end=date_end)
+                    tg.dataset = xr.concat([ tg1.dataset, tg2.dataset], dim='time')
+                    print(f"{len(tg2.dataset.time)} pts loaded from API")
+                else:
+                    tg = tg1
+            except:
+                tg.dataset = tg.read_shoothill_to_xarray(date_start=date_start, date_end=date_end)
+
             # This produces an xr.dataset with sea_level_highs and sea_level_lows
             # with time variables time_highs and time_lows.
-            tg_HLW = tg.find_high_and_low_water(var_str='sea_level')
-
-            #tg.dataset.to_netcdf('data/glad_shoothill.nc', mode="a", format="NETCDF4")
+            tg_HLW = tg.find_high_and_low_water(var_str='sea_level',method='cubic') #'cubic')
 
 
         elif source == "ctr": # use api to load chester weir. Reset loc variable
@@ -426,7 +441,31 @@ class Controller():
             date_end=np.datetime64('now','D')
             #station_id = 7900 # below weir
             station_id = 7899 # above weir
-            tg.dataset = tg.read_shoothill_to_xarray(station_id=station_id ,date_start=date_start, date_end=date_end)
+            fn_archive = "ctr" # File head for netcdf archive of api call
+
+            station_id = 968
+            fn_archive = "iron"
+
+            # Load timeseries from local file if it exists
+            try:
+                tg1 = GAUGE()
+                tg2 = GAUGE()
+                tg = GAUGE()
+
+                # Load local file. Created with archive_shoothill.py
+                dir = "archive_shoothill/"
+                tg1.dataset = xr.open_mfdataset(dir + fn_archive + "_????.nc") # Tidal port Gladstone Dock, Liverpool
+                tg1.dataset = tg1.dataset.sel(time=slice(date_start, date_end))
+                print(f"{len(tg1.dataset.time)} pts loaded from netcdf")
+                if (tg1.dataset.time[-1].values < date_end):
+                    tg2 = GAUGE()
+                    tg2.dataset = tg2.read_shoothill_to_xarray(station_id=station_id, date_start=tg1.dataset.time[-1].values, date_end=date_end)
+                    tg.dataset = xr.concat([ tg1.dataset, tg2.dataset], dim='time')
+                    print(f"{len(tg2.dataset.time)} pts loaded from API")
+                else:
+                    tg = tg1
+            except:
+                tg.dataset = tg.read_shoothill_to_xarray(station_id=station_id ,date_start=date_start, date_end=date_end)
 
             # This produces an xr.dataset with sea_level_highs and sea_level_lows
             # with time variables time_highs and time_lows.
@@ -690,25 +729,6 @@ class Controller():
         #plt.show()
         plt.savefig('figs/SaltneyArrivalLag_vs_LivHeight_'+HLW+'_'+source+'.png')
 
-        if(0):
-            #plt.show()
-
-            s = plt.scatter( self.bore['Saltney_lag_HW_bodc'], \
-                self.bore['liv_height_HW_bodc'], \
-                c=self.bore['Chester Weir height: CHESTER WEIR 15 MIN SG'],
-                cmap='magma',
-                vmin=4.4,
-                vmax=4.6 )
-            cbar = plt.colorbar(s)
-            # Linear fit
-            #x = self.df['Liv (Gladstone Dock) HT height (m)']
-            #plt.plot( x, self.df['linfit_lag'], '-' )
-            cbar.set_label('River height at weir (m)')
-            plt.title('Bore arrival time at Saltney Ferry')
-            plt.xlabel('Arrival time (mins before Liv HT)')
-            plt.ylabel('Liv (Gladstone Dock) HT height (m)')
-            plt.show()
-
 
     def plot_surge_effect(self, source:str='bodc', HLW:str="HW"):
         """
@@ -782,7 +802,7 @@ class Controller():
         """
         """
         plt.close('all')
-        fig = plt.figure()
+        fig = plt.figure(figsize=(8, 6), dpi=120)
         if HLW=="dLW":
             X = self.bore['Saltney_lag_LW_'+source]
             Y = self.bore['liv_height_HW_'+source] - self.bore['liv_height_LW_'+source]
@@ -802,9 +822,10 @@ class Controller():
         ss= plt.scatter( X, Y, \
             c=self.bore['ctr_height_LW'],
             s=S,
-            cmap='magma',
+            #cmap='magma',
+            cmap='jet',
             vmin=4.4,
-            vmax=4.6,
+            vmax=5.5, # 4.6
             label="RMSE:"+self.bore.attrs['rmse_'+HLW+'_'+source]
             )
         cbar = plt.colorbar(ss)
@@ -818,12 +839,12 @@ class Controller():
                          textcoords="offset points", # how to position the text
                          xytext=(0,6), # distance from text to points (x,y)
                          ha='center', # horizontal alignment can be left, right or center
-                         fontsize=6)
+                         fontsize=4)
         plt.legend()
         # Linear fit
         #x = self.df['Liv (Gladstone Dock) HT height (m)']
         #plt.plot( x, self.df['linfit_lag'], '-' )
-        cbar.set_label('River height at weir (m)')
+        cbar.set_label('River height (m)')
         plt.title('Bore arrival time at Saltney Ferry')
         plt.xlabel('Arrival time (mins) relative to Liv '+HLW)
         plt.ylabel('Liv (Gladstone Dock) '+HLW+' height (m)')
