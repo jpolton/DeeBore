@@ -923,7 +923,7 @@ class Controller():
             print("Predictions for ", day_of_week(Saltney_time_pred[i]), Saltney_time_pred[i].astype('datetime64[s]').astype(datetime.datetime).strftime('%Y/%m/%d') )
             print("Saltney FB:", np.datetime_as_string(Saltney_time_pred[i], unit='m', timezone=pytz.timezone('Europe/London')) )
             try:
-                Glad_HLW = tg.get_tidetabletimes( Saltney_time_pred[i], method='nearest_2' )
+                Glad_HLW = tg.get_tide_table_times( Saltney_time_pred[i], method='nearest_2' )
                 # Extract the High Tide value
                 print('Liv HT:    ', np.datetime_as_string(Glad_HLW[ np.argmax(Glad_HLW.values) ].time.values, unit='m', timezone=pytz.timezone('Europe/London')), Glad_HLW[ np.argmax(Glad_HLW.values) ].values, 'm' )
                 # Extract the Low Tide value
