@@ -1011,7 +1011,7 @@ class Controller():
 
         sg = GAUGE()
         sg.dataset = sg.read_shoothill_to_xarray(date_start=date_start, date_end=date_end)
-        sg_HW = sg.find_nearby_high_and_low_water(var_str='sea_level', target_times=tg_HLW.dataset.time_highs, method='cubic')
+        sg_HW = sg.find_nearby_high_and_low_water(var_str='sea_level', target_times=tg_HLW.dataset.time_highs, method='cubic', extrema="max")
 
         # Example plot
         from matplotlib.collections import LineCollection
@@ -1053,7 +1053,7 @@ class Controller():
         bg.dataset['end_date'] = bg.dataset.time.max().values
         # This produces an xr.dataset with sea_level_highs and sea_level_lows
         # with time variables time_highs and time_lows.
-        bg_HW = bg.find_nearby_high_and_low_water(var_str='sea_level', target_times=tg_HLW.dataset.time_highs, method='cubic')
+        bg_HW = bg.find_nearby_high_and_low_water(var_str='sea_level', target_times=tg_HLW.dataset.time_highs, method='cubic', extrema="max")
         #bg_HLW = bg.find_high_and_low_water(var_str='sea_level',method='cubic') #'cubic')
 
         nval = min( len(sg_HW.dataset.time_highs), len(bg_HW.dataset.time_highs) )
