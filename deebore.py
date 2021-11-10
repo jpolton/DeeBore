@@ -1176,6 +1176,9 @@ class Controller():
         self.plot_scatter_river(source='bodc', HLW="dHW")
         self.plot_scatter_river(source='bodc', HLW="XX")
         self.plot_scatter_river(source='api', HLW="HW")
+        self.plot_scatter_date(source='api', HLW="HW")
+        self.plot_scatter_date(source='bodc', HLW="HW")
+        self.plot_scatter_date(source='harmonic', HLW="HW")
 
 
     def river_lag_timing(self, HLW="HW", source="api"):
@@ -1232,6 +1235,58 @@ class Controller():
         plt.ylabel('River height (m)')
         plt.savefig('figs/SaltneyArrivalLag_vs_river_LivHeight'+HLW+'_'+source+'.png')
 
+
+    def plot_scatter_date(self, source:str='bodc', HLW:str="HW"):
+        """
+        """
+        plt.close('all')
+        fig = plt.figure(figsize=(8, 6), dpi=120)
+        if HLW=="dLW":
+            X = self.bore['Saltney_lag_LW_'+source]
+            Y = self.bore['liv_height_HW_'+source] - self.bore['liv_height_LW_'+source]
+        elif HLW=="dHW":
+            X = self.bore['Saltney_lag_HW_'+source]
+            Y = self.bore['liv_height_HW_'+source] - self.bore['liv_height_LW_'+source]
+        elif HLW=="XX":
+            X = self.bore['Saltney_lag_HW_'+source]
+            Y = self.bore['liv_height_LW_'+source]
+        else:
+            X = self.bore['Saltney_lag_'+HLW+'_'+source]
+            Y = self.bore['liv_height_'+HLW+'_'+source]
+
+        S = [40 if self.bore['Quality'][i] == "A" else 10 for i in range(len(self.bore['Quality']))]
+        lab = [ self.bore.time[i].values.astype('datetime64[D]').astype(object).strftime('%b%y') for i in range(len(self.bore['Quality']))]
+
+        ss= plt.scatter( X, Y, \
+            c=self.bore.time, #self.bore['ctr_height_LW'],
+            s=S,
+            #cmap='magma',
+            cmap='jet',
+            #vmin=4.4,
+            #vmax=5.5, # 4.6
+            label="RMSE:"+self.bore.attrs['rmse_'+HLW+'_'+source]
+            )
+        cbar = plt.colorbar(ss)
+
+        for ind in range(len(self.bore['Quality'])):
+        # zip joins x and y coordinates in pairs
+
+
+            plt.annotate(lab[ind], # this is the text
+                         (X[ind],Y[ind]), # this is the point to label
+                         textcoords="offset points", # how to position the text
+                         xytext=(0,6), # distance from text to points (x,y)
+                         ha='center', # horizontal alignment can be left, right or center
+                         fontsize=4)
+        plt.legend()
+        # Linear fit
+        #x = self.df['Liv (Gladstone Dock) HT height (m)']
+        #plt.plot( x, self.df['linfit_lag'], '-' )
+        cbar.set_label('Date')
+        plt.title('Bore arrival time at Saltney Ferry')
+        plt.xlabel('Arrival time (mins) relative to Liv '+HLW)
+        plt.ylabel('Liv (Gladstone Dock) '+HLW+' height (m)')
+        plt.savefig('figs/SaltneyArrivalLag_vs_LivHeight_date_'+HLW+'_'+source+'.png')
 
 
 ################################################################################
