@@ -243,7 +243,7 @@ class Controller():
                 print('Export data')
                 self.export_to_csv()
 
-            elif command == "r":
+            elif command == "rm":
                 print('Remove pickle file)')
                 if os.path.exists(DATABUCKET_FILE):
                     os.remove(DATABUCKET_FILE)
@@ -1321,7 +1321,7 @@ if __name__ == "__main__":
     6       Predict bore event for date
 
     x       Export data to csv. NOT IMPLEMENTED
-    r       Remove pickle file
+    rm      Remove pickle file
 
     i       to show these instructions
     q       to quit (and pickle bore)
