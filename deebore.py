@@ -410,7 +410,7 @@ class Controller():
             tg.dataset['end_date'] = tg.dataset.time.max().values
             # This produces an xr.dataset with sea_level_highs and sea_level_lows
             # with time variables time_highs and time_lows.
-            tg_HLW = tg.find_high_and_low_water(var_str='sea_level',method='cubic') #'cubic')
+            #tg_HLW = tg.find_high_and_low_water(var_str='sea_level',method='cubic') #'cubic')
 
         elif source == "api": # load full tidal signal from shoothill, extract HLW
             date_start=np.datetime64('2005-04-01')
@@ -440,7 +440,7 @@ class Controller():
 
             # This produces an xr.dataset with sea_level_highs and sea_level_lows
             # with time variables time_highs and time_lows.
-            tg_HLW = tg.find_high_and_low_water(var_str='sea_level',method='cubic') #'cubic')
+            #tg_HLW = tg.find_high_and_low_water(var_str='sea_level',method='cubic') #'cubic')
 
 
         elif source == "ctr": # use api to load chester weir. Reset loc variable
@@ -512,26 +512,38 @@ class Controller():
         HT_h = [] # Extrema - height
         HT_t = [] # Extrema - time
 
+        winsize = 6 #4h for HW, 6h for LW. +/- search distance for nearest extreme value
+
         for i in range(len(self.bore.time)):
             try:
                 HW = None
                 LW = None
-                #HLW = tg.get_tidetabletimes(self.bore.time[i].values)
+                obs_time = self.bore.time[i].values
+
+                # Extracting the highest and lowest value with a cubic spline is
+                # very memory costly. Only need to use the cubic method for the
+                # bodc and api sources, so compute the high and low waters in a
+                # piecewise approach around observations times.
+                if source == "bodc" or source == "api":
+                    # This produces an xr.dataset with sea_level_highs and sea_level_lows
+                    # with time variables time_highs and time_lows.
+                    win = GAUGE()
+                    win.dataset = tg.dataset.sel( time=slice(obs_time - np.timedelta64(winsize, "h"), obs_time + np.timedelta64(winsize, "h"))  )
+                    #print(i," win.dataset.time.size", win.dataset.time.size)
+                    if win.dataset.time.size == 0:
+                        tg_HLW = GAUGE()
+                        tg_HLW.dataset = xr.Dataset({measure_var: (time_var, [np.NaN])}, coords={time_var: [obs_time]})
+                    else:
+                        tg_HLW = win.find_high_and_low_water(var_str='sea_level',method='cubic') #'cubic')
 
                 HW = tg_HLW.get_tide_table_times(
-                                        time_guess=self.bore.time[i].values,
+                                        time_guess=obs_time,
                                         time_var=time_var,
                                         measure_var=measure_var,
                                         method='nearest_1',
-                                        winsize=6 ) #4h for HW, 6h for LW
-                #LW = tg_HLW.get_tidetabletimes(
-                #                        time_guess=self.bore.time[i].values,
-                #                        time_var='time_lows',
-                #                        measure_var='sea_level_lows',
-                #                        method='nearest_1',
-                #                        winsize=6 ) #4
+                                        winsize=winsize ) #4h for HW, 6h for LW
 
-                #HW = HW - LW.values
+                #print("time,HW:",obs_time, HW.values)
                 if type(HW) is xr.DataArray:
                     #print(f"HW: {HW}")
                     HT_h.append( HW.values )
@@ -570,7 +582,6 @@ class Controller():
                 else:
                     logging.info(f"Did not find a high water near this guess")
                     print(f"Did not find a high water near this guess")
-
 
 
             except:
