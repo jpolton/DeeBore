@@ -6,7 +6,7 @@ data/*
 
 *pkl
 __pycache__/
-config_keys.py # Shoothill API keys
+config_keys.py 
 
 archive_shoothill/
 
