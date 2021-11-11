@@ -61,6 +61,99 @@ import logging
 logging.basicConfig(filename='bore.log', filemode='w+')
 logging.getLogger().setLevel(logging.DEBUG)
 
+################################################################################
+class OpenWeather:
+    """
+    Class to load in an export OpenWeather history file at Hawarden Airport into
+    an xarray dataset.
+    """
+    def __init__(self):
+        self.dataset = None
+
+    #%% Load method
+    @classmethod
+    def read_openweather_to_xarray(cls, fn_openweather, date_start=None, date_end=None):
+        """
+        For reading from a single OpenWeather csv history file into an
+        xarray dataset.
+        If no data lies between the specified dates, a dataset is still created
+        containing information on the gauge, but the time dimension will
+        be empty.
+
+        The data takes the form:
+
+        dt,dt_iso,timezone,city_name,lat,lon,temp,feels_like,temp_min,temp_max,pressure,sea_level,grnd_level,humidity,wind_speed,wind_deg,rain_1h,rain_3h,snow_1h,snow_3h,clouds_all,weather_id,weather_main,weather_description,weather_icon
+        1104537600,2005-01-01 00:00:00 +0000 UTC,0,hawarden airport,53.176908,-2.978784,7.63,6.95,7.54,7.74,1024,,,99,1.5,150,,,,,75,803,Clouds,broken clouds,04n
+        1104541200,2005-01-01 01:00:00 +0000 UTC,0,hawarden airport,53.176908,-2.978784,4.83,2.61,4.54,7.54,1023,,,99,2.6,170,,,,,28,802,Clouds,scattered clouds,03n
+        ...
+
+        Parameters
+        ----------
+        fn_openweather (str) : path to OpenWeather location file
+        date_start (datetime) : start date for returning data
+        date_end (datetime) : end date for returning data
+
+        Returns
+        -------
+        xarray.Dataset object.
+        E.g.
+        Coordinates:
+          * time        (time) datetime64[ns] 2005-01-01 ... 2021-11-08T23:00:00
+        Data variables:
+            wind_speed  (time) float64 1.5 2.6 4.6 4.1 5.1 ... 3.6 4.12 0.89 4.02 2.68
+            wind_deg    (time) int64 150 170 200 220 210 200 ... 180 190 210 117 239 226
+            longitude   float64 53.18
+            latitude    float64 -2.979
+            site_name   object 'hawarden airport'
+        """
+        try:
+            dataset = cls.read_openweather_data(fn_openweather, date_start, date_end)
+        except:
+            raise Exception("Problem reading OpenWeather file: " + fn_openweather)
+        # Attributes
+        dataset["longitude"] = float(dataset["lat"][0])
+        dataset["latitude"] = float(dataset["lon"][0])
+        dataset["site_name"] = str(dataset["city_name"][0])
+        dataset = dataset.drop_vars(["lon", "lat", "city_name"])
+
+        return dataset
+
+    @classmethod
+    def read_openweather_data(cls, filnam, date_start=None, date_end=None):
+        """
+        Reads NRW data from a csv file.
+
+        Parameters
+        ----------
+        filnam (str) : path to OpenWeather file
+        date_start (np.datetime64) : start date for returning data.
+        date_end (np.datetime64) : end date for returning data.
+
+        Returns
+        -------
+        xarray.Dataset containing times, wind_speed, wind_deg, lat, lon, city_name
+        """
+        import datetime
+
+        # Initialise empty dataset and lists
+        dataset = xr.Dataset()
+        # Define custom data parser
+        custom_date_parser = lambda x: datetime.datetime.strptime(x, "%Y-%m-%d %H:%M:%S +0000 UTC")
+        data = pd.read_csv(filnam, delimiter=',', parse_dates=['dt_iso'], date_parser=custom_date_parser)
+        data.rename(columns={'dt_iso':'time'}, inplace=True)
+        data.set_index('time', inplace=True)
+        data.drop(columns=['dt', 'timezone', 'temp',
+           'feels_like', 'temp_min', 'temp_max', 'pressure', 'sea_level',
+           'grnd_level', 'humidity', 'rain_1h',
+           'rain_3h', 'snow_1h', 'snow_3h', 'clouds_all', 'weather_id',
+           'weather_main', 'weather_description', 'weather_icon'], inplace=True)
+        dataset = data.to_xarray()
+        if  date_start != None:
+                dataset = dataset.where(dataset.time >= date_start)
+        if date_end != None:
+                dataset = dataset.where(dataset.time <= date_end)
+        # Assign local dataset to object-scope dataset
+        return dataset
 
 
 #%% ############################################################################
@@ -197,6 +290,11 @@ class Controller():
                 print('load and process measured (API) river data')
                 if not self.load_bore_flag: self.load_csv()
                 self.get_river_data()
+
+            elif command == "m":
+                print("load and process met data")
+                if not self.load_bore_flag: self.load_csv()
+                self.get_met_data()
 
             elif command == "2":
                 print('show bore dataset')
@@ -342,6 +440,123 @@ class Controller():
             #plt.plot( self.bore['ctr_height_LW_ctr'], 'ro')
             #plt.plot( self.bore['ctr_height_LW'], 'g.')
             del self.bore['ctr_height_LW_ctr'], self.bore['ctr_time_LW_ctr']
+
+    def get_met_data(self, HLW:str="HW"):
+        """
+        Get the met data time matching the HLW option.
+        Met data from OpenWeather history download.
+
+
+        This can then be exported into the obs table:
+        c.met.to_pandas().to_csv('met.csv')
+        """
+        fn_openweather = "data/met/openweather_2005-01-01_2021-11-08.csv"
+        met = OpenWeather()
+        met.dataset = met.read_openweather_to_xarray(fn_openweather)
+
+        winsize = 6 #4h for HW, 6h for LW. +/- search distance for nearest extreme value
+        self.met = xr.Dataset()
+
+        for measure_var in ['wind_speed', 'wind_deg']:
+
+            met_var = []
+            met_time = []
+            for i in range(len(self.bore.time)):
+                try:
+                    met_ds = None
+                    obs_time = self.bore.time[i].values
+
+
+                    # Find nearest met observation
+                    dt = np.abs(met.dataset['time'] - obs_time)
+                    index = np.argsort(dt).values
+                    if winsize is not None:  # if search window trucation exists
+                        if np.timedelta64(dt[index[0]].values, "m").astype("int") <= 60 * winsize:  # compare in minutes
+                            #print(f"dt:{np.timedelta64(dt[index[0]].values, 'm').astype('int')}")
+                            #print(f"winsize:{winsize}")
+                            met_ds = met.dataset[measure_var][index[0]]
+                        else:
+                            # return a NaN in an xr.Dataset
+                            # The rather odd trailing zero is to remove the array layer
+                            # on both time and measurement, and to match the other
+                            # alternative for a return
+                            met_ds = xr.DataArray( [np.NaN], coords={'time': [obs_time]})
+                            #met_ds = xr.Dataset({measure_var: ('time', [np.NaN])}, coords={'time': [obs_time]})
+
+                    else:  # give the closest without window search truncation
+                        met_ds = met.dataset[measure_var][index[0]]
+
+
+
+                    #print("time,HW:",obs_time, HW.values)
+                    if type(met_ds) is xr.DataArray:
+                        #print(f"met: {met_ds.values}")
+                        met_var.append( float(met_ds.values) )
+                        #print('len(met_var)', len(met_var))
+                        met_time.append( met_ds.time.values )
+                        #print('len(met_time)', len(met_time))
+                        #self.bore['LT_h'][i] = HLW.dataset.sea_level[HLW.dataset['sea_level'].argmin()]
+                        #self.bore['LT_t'][i] = HLW.dataset.time[HLW.dataset['sea_level'].argmin()]
+                        #ind.append(i)
+                        #print(f"i:{i}, {met_time[-1].astype('M8[ns]').astype('M8[ms]').item()}" )
+                        #print(met_time[-1].astype('M8[ns]').astype('M8[ms]').item().strftime('%Y-%m-%d'))
+
+                        ## Make timeseries plot around the highwater maxima to check
+                        # values are being extracted as expected.
+                        if (i % 12) == 0:
+                            fig = plt.figure()
+
+                        if measure_var == "wind_speed":
+                            ymax = 15
+                        if measure_var == "wind_deg":
+                            ymax = 360
+                        plt.subplot(3,4,(i%12)+1)
+                        plt.plot(met.dataset.time, met.dataset[measure_var])
+                        plt.plot( met_time[-1], met_var[-1], 'r+' )
+                        plt.plot( [self.bore.time[i].values,self.bore.time[i].values],[0,ymax],'k')
+                        plt.xlim([met_time[-1] - np.timedelta64(5,'h'),
+                                  met_time[-1] + np.timedelta64(5,'h')])
+                        #plt.ylim([0,11])
+                        plt.text( met_time[-1]-np.timedelta64(5,'h'),ymax*0.9, self.bore.location[i].values)
+                        plt.text( met_time[-1]-np.timedelta64(5,'h'),ymax*0.1,  met_time[-1].astype('M8[ns]').astype('M8[ms]').item().strftime('%Y-%m-%d'))
+                        # Turn off tick labels
+                        plt.gca().axes.get_xaxis().set_visible(False)
+                        #plt.xaxis_date()
+                        #plt.autoscale_view()
+                        if (i%12) == 12-1:
+                            plt.savefig('figs/check_get_'+measure_var+'_times_'+str(i//12).zfill(2)+'.png')
+                            plt.close('all')
+
+
+                    else:
+                        logging.info(f"Did not find a met time near this guess {obs_time}")
+                        print(f"Did not find a met time near this guess {obs_time}")
+
+
+                except:
+                    logging.warning('Issue with appending met data')
+                    print('Issue with appending met data')
+
+            try: # Try and print the last observation timeseries
+                plt.savefig('figs/check_get_'+measure_var+'_times_'+str(i//12).zfill(2)+'.png')
+                plt.close('all')
+            except:
+                logging.info(f"Did not have any extra panels to plot")
+                print(f"Did not have any extra panels to plot")
+
+
+            # Save a xarray objects
+            coords = {'time': (('time'), self.bore.time.values)}
+            #print("number of obs:",len(self.bore.time))
+            #print("length of time", len(self.bore.time.values))
+            #print("length of data:", len(np.array(met_var)) )
+            self.met[measure_var] = xr.DataArray( np.array(met_var), coords=coords, dims=['time'])
+
+
+
+
+
+
 
 
     def get_Glad_data(self, source:str='harmonic', HLW:str="HW"):
@@ -598,6 +813,9 @@ class Controller():
 
         # Save a xarray objects
         coords = {'time': (('time'), self.bore.time.values)}
+        #print("number of obs:",len(self.bore.time))
+        #print("length of time", len(self.bore.time.values))
+        #print("length of data:", len(np.array(HT_h)) )
         self.bore[loc+'_height_'+HLW+'_'+source] = xr.DataArray( np.array(HT_h), coords=coords, dims=['time'])
         self.bore[loc+'_time_'+HLW+'_'+source] = xr.DataArray( np.array(HT_t), coords=coords, dims=['time'])
 
@@ -1325,6 +1543,7 @@ if __name__ == "__main__":
     b       load and process measured (bodc) data
     a       load and process measured (API) data
     r       load and process measured (API) river data
+    m       load and process met data
     2       show bore dataset
     3       plot bore data (lag vs tidal height)
     4       plot difference between predicted and measured (lag vs tidal height)
