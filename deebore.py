@@ -402,6 +402,8 @@ class Controller():
                                 'Unnamed: 15','Unnamed: 16'], \
                                  inplace=True)
         df.rename(columns={"date + logged time (GMT)":"time"}, inplace=True)
+        df.rename(columns={"wind_deg (from)":"wind_deg"}, inplace=True)
+        df.rename(columns={"wind_speed (m/s)":"wind_speed"}, inplace=True)
         df['time'] = pd.to_datetime(df['time'], format="%d/%m/%Y %H:%M")
         #df['time'] = pd.to_datetime(df['time'], utc=True, format="%d/%m/%Y %H:%M")
         #df.set_index(['time'], inplace=True)
@@ -1408,7 +1410,9 @@ class Controller():
         self.plot_scatter_date(source='api', HLW="HW")
         self.plot_scatter_date(source='bodc', HLW="HW")
         self.plot_scatter_date(source='harmonic', HLW="HW")
-
+        self.plot_scatter_wind(source='api', HLW="HW")
+        self.plot_scatter_wind(source='bodc', HLW="HW")
+        self.plot_scatter_wind(source='harmonic', HLW="HW")
 
     def river_lag_timing(self, HLW="HW", source="api"):
         """
@@ -1518,6 +1522,56 @@ class Controller():
         plt.savefig('figs/SaltneyArrivalLag_vs_LivHeight_date_'+HLW+'_'+source+'.png')
 
 
+    def plot_scatter_wind(self, source:str='bodc', HLW:str="HW"):
+        """
+        """
+        plt.close('all')
+        fig = plt.figure(figsize=(8, 6), dpi=120)
+        if HLW=="dLW":
+            X = self.bore['Saltney_lag_LW_'+source]
+            Y = self.bore['liv_height_HW_'+source] - self.bore['liv_height_LW_'+source]
+        elif HLW=="dHW":
+            X = self.bore['Saltney_lag_HW_'+source]
+            Y = self.bore['liv_height_HW_'+source] - self.bore['liv_height_LW_'+source]
+        elif HLW=="XX":
+            X = self.bore['Saltney_lag_HW_'+source]
+            Y = self.bore['liv_height_LW_'+source]
+        else:
+            X = self.bore['Saltney_lag_'+HLW+'_'+source]
+            Y = self.bore['liv_height_'+HLW+'_'+source]
+
+        S = [40 if self.bore['Quality'][i] == "A" else 10 for i in range(len(self.bore['Quality']))]
+        lab = [ self.bore.time[i].values.astype('datetime64[D]').astype(object).strftime('%b%y') for i in range(len(self.bore['Quality']))]
+
+        ss= plt.scatter( X, Y, \
+            c=self.bore.wind_speed * np.cos((315 - self.bore.wind_deg)*np.pi/180.), #self.bore['ctr_height_LW'],
+            s=S,
+            cmap='Spectral',
+            vmin=-7,
+            vmax=7, # 4.6
+            label="RMSE:"+self.bore.attrs['rmse_'+HLW+'_'+source]
+            )
+        cbar = plt.colorbar(ss)
+
+        for ind in range(len(self.bore['Quality'])):
+        # zip joins x and y coordinates in pairs
+
+
+            plt.annotate(lab[ind], # this is the text
+                         (X[ind],Y[ind]), # this is the point to label
+                         textcoords="offset points", # how to position the text
+                         xytext=(0,6), # distance from text to points (x,y)
+                         ha='center', # horizontal alignment can be left, right or center
+                         fontsize=4)
+        plt.legend()
+        # Linear fit
+        #x = self.df['Liv (Gladstone Dock) HT height (m)']
+        #plt.plot( x, self.df['linfit_lag'], '-' )
+        cbar.set_label('Along estuary wind (m/s), towards Saltney')
+        plt.title('Bore arrival time at Saltney Ferry')
+        plt.xlabel('Arrival time (mins) relative to Liv '+HLW)
+        plt.ylabel('Liv (Gladstone Dock) '+HLW+' height (m)')
+        plt.savefig('figs/SaltneyArrivalLag_vs_LivHeight_wind_'+HLW+'_'+source+'.png')
 ################################################################################
 ################################################################################
 #%% Main Routine
