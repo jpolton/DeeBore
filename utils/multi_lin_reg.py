@@ -50,7 +50,7 @@ def mlr_fit(X,y):
     # Fit model with test and train data
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size = 0.25, random_state=8) # test_size=0.2
 
-    lin_reg_mod = LinearRegression(normalize=True)
+    lin_reg_mod = LinearRegression() #normalize=True)
 
     lin_reg_mod.fit(X_train, y_train)
 
