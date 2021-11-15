@@ -1524,54 +1524,63 @@ class Controller():
 
     def plot_scatter_wind(self, source:str='bodc', HLW:str="HW"):
         """
+        dir: str [along/across]. PLot either the along or across estuary wind speed
         """
-        plt.close('all')
-        fig = plt.figure(figsize=(8, 6), dpi=120)
-        if HLW=="dLW":
-            X = self.bore['Saltney_lag_LW_'+source]
-            Y = self.bore['liv_height_HW_'+source] - self.bore['liv_height_LW_'+source]
-        elif HLW=="dHW":
-            X = self.bore['Saltney_lag_HW_'+source]
-            Y = self.bore['liv_height_HW_'+source] - self.bore['liv_height_LW_'+source]
-        elif HLW=="XX":
-            X = self.bore['Saltney_lag_HW_'+source]
-            Y = self.bore['liv_height_LW_'+source]
-        else:
-            X = self.bore['Saltney_lag_'+HLW+'_'+source]
-            Y = self.bore['liv_height_'+HLW+'_'+source]
+        for dirn in ["along", "across"]:
 
-        S = [40 if self.bore['Quality'][i] == "A" else 10 for i in range(len(self.bore['Quality']))]
-        lab = [ self.bore.time[i].values.astype('datetime64[D]').astype(object).strftime('%b%y') for i in range(len(self.bore['Quality']))]
+            plt.close('all')
+            fig = plt.figure(figsize=(8, 6), dpi=120)
+            if HLW=="dLW":
+                X = self.bore['Saltney_lag_LW_'+source]
+                Y = self.bore['liv_height_HW_'+source] - self.bore['liv_height_LW_'+source]
+            elif HLW=="dHW":
+                X = self.bore['Saltney_lag_HW_'+source]
+                Y = self.bore['liv_height_HW_'+source] - self.bore['liv_height_LW_'+source]
+            elif HLW=="XX":
+                X = self.bore['Saltney_lag_HW_'+source]
+                Y = self.bore['liv_height_LW_'+source]
+            else:
+                X = self.bore['Saltney_lag_'+HLW+'_'+source]
+                Y = self.bore['liv_height_'+HLW+'_'+source]
 
-        ss= plt.scatter( X, Y, \
-            c=self.bore.wind_speed * np.cos((315 - self.bore.wind_deg)*np.pi/180.), #self.bore['ctr_height_LW'],
-            s=S,
-            cmap='Spectral',
-            vmin=-7,
-            vmax=7, # 4.6
-            label="RMSE:"+self.bore.attrs['rmse_'+HLW+'_'+source]
-            )
-        cbar = plt.colorbar(ss)
+            S = [40 if self.bore['Quality'][i] == "A" else 10 for i in range(len(self.bore['Quality']))]
+            lab = [ self.bore.time[i].values.astype('datetime64[D]').astype(object).strftime('%b%y') for i in range(len(self.bore['Quality']))]
+            if dirn == "along":
+                spd = self.bore.wind_speed * np.cos((315 - self.bore.wind_deg)*np.pi/180.)
+            elif dirn == "across":
+                spd = self.bore.wind_speed * np.sin((315 - self.bore.wind_deg)*np.pi/180.)
+            else:
+                print(f"{dirn}: did not expect that direction option")
 
-        for ind in range(len(self.bore['Quality'])):
-        # zip joins x and y coordinates in pairs
+            ss= plt.scatter( X, Y, \
+                c=spd, #self.bore['ctr_height_LW'],
+                s=S,
+                cmap='Spectral',
+                vmin=-7,
+                vmax=7, # 4.6
+                label="RMSE:"+self.bore.attrs['rmse_'+HLW+'_'+source]
+                )
+            cbar = plt.colorbar(ss)
+
+            for ind in range(len(self.bore['Quality'])):
+            # zip joins x and y coordinates in pairs
 
 
-            plt.annotate(lab[ind], # this is the text
-                         (X[ind],Y[ind]), # this is the point to label
-                         textcoords="offset points", # how to position the text
-                         xytext=(0,6), # distance from text to points (x,y)
-                         ha='center', # horizontal alignment can be left, right or center
-                         fontsize=4)
-        plt.legend()
-        # Linear fit
-        #x = self.df['Liv (Gladstone Dock) HT height (m)']
-        #plt.plot( x, self.df['linfit_lag'], '-' )
-        cbar.set_label('Along estuary wind (m/s), towards Saltney')
-        plt.title('Bore arrival time at Saltney Ferry')
-        plt.xlabel('Arrival time (mins) relative to Liv '+HLW)
-        plt.ylabel('Liv (Gladstone Dock) '+HLW+' height (m)')
-        plt.savefig('figs/SaltneyArrivalLag_vs_LivHeight_wind_'+HLW+'_'+source+'.png')
+                plt.annotate(lab[ind], # this is the text
+                             (X[ind],Y[ind]), # this is the point to label
+                             textcoords="offset points", # how to position the text
+                             xytext=(0,6), # distance from text to points (x,y)
+                             ha='center', # horizontal alignment can be left, right or center
+                             fontsize=4)
+            plt.legend()
+            # Linear fit
+            #x = self.df['Liv (Gladstone Dock) HT height (m)']
+            #plt.plot( x, self.df['linfit_lag'], '-' )
+            cbar.set_label(dirn+' estuary wind (m/s), from Hawarden/Connahs Quay')
+            plt.title('Bore arrival time at Saltney Ferry')
+            plt.xlabel('Arrival time (mins) relative to Liv '+HLW)
+            plt.ylabel('Liv (Gladstone Dock) '+HLW+' height (m)')
+            plt.savefig('figs/SaltneyArrivalLag_vs_LivHeight_'+dirn+'_wind_'+HLW+'_'+source+'.png')
 ################################################################################
 ################################################################################
 #%% Main Routine
