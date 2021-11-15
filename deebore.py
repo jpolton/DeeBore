@@ -855,8 +855,13 @@ class Controller():
         logging.info('calc_Glad_Saltney_time_diff')
         nt = len(self.bore.time)
         lag = (self.bore['time'].values - self.bore['liv_time_'+HLW+'_'+source].values).astype('timedelta64[m]')
-        Saltney_lag    = [ lag[i].astype('int') if self.bore.location.values[i] == 'bridge' else np.NaN for i in range(nt) ]
-        bluebridge_lag = [ lag[i].astype('int') if self.bore.location.values[i] == 'blue bridge' else np.NaN for i in range(nt) ]
+        # convert to integers so nans can be applied
+        lag = [ lag[i].astype('int') if np.isfinite(self.bore['liv_height_'+HLW+'_'+source].values)[i]  else np.NaN for i in range(nt) ]
+        # Pick out FB and Blue bridge
+        Saltney_lag    = [ lag[i] if self.bore.location.values[i] == 'bridge' else np.NaN for i in range(nt) ]
+        bluebridge_lag = [ lag[i] if self.bore.location.values[i] == 'blue bridge' else np.NaN for i in range(nt) ]
+        #Saltney_lag    = [ lag[i].astype('int') if self.bore.location.values[i] == 'bridge' else np.NaN for i in range(nt) ]
+        #bluebridge_lag = [ lag[i].astype('int') if self.bore.location.values[i] == 'blue bridge' else np.NaN for i in range(nt) ]
 
         # Save a xarray objects
         coords = {'time': (('time'), self.bore.time.values)}
