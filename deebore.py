@@ -375,7 +375,7 @@ class Controller():
         self.get_Glad_data(source=source, HLW=HLW)
         #self.compare_Glad_HLW()
         print('Calculating the Gladstone to Saltney time difference')
-        self.calc_Glad_Saltney_time_diff(source=source, HLW=HLW)
+        self.calc_Glad_Saltney_time_lag(source=source, HLW=HLW)
         print('Process linear fit. Calc and save')
         self.process_fit(source=source, HLW=HLW)
 
@@ -840,7 +840,7 @@ class Controller():
         #    print( self.bore.time[i].values, self.bore['Liv (Gladstone Dock) HT time (GMT)'][i].values, self.bore['liv_time'][i].values)
 
 
-    def calc_Glad_Saltney_time_diff(self, source:str="harmonic", HLW:str="HW"):
+    def calc_Glad_Saltney_time_lag(self, source:str="harmonic", HLW:str="HW"):
         """
         Compute lag (obs - tide) for arrival at Saltney relative to Glastone HT
         Store lags as integer (minutes) since np.datetime64 and
