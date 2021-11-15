@@ -944,13 +944,17 @@ class Controller():
             plt.plot( Xsalt[I],Yliv[I], 'k+', label='1st hand')
             plt.plot( Xblue,Yliv, 'b.', label='Bluebridge')
             plt.plot( Xfit,Yliv, 'k-')
-            Yliv = self.bore['liv_height_'+HLW+'_'+source].where( np.isnan(self.bore['liv_height_'+HLW+'_bodc']))
-            Xsalt = self.bore['Saltney_lag_'+HLW+'_'+source].where( np.isnan(self.bore['liv_height_'+HLW+'_bodc']))
-            Xblue = self.bore['bluebridge_lag_'+HLW+'_'+source].where( np.isnan(self.bore['liv_height_'+HLW+'_bodc']))
             Xsalt_latest = Xsalt.where( xr.ufuncs.isfinite(Xsalt), drop=True)[0]
             Yliv_latest  = Yliv.where( xr.ufuncs.isfinite(Xsalt), drop=True)[0]
-            plt.plot( Xsalt,Yliv, 'ro', label='Saltney 2022')
-            plt.plot( Xblue,Yliv, 'bo', label='Bluebridge 2022')
+            # Highlight recent data
+            Yliv = self.bore['liv_height_'+HLW+'_'+source].where( self.bore.time > np.datetime64('2021-01-01') )
+            Xsalt = self.bore['Saltney_lag_'+HLW+'_'+source].where( self.bore.time > np.datetime64('2021-01-01') )
+            Xblue = self.bore['bluebridge_lag_'+HLW+'_'+source].where( self.bore.time > np.datetime64('2021-01-01') )
+            #Yliv = self.bore['liv_height_'+HLW+'_'+source].where( np.isnan(self.bore['liv_height_'+HLW+'_bodc']))
+            #Xsalt = self.bore['Saltney_lag_'+HLW+'_'+source].where( np.isnan(self.bore['liv_height_'+HLW+'_bodc']))
+            #Xblue = self.bore['bluebridge_lag_'+HLW+'_'+source].where( np.isnan(self.bore['liv_height_'+HLW+'_bodc']))
+            plt.plot( Xsalt,Yliv, 'ro', label='Saltney 2021')
+            plt.plot( Xblue,Yliv, 'bo', label='Bluebridge 2021')
             plt.plot( Xsalt_latest,Yliv_latest, 'go', label='Saltney latest')
             plt.plot( Xsalt[I],Yliv[I], 'k+')
             #plt.plot( Xblue[0],Yliv[0], 'b+', label='Bluebridge recent')
