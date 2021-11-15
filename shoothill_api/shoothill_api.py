@@ -89,6 +89,9 @@ class GAUGE(coast.Tidegauge):
 
     def find_nearby_high_and_low_water(self, var_str, target_times:xr.DataArray=None, winsize:int=2, method='comp', extrema:str="both"):
         """
+
+        WORK IN PROGRESS
+
         Finds high and low water for a given variable, in close proximity to
         input xrray of times.
         Returns in a new Tidegauge object with similar data format to
@@ -162,6 +165,72 @@ class GAUGE(coast.Tidegauge):
         #print(values_max)
 
         new_object = coast.Tidegauge()
+        new_object.dataset = new_dataset
+
+        return new_object
+
+    def find_inflection_points(self, var_str, method="comp", **kwargs):
+        """
+        Finds inflection points (between high and low water) for a given variable.
+        Returns in a new TIDEGAUGE object with similar data format to
+        a TIDETABLE.
+
+        The derivative is first taken (2nd order accurate central difference),
+        then maxima/minima of the derivatives are then found and returned.
+
+        Methods:
+        'comp' :: Find inflection by comparison with neighbouring values.
+                  Uses scipy.signal.find_peaks. **kwargs passed to this routine
+                  will be passed to scipy.signal.find_peaks.
+        'cubic':: Find the inflections using the roots of cubic spline.
+                  Uses scipy.interpolate.InterpolatedUnivariateSpline
+                  and scipy.signal.argrelmax. **kwargs are not activated.
+        NOTE: Currently only the 'comp' and 'cubic' methods implemented. Future
+                  methods include linear interpolation or refinements.
+
+        import coast
+        liv= xr.open_mfdataset("archive_shoothill/liv_2021.nc")
+        obs_time = np.datetime64('2021-11-01')
+        winsize = 6
+        win = GAUGE()
+        win.dataset = liv.sel( time=slice(obs_time - np.timedelta64(winsize, "h"), obs_time + np.timedelta64(winsize, "h"))  )
+        y = win.dataset.sea_level
+        x = win.dataset.time
+        f = y.differentiate("time")
+        time_max, values_max = coast.stats_util.find_maxima(x, f, method="comp")
+        interp = y.interp(time=time_max)
+        plt.plot( win.dataset.time, win.dataset.sea_level); plt.plot(interp.time, interp,'+'); plt.show()
+        """
+        y = self.dataset[var_str]
+        f = y.differentiate("time")
+        x = self.dataset.time
+
+        time_max, values_max = coast.stats_util.find_maxima(x, f, method=method, **kwargs)
+        time_min, values_min = coast.stats_util.find_maxima(x, -f, method=method, **kwargs)
+
+        #print(f"values_max {values_max.data}")
+        #print(f"test  {self.dataset.sea_level.interp(time=[np.datetime64('2021-11-12T17:40')])}")
+        #print(f"time_max {time_max}")
+        #print(f"time_max {values_max.time}")
+        #print(f"test2  {y.interp(time=[np.datetime64('2021-11-12T17:40')])}")
+
+        #print(f"interpolated: {y.interp(time=time_max)}")
+        inflection_rise = y.interp(time=time_max)
+        inflection_fall = y.interp(time=time_min)
+        #print(f"interpolated2: {y.interp(time=time_max.data)}")
+
+        new_dataset = xr.Dataset()
+        new_dataset.attrs = self.dataset.attrs
+        #new_dataset[var_str + "_rise"] = ("time_rise", inflection_rise.values)
+        #new_dataset[var_str + "_fall"] = ("time_fall", inflection_fall.values)
+        #new_dataset["time_rise"] = ("time_rise", inflection_rise.time.values)
+        #new_dataset["time_fall"] = ("time_fall", inflection_fall.values)
+        new_dataset[var_str + "_highs"] = ("time_highs", inflection_rise.values)
+        new_dataset[var_str + "_lows"] = ("time_lows", inflection_fall.values)
+        new_dataset["time_highs"] = ("time_highs", inflection_rise.time.values)
+        new_dataset["time_lows"] = ("time_lows", inflection_fall.values)
+
+        new_object = GAUGE()
         new_object.dataset = new_dataset
 
         return new_object
