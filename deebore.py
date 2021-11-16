@@ -26,7 +26,7 @@ Example usage:
 
 
 To do:
-    * Try loading shoothill data from file before making api request
+    * Smooth data before finding flood ebb
     * Workflow for updating all measured data
 """
 
@@ -247,21 +247,21 @@ class Controller():
                 print('load and process all data')
                 self.load_csv()
                 print('load and process measured (bodc) data')
-                self.load_and_process(source="bodc", HLW="HW")
-                self.load_and_process(source="bodc", HLW="LW")
-                self.load_and_process(source="bodc", HLW="FW")
+                self.load_and_process(source="bodc", HLW_list=["HW", "LW", "FW"])
+                #self.load_and_process(source="bodc", HLW="LW")
+                #self.load_and_process(source="bodc", HLW="FW")
                 print('load and process measured (API) data')
-                self.load_and_process(source="api", HLW="HW")
-                self.load_and_process(source="api", HLW="LW")
-                self.load_and_process(source="api", HLW="FW")
+                self.load_and_process(source="api", HLW_list=["HW", "LW", "FW"])
+                #self.load_and_process(source="api", HLW="LW")
+                #self.load_and_process(source="api", HLW="FW")
                 print('load and process CTR data. Obs + API')
-                self.get_river_data(HLW="LW")
+                self.get_river_data(HLW_list=["LW"])
                 print('load and process harmonic data')
-                self.load_and_process(source="harmonic", HLW="HW")
-                self.load_and_process(source="harmonic", HLW="LW")
+                self.load_and_process(source="harmonic", HLW_list=["HW", "LW"])
+                #self.load_and_process(source="harmonic", HLW="LW")
                 print('load and process harmonic reconstructed data')
-                self.load_and_process(source="harmonic_rec", HLW="HW")
-                self.load_and_process(source="harmonic_rec", HLW="LW")
+                self.load_and_process(source="harmonic_rec", HLW_list=["HW", "LW"])
+                #self.load_and_process(source="harmonic_rec", HLW="LW")
 
             elif command == "0":
                 print('load bore observations')
@@ -358,7 +358,7 @@ class Controller():
     #%% Load and process methods
     ############################################################################
 
-    def load_and_process(self, source:str="harmonic", HLW:str="HW"):
+    def load_and_process(self, source:str="harmonic", HLW_list=["HW"]):
         """
         Performs sequential steps to build into the bore object.
         1. Load Gladstone Dock data (though this might also be loaded from the obs logs)
@@ -373,23 +373,24 @@ class Controller():
         HLW: [LW/HW] - the data is either processed for High or Low water events
         """
         print('loading '+source+' tide data')
-        self.get_Glad_data(source=source, HLW=HLW)
+        self.get_Glad_data(source=source, HLW_list=HLW_list)
         #self.compare_Glad_HLW()
         print('Calculating the Gladstone to Saltney time difference')
-        self.calc_Glad_Saltney_time_lag(source=source, HLW=HLW)
+        self.calc_Glad_Saltney_time_lag(source=source, HLW_list=HLW_list)
         print('Process linear fit. Calc and save')
-        self.process_fit(source=source, HLW=HLW)
+        self.process_fit(source=source, HLW_list=HLW_list)
 
 
-    def process_fit(self, source:str="harmonic", HLW:str="HW"):
-        # Get linear fit with rmse
-        self.bore.attrs['weights_'+HLW+'_'+source], self.bore.attrs['rmse_'+HLW+'_'+source] = self.linearfit(
-                self.bore['liv_height_'+HLW+'_'+source],
-                self.bore['Saltney_lag_'+HLW+'_'+source]
-                )
-        # Apply linear model
-        self.bore['linfit_lag_'+HLW+'_'+source] = self.bore.attrs['weights_'+HLW+'_'+source](self.bore['liv_height_'+HLW+'_'+source])
-        #self.bore['rmse_'+HLW+'_'+source] = '{:4.1f} mins'.format(self.stats(source=source, HLW=HLW))
+    def process_fit(self, source:str="harmonic", HLW_list=["HW"]):
+        for HLW in HLW_list:
+            # Get linear fit with rmse
+            self.bore.attrs['weights_'+HLW+'_'+source], self.bore.attrs['rmse_'+HLW+'_'+source] = self.linearfit(
+                    self.bore['liv_height_'+HLW+'_'+source],
+                    self.bore['Saltney_lag_'+HLW+'_'+source]
+                    )
+            # Apply linear model
+            self.bore['linfit_lag_'+HLW+'_'+source] = self.bore.attrs['weights_'+HLW+'_'+source](self.bore['liv_height_'+HLW+'_'+source])
+            #self.bore['rmse_'+HLW+'_'+source] = '{:4.1f} mins'.format(self.stats(source=source, HLW=HLW))
 
     def load_csv(self):
         """
@@ -421,17 +422,17 @@ class Controller():
         self.bore = bore
         logging.info('Bore data loaded')
 
-    def get_river_data(self, HLW:str="LW"):
+    def get_river_data(self, HLW_list=["LW"]):
         """
         Get Chester weir data. Consolidate CTR data.
         Data from the table takes precident. Gaps are filled by the API.
         """
 
-        if HLW != "LW":
+        if HLW_list != ["LW"]:
             print('Not expecting that possibility here')
         else:
             # Obtain CTR data for LW for the observations times.
-            self.get_Glad_data(source='ctr',HLW="LW")
+            self.get_Glad_data(source='ctr',HLW_list=["LW"])
             alph = self.bore['Chester Weir height: CHESTER WEIR 15 MIN SG'] *np.NaN
             beta = self.bore['ctr_height_LW_ctr']
             #print( self.bore['ctr_height_LW_ctr'][0:10] )
@@ -444,11 +445,10 @@ class Controller():
             #plt.plot( self.bore['ctr_height_LW'], 'g.')
             del self.bore['ctr_height_LW_ctr'], self.bore['ctr_time_LW_ctr']
 
-    def get_met_data(self, HLW:str="HW"):
+    def get_met_data(self): #, HLW:str="HW"):
         """
-        Get the met data time matching the HLW option.
+        Get the met data time matching the observation.
         Met data from OpenWeather history download.
-
 
         This can then be exported into the obs table:
         c.met.to_pandas().to_csv('met.csv')
@@ -562,7 +562,8 @@ class Controller():
 
 
 
-    def get_Glad_data(self, source:str='harmonic', HLW:str="HW"):
+    def get_Glad_data(self, source:str='harmonic', HLW_list=["HW"]):
+        #def get_Glad_data(self, source:str='harmonic', HLW:str="HW"):
         """
         Get Gladstone HLW data from external source
         These data are reported in the bore.csv file but not consistently and it
@@ -574,7 +575,8 @@ class Controller():
                 'harmonic_rec' - reconstruct time series from harmonic constants
                 'bodc' - measured and processed data
                 'api' - load recent, un processed data from shoothill API
-        HLW: [LW/HW] - the data is either processed for High or Low water events
+        HLW_list: ["LW","HW","FW","EW"] - the data is either processed for High or Low water
+                events, or Flood or Ebb (inflection) events
         """
         loc = "liv" # default location - Liverpool
 
@@ -715,147 +717,149 @@ class Controller():
         self.tg = tg
 
         ## Process the *_highs or *_lows
-        #time_var = 'time_highs'
-        #measure_var = 'sea_level_highs'
-        #ind = [] # list of indices in the obs bore data where gladstone data is found
-        if HLW == 'HW':
-            time_var = 'time_highs'
-            measure_var = 'sea_level_highs'
-        elif HLW == 'LW':
-            time_var = 'time_lows'
-            measure_var = 'sea_level_lows'
-        elif HLW == 'FW':
-            time_var = 'time_flood'
-            measure_var = 'sea_level_flood'
-        elif HLW == 'EW':
-            time_var = 'time_ebb'
-            measure_var = 'sea_level_ebb'
-        else:
-            print('This should not have happened...')
+        for HLW in HLW_list:
+            print(f"HLW: {HLW}")
+            #time_var = 'time_highs'
+            #measure_var = 'sea_level_highs'
+            #ind = [] # list of indices in the obs bore data where gladstone data is found
+            if HLW == 'HW':
+                time_var = 'time_highs'
+                measure_var = 'sea_level_highs'
+            elif HLW == 'LW':
+                time_var = 'time_lows'
+                measure_var = 'sea_level_lows'
+            elif HLW == 'FW':
+                time_var = 'time_flood'
+                measure_var = 'sea_level_flood'
+            elif HLW == 'EW':
+                time_var = 'time_ebb'
+                measure_var = 'sea_level_ebb'
+            else:
+                print('This should not have happened...')
 
-        HT_h = [] # Extrema - height
-        HT_t = [] # Extrema - time
+            HT_h = [] # Extrema - height
+            HT_t = [] # Extrema - time
 
-        winsize = 6 #4h for HW, 6h for LW. +/- search distance for nearest extreme value
+            winsize = 6 #4h for HW, 6h for LW. +/- search distance for nearest extreme value
 
-        for i in range(len(self.bore.time)):
-            try:
-                HW = None
-                LW = None
-                obs_time = self.bore.time[i].values
-
-                # Extracting the highest and lowest value with a cubic spline is
-                # very memory costly. Only need to use the cubic method for the
-                # bodc and api sources, so compute the high and low waters in a
-                # piecewise approach around observations times.
-                if source == "bodc" or source == "api":
-                    # This produces an xr.dataset with sea_level_highs and sea_level_lows
-                    # with time variables time_highs and time_lows.
-                    win = GAUGE()
-                    win.dataset = tg.dataset.sel( time=slice(obs_time - np.timedelta64(winsize, "h"), obs_time + np.timedelta64(winsize, "h"))  )
-                    #if HLW == "LW":
-                    #    print(f"win.dataset {win.dataset}")
-                    #print(i," win.dataset.time.size", win.dataset.time.size)
-                    if win.dataset.time.size == 0:
-                        tg_HLW = GAUGE()
-                        tg_HLW.dataset = xr.Dataset({measure_var: (time_var, [np.NaN])}, coords={time_var: [obs_time]})
-                    else:
-                        if HLW == "FW" or HLW == "EW":
-                            tg_HLW = win.find_flood_and_ebb_water(var_str='sea_level',method='cubic')
-                            print(f"inflection point time: {tg_HLW.dataset[time_var]}")
-                        elif HLW == "HW" or HLW == "LW":
-                            tg_HLW = win.find_high_and_low_water(var_str='sea_level',method='cubic')
-                        else:
-                            print(f"This should not have happened... HLW:{HLW}")
-
-                HW = tg_HLW.get_tide_table_times(
-                                        time_guess=obs_time,
-                                        time_var=time_var,
-                                        measure_var=measure_var,
-                                        method='nearest_1',
-                                        winsize=winsize ) #4h for HW, 6h for LW
-
-                #print("time,HW:",obs_time, HW.values)
-                if type(HW) is xr.DataArray: ## Actually I think they are alway xr.DataArray with time, but the height can be nan.
-                    #print(f"HW: {HW}")
-                    HT_h.append( HW.values )
-                    #print('len(HT_h)', len(HT_h))
-                    HT_t.append( HW[time_var].values )
-                    #print('len(HT_t)', len(HT_t))
-                    #self.bore['LT_h'][i] = HLW.dataset.sea_level[HLW.dataset['sea_level'].argmin()]
-                    #self.bore['LT_t'][i] = HLW.dataset.time[HLW.dataset['sea_level'].argmin()]
-                    #ind.append(i)
-                    #print(f"i:{i}, {HT_t[-1].astype('M8[ns]').astype('M8[ms]').item()}" )
-                    #print(HT_t[-1].astype('M8[ns]').astype('M8[ms]').item().strftime('%Y-%m-%d'))
-
-                    ## Make timeseries plot around the highwater maxima to check
-                    # values are being extracted as expected.
-                    if (i % 12) == 0:
-                        fig = plt.figure()
-
-                    plt.subplot(3,4,(i%12)+1)
-                    plt.plot(self.tg.dataset.time, self.tg.dataset.sea_level)
-                    plt.plot( HT_t[-1], HT_h[-1], 'r+' )
-                    plt.plot( [self.bore.time[i].values,self.bore.time[i].values],[0,11],'k')
-                    plt.xlim([HT_t[-1] - np.timedelta64(5,'h'),
-                              HT_t[-1] + np.timedelta64(5,'h')])
-                    plt.ylim([0,11])
-                    plt.text( HT_t[-1]-np.timedelta64(5,'h'),10, self.bore.location[i].values)
-                    plt.text( HT_t[-1]-np.timedelta64(5,'h'),1,  HT_t[-1].astype('M8[ns]').astype('M8[ms]').item().strftime('%Y-%m-%d'))
-                    # Turn off tick labels
-                    plt.gca().axes.get_xaxis().set_visible(False)
-                    #plt.xaxis_date()
-                    #plt.autoscale_view()
-                    if (i%12) == 12-1:
-                        plt.savefig('figs/check_get_tidetabletimes_'+str(i//12).zfill(2)+'_'+HLW+'_'+source+'.png')
-                        plt.close('all')
-
-
-                else:
-                    logging.info(f"Did not find a high water near this guess")
-                    print(f"Did not find a high water near this guess")
-
-
-            except:
-                logging.warning('Issue with appending HLW data')
-                print('Issue with appending HLW data')
-
-        try: # Try and print the last observation timeseries
-            plt.savefig('figs/check_get_tidetabletimes_'+str(i//12).zfill(2)+'_'+HLW+'_'+source+'.png')
-            plt.close('all')
-        except:
-            logging.info(f"Did not have any extra panels to plot")
-            print(f"Did not have any extra panels to plot")
-
-
-        # Save a xarray objects
-        coords = {'time': (('time'), self.bore.time.values)}
-        #print("number of obs:",len(self.bore.time))
-        #print("length of time", len(self.bore.time.values))
-        #print("length of data:", len(np.array(HT_h)) )
-        self.bore[loc+'_height_'+HLW+'_'+source] = xr.DataArray( np.array(HT_h), coords=coords, dims=['time'])
-        self.bore[loc+'_time_'+HLW+'_'+source] = xr.DataArray( np.array(HT_t), coords=coords, dims=['time'])
-
-        print('There is a supressed plot.scatter here')
-        #self.bore.plot.scatter(x='liv_time', y='liv_height'); plt.show()
-
-        logging.debug(f"len(self.bore[loc+'_time_'{HLW}'_'{source}]): {len(self.bore[loc+'_time_'+HLW+'_'+source])}")
-        #logging.info(f'len(self.bore.liv_time)', len(self.bore.liv_time))
-        logging.debug(f"type(HT_t): {type(HT_t)}")
-        logging.debug(f"type(HT_h): {type(HT_h)}")
-
-        if loc=='liv':
-            logging.debug('log time, orig tide table, new tide table lookup')
             for i in range(len(self.bore.time)):
-                logging.debug( f"{self.bore.time[i].values}, {self.bore['Liv (Gladstone Dock) HT time (GMT)'][i].values}, {self.bore['liv_time_'+HLW+'_'+source][i].values}")
+                if(1): #try:
+                    HW = None
+                    LW = None
+                    obs_time = self.bore.time[i].values
+
+                    # Extracting the highest and lowest value with a cubic spline is
+                    # very memory costly. Only need to use the cubic method for the
+                    # bodc and api sources, so compute the high and low waters in a
+                    # piecewise approach around observations times.
+                    if source == "bodc" or source == "api":
+                        # This produces an xr.dataset with sea_level_highs and sea_level_lows
+                        # with time variables time_highs and time_lows.
+                        win = GAUGE()
+                        win.dataset = tg.dataset.sel( time=slice(obs_time - np.timedelta64(winsize, "h"), obs_time + np.timedelta64(winsize, "h"))  )
+                        #if HLW == "LW":
+                        #    print(f"win.dataset {win.dataset}")
+                        #print(i," win.dataset.time.size", win.dataset.time.size)
+                        if win.dataset.time.size == 0:
+                            tg_HLW = GAUGE()
+                            tg_HLW.dataset = xr.Dataset({measure_var: (time_var, [np.NaN])}, coords={time_var: [obs_time]})
+                        else:
+                            if HLW == "FW" or HLW == "EW":
+                                tg_HLW = win.find_flood_and_ebb_water(var_str='sea_level',method='cubic')
+                                print(f"inflection point time: {tg_HLW.dataset[time_var]}")
+                            elif HLW == "HW" or HLW == "LW":
+                                tg_HLW = win.find_high_and_low_water(var_str='sea_level',method='cubic')
+                            else:
+                                print(f"This should not have happened... HLW:{HLW}")
+
+                    HW = tg_HLW.get_tide_table_times(
+                                            time_guess=obs_time,
+                                            time_var=time_var,
+                                            measure_var=measure_var,
+                                            method='nearest_1',
+                                            winsize=winsize ) #4h for HW, 6h for LW
+
+                    #print("time,HW:",obs_time, HW.values)
+                    if type(HW) is xr.DataArray: ## Actually I think they are alway xr.DataArray with time, but the height can be nan.
+                        #print(f"HW: {HW}")
+                        HT_h.append( HW.values )
+                        #print('len(HT_h)', len(HT_h))
+                        HT_t.append( HW[time_var].values )
+                        #print('len(HT_t)', len(HT_t))
+                        #self.bore['LT_h'][i] = HLW.dataset.sea_level[HLW.dataset['sea_level'].argmin()]
+                        #self.bore['LT_t'][i] = HLW.dataset.time[HLW.dataset['sea_level'].argmin()]
+                        #ind.append(i)
+                        #print(f"i:{i}, {HT_t[-1].astype('M8[ns]').astype('M8[ms]').item()}" )
+                        #print(HT_t[-1].astype('M8[ns]').astype('M8[ms]').item().strftime('%Y-%m-%d'))
+
+                        ## Make timeseries plot around the highwater maxima to check
+                        # values are being extracted as expected.
+                        if (i % 12) == 0:
+                            fig = plt.figure()
+
+                        plt.subplot(3,4,(i%12)+1)
+                        plt.plot(self.tg.dataset.time, self.tg.dataset.sea_level)
+                        plt.plot( HT_t[-1], HT_h[-1], 'r+' )
+                        plt.plot( [self.bore.time[i].values,self.bore.time[i].values],[0,11],'k')
+                        plt.xlim([HT_t[-1] - np.timedelta64(5,'h'),
+                                  HT_t[-1] + np.timedelta64(5,'h')])
+                        plt.ylim([0,11])
+                        plt.text( HT_t[-1]-np.timedelta64(5,'h'),10, self.bore.location[i].values)
+                        plt.text( HT_t[-1]-np.timedelta64(5,'h'),1,  HT_t[-1].astype('M8[ns]').astype('M8[ms]').item().strftime('%Y-%m-%d'))
+                        # Turn off tick labels
+                        plt.gca().axes.get_xaxis().set_visible(False)
+                        #plt.xaxis_date()
+                        #plt.autoscale_view()
+                        if (i%12) == 12-1:
+                            plt.savefig('figs/check_get_tidetabletimes_'+str(i//12).zfill(2)+'_'+HLW+'_'+source+'.png')
+                            plt.close('all')
 
 
-        #print('log time, orig tide table, new tide table lookup')
-        #for i in range(len(self.bore.time)):
-        #    print( self.bore.time[i].values, self.bore['Liv (Gladstone Dock) HT time (GMT)'][i].values, self.bore['liv_time'][i].values)
+                    else:
+                        logging.info(f"Did not find a high water near this guess")
+                        print(f"Did not find a high water near this guess")
 
 
-    def calc_Glad_Saltney_time_lag(self, source:str="harmonic", HLW:str="HW"):
+                if(0):#except:
+                    logging.warning('Issue with appending HLW data')
+                    print('Issue with appending HLW data')
+
+            try: # Try and print the last observation timeseries
+                plt.savefig('figs/check_get_tidetabletimes_'+str(i//12).zfill(2)+'_'+HLW+'_'+source+'.png')
+                plt.close('all')
+            except:
+                logging.info(f"Did not have any extra panels to plot")
+                print(f"Did not have any extra panels to plot")
+
+
+            # Save a xarray objects
+            coords = {'time': (('time'), self.bore.time.values)}
+            #print("number of obs:",len(self.bore.time))
+            #print("length of time", len(self.bore.time.values))
+            #print("length of data:", len(np.array(HT_h)) )
+            self.bore[loc+'_height_'+HLW+'_'+source] = xr.DataArray( np.array(HT_h), coords=coords, dims=['time'])
+            self.bore[loc+'_time_'+HLW+'_'+source] = xr.DataArray( np.array(HT_t), coords=coords, dims=['time'])
+
+            print('There is a supressed plot.scatter here')
+            #self.bore.plot.scatter(x='liv_time', y='liv_height'); plt.show()
+
+            logging.debug(f"len(self.bore[loc+'_time_'{HLW}'_'{source}]): {len(self.bore[loc+'_time_'+HLW+'_'+source])}")
+            #logging.info(f'len(self.bore.liv_time)', len(self.bore.liv_time))
+            logging.debug(f"type(HT_t): {type(HT_t)}")
+            logging.debug(f"type(HT_h): {type(HT_h)}")
+
+            if loc=='liv':
+                logging.debug('log time, orig tide table, new tide table lookup')
+                for i in range(len(self.bore.time)):
+                    logging.debug( f"{self.bore.time[i].values}, {self.bore['Liv (Gladstone Dock) HT time (GMT)'][i].values}, {self.bore['liv_time_'+HLW+'_'+source][i].values}")
+
+
+            #print('log time, orig tide table, new tide table lookup')
+            #for i in range(len(self.bore.time)):
+            #    print( self.bore.time[i].values, self.bore['Liv (Gladstone Dock) HT time (GMT)'][i].values, self.bore['liv_time'][i].values)
+
+
+    def calc_Glad_Saltney_time_lag(self, source:str="harmonic", HLW_list=["HW"]):
         """
         Compute lag (obs - tide) for arrival at Saltney relative to Glastone HT
         Store lags as integer (minutes) since np.datetime64 and
@@ -867,22 +871,23 @@ class Controller():
                 'api' - load recent, un processed data from shoothill API
         HLW: [LW/HW] - the data is either processed for High or Low water events
         """
-        logging.info('calc_Glad_Saltney_time_diff')
-        nt = len(self.bore.time)
-        lag = (self.bore['time'].values - self.bore['liv_time_'+HLW+'_'+source].values).astype('timedelta64[m]')
-        # convert to integers so nans can be applied
-        lag = [ lag[i].astype('int') if np.isfinite(self.bore['liv_height_'+HLW+'_'+source].values)[i]  else np.NaN for i in range(nt) ]
-        # Pick out FB and Blue bridge
-        Saltney_lag    = [ lag[i] if self.bore.location.values[i] == 'bridge' else np.NaN for i in range(nt) ]
-        bluebridge_lag = [ lag[i] if self.bore.location.values[i] == 'blue bridge' else np.NaN for i in range(nt) ]
-        #Saltney_lag    = [ lag[i].astype('int') if self.bore.location.values[i] == 'bridge' else np.NaN for i in range(nt) ]
-        #bluebridge_lag = [ lag[i].astype('int') if self.bore.location.values[i] == 'blue bridge' else np.NaN for i in range(nt) ]
+        for HLW in HLW_list:
+            logging.info('calc_Glad_Saltney_time_diff')
+            nt = len(self.bore.time)
+            lag = (self.bore['time'].values - self.bore['liv_time_'+HLW+'_'+source].values).astype('timedelta64[m]')
+            # convert to integers so nans can be applied
+            lag = [ lag[i].astype('int') if np.isfinite(self.bore['liv_height_'+HLW+'_'+source].values)[i]  else np.NaN for i in range(nt) ]
+            # Pick out FB and Blue bridge
+            Saltney_lag    = [ lag[i] if self.bore.location.values[i] == 'bridge' else np.NaN for i in range(nt) ]
+            bluebridge_lag = [ lag[i] if self.bore.location.values[i] == 'blue bridge' else np.NaN for i in range(nt) ]
+            #Saltney_lag    = [ lag[i].astype('int') if self.bore.location.values[i] == 'bridge' else np.NaN for i in range(nt) ]
+            #bluebridge_lag = [ lag[i].astype('int') if self.bore.location.values[i] == 'blue bridge' else np.NaN for i in range(nt) ]
 
-        # Save a xarray objects
-        coords = {'time': (('time'), self.bore.time.values)}
-        self.bore['lag_'+HLW+'_'+source] = xr.DataArray( lag, coords=coords, dims=['time'])
-        self.bore['Saltney_lag_'+HLW+'_'+source] = xr.DataArray( Saltney_lag, coords=coords, dims=['time'])
-        self.bore['bluebridge_lag_'+HLW+'_'+source] = xr.DataArray( bluebridge_lag, coords=coords, dims=['time'])
+            # Save a xarray objects
+            coords = {'time': (('time'), self.bore.time.values)}
+            self.bore['lag_'+HLW+'_'+source] = xr.DataArray( lag, coords=coords, dims=['time'])
+            self.bore['Saltney_lag_'+HLW+'_'+source] = xr.DataArray( Saltney_lag, coords=coords, dims=['time'])
+            self.bore['bluebridge_lag_'+HLW+'_'+source] = xr.DataArray( bluebridge_lag, coords=coords, dims=['time'])
 
 
     def linearfit(self, X, Y):
