@@ -169,9 +169,11 @@ class GAUGE(coast.Tidegauge):
 
         return new_object
 
-    def find_inflection_points(self, var_str, method="comp", **kwargs):
+    def find_flood_and_ebb_water(self, var_str, method="comp", **kwargs):
         """
-        Finds inflection points (between high and low water) for a given variable.
+        Finds the time and values for the inflection points (between high and
+        low water) for a given variable. These correspond to the max flood and
+        ebb points.
         Returns in a new TIDEGAUGE object with similar data format to
         a TIDETABLE.
 
@@ -188,6 +190,10 @@ class GAUGE(coast.Tidegauge):
         NOTE: Currently only the 'comp' and 'cubic' methods implemented. Future
                   methods include linear interpolation or refinements.
 
+        See also:
+            coast.Tidegauge.find_high_and_low_water()
+            
+        Example:
         import coast
         liv= xr.open_mfdataset("archive_shoothill/liv_2021.nc")
         obs_time = np.datetime64('2021-11-01')
@@ -215,8 +221,8 @@ class GAUGE(coast.Tidegauge):
         #print(f"test2  {y.interp(time=[np.datetime64('2021-11-12T17:40')])}")
 
         #print(f"interpolated: {y.interp(time=time_max)}")
-        inflection_rise = y.interp(time=time_max)
-        inflection_fall = y.interp(time=time_min)
+        inflection_flood = y.interp(time=time_max)
+        inflection_ebb = y.interp(time=time_min)
         #print(f"interpolated2: {y.interp(time=time_max.data)}")
 
         new_dataset = xr.Dataset()
@@ -225,10 +231,10 @@ class GAUGE(coast.Tidegauge):
         #new_dataset[var_str + "_fall"] = ("time_fall", inflection_fall.values)
         #new_dataset["time_rise"] = ("time_rise", inflection_rise.time.values)
         #new_dataset["time_fall"] = ("time_fall", inflection_fall.values)
-        new_dataset[var_str + "_highs"] = ("time_highs", inflection_rise.values)
-        new_dataset[var_str + "_lows"] = ("time_lows", inflection_fall.values)
-        new_dataset["time_highs"] = ("time_highs", inflection_rise.time.values)
-        new_dataset["time_lows"] = ("time_lows", inflection_fall.values)
+        new_dataset[var_str + "_flood"] = ("time_flood", inflection_flood.values)
+        new_dataset[var_str + "_ebb"]  = ("time_ebb",  inflection_ebb.values)
+        new_dataset["time_flood"] = ("time_flood", inflection_flood.time.values)
+        new_dataset["time_ebb"]  =  ("time_ebb", inflection_ebb.time.values)
 
         new_object = GAUGE()
         new_object.dataset = new_dataset

@@ -246,21 +246,22 @@ class Controller():
             elif command == "all":
                 print('load and process all data')
                 self.load_csv()
+                print('load and process measured (bodc) data')
+                self.load_and_process(source="bodc", HLW="HW")
+                self.load_and_process(source="bodc", HLW="LW")
+                self.load_and_process(source="bodc", HLW="FW")
+                print('load and process measured (API) data')
+                self.load_and_process(source="api", HLW="HW")
+                self.load_and_process(source="api", HLW="LW")
+                self.load_and_process(source="api", HLW="FW")
+                print('load and process CTR data. Obs + API')
+                self.get_river_data(HLW="LW")
                 print('load and process harmonic data')
                 self.load_and_process(source="harmonic", HLW="HW")
                 self.load_and_process(source="harmonic", HLW="LW")
                 print('load and process harmonic reconstructed data')
                 self.load_and_process(source="harmonic_rec", HLW="HW")
                 self.load_and_process(source="harmonic_rec", HLW="LW")
-                print('load and process measured (bodc) data')
-                self.load_and_process(source="bodc", HLW="HW")
-                self.load_and_process(source="bodc", HLW="LW")
-                print('load and process measured (API) data')
-                self.load_and_process(source="api", HLW="HW")
-                self.load_and_process(source="api", HLW="LW")
-                print('load and process CTR data. Obs + API')
-                self.get_river_data(HLW="LW")
-
 
             elif command == "0":
                 print('load bore observations')
@@ -723,6 +724,12 @@ class Controller():
         elif HLW == 'LW':
             time_var = 'time_lows'
             measure_var = 'sea_level_lows'
+        elif HLW == 'FW':
+            time_var = 'time_flood'
+            measure_var = 'sea_level_flood'
+        elif HLW == 'EW':
+            time_var = 'time_ebb'
+            measure_var = 'sea_level_ebb'
         else:
             print('This should not have happened...')
 
@@ -746,12 +753,20 @@ class Controller():
                     # with time variables time_highs and time_lows.
                     win = GAUGE()
                     win.dataset = tg.dataset.sel( time=slice(obs_time - np.timedelta64(winsize, "h"), obs_time + np.timedelta64(winsize, "h"))  )
+                    #if HLW == "LW":
+                    #    print(f"win.dataset {win.dataset}")
                     #print(i," win.dataset.time.size", win.dataset.time.size)
                     if win.dataset.time.size == 0:
                         tg_HLW = GAUGE()
                         tg_HLW.dataset = xr.Dataset({measure_var: (time_var, [np.NaN])}, coords={time_var: [obs_time]})
                     else:
-                        tg_HLW = win.find_high_and_low_water(var_str='sea_level',method='cubic') #'cubic')
+                        if HLW == "FW" or HLW == "EW":
+                            tg_HLW = win.find_flood_and_ebb_water(var_str='sea_level',method='cubic')
+                            print(f"inflection point time: {tg_HLW.dataset[time_var]}")
+                        elif HLW == "HW" or HLW == "LW":
+                            tg_HLW = win.find_high_and_low_water(var_str='sea_level',method='cubic')
+                        else:
+                            print(f"This should not have happened... HLW:{HLW}")
 
                 HW = tg_HLW.get_tide_table_times(
                                         time_guess=obs_time,
@@ -761,7 +776,7 @@ class Controller():
                                         winsize=winsize ) #4h for HW, 6h for LW
 
                 #print("time,HW:",obs_time, HW.values)
-                if type(HW) is xr.DataArray:
+                if type(HW) is xr.DataArray: ## Actually I think they are alway xr.DataArray with time, but the height can be nan.
                     #print(f"HW: {HW}")
                     HT_h.append( HW.values )
                     #print('len(HT_h)', len(HT_h))
@@ -921,7 +936,7 @@ class Controller():
         HLW: [LW/HW] - the data is either processed for High or Low water events
         """
         I = self.bore['Quality'] == "A"
-        if source == 'all':
+        if source == "all":
             Yliv = self.bore['liv_height_'+HLW+'_bodc']
             Xsalt = self.bore['Saltney_lag_'+HLW+'_bodc']
             Xblue = self.bore['bluebridge_lag_'+HLW+'_bodc']
