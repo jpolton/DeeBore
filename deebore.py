@@ -247,7 +247,7 @@ class Controller():
                 print('load and process all data')
                 self.load_csv()
                 print('load and process measured (bodc) data')
-                self.load_and_process(source="bodc", HLW_list=["HW", "LW", "FW"])
+                self.load_and_process(source="bodc", HLW_list=["FW", "HW", "LW"])
                 #self.load_and_process(source="bodc", HLW="LW")
                 #self.load_and_process(source="bodc", HLW="FW")
                 print('load and process measured (API) data')
@@ -304,10 +304,12 @@ class Controller():
             elif command == "3":
                 print('plot bore data (lag vs tidal height')
                 plt.close('all');self.plot_lag_vs_height('bodc')
+                plt.close('all');self.plot_lag_vs_height('bodc', HLW="FW")
                 plt.close('all');self.plot_lag_vs_height('all')
                 plt.close('all');self.plot_lag_vs_height('harmonic')
                 plt.close('all');self.plot_lag_vs_height('harmonic_rec')
                 plt.close('all');self.plot_lag_vs_height('api')
+                plt.close('all');self.plot_lag_vs_height('api', HLW="FW")
 
             elif command == "4":
                 print('plot difference between predicted and measured (lag vs tidal height)')
@@ -766,9 +768,11 @@ class Controller():
                         else:
                             if HLW == "FW" or HLW == "EW":
                                 tg_HLW = win.find_flood_and_ebb_water(var_str='sea_level',method='cubic')
-                                print(f"inflection point time: {tg_HLW.dataset[time_var]}")
+                                #print(f"inflection point time: {tg_HLW.dataset[time_var]}")
+                                print(f"inflection points: {len(tg_HLW.dataset[time_var])}")
                             elif HLW == "HW" or HLW == "LW":
                                 tg_HLW = win.find_high_and_low_water(var_str='sea_level',method='cubic')
+                                print(f"max points: {len(tg_HLW.dataset[time_var])}")
                             else:
                                 print(f"This should not have happened... HLW:{HLW}")
 
@@ -1435,12 +1439,16 @@ class Controller():
         self.plot_scatter_river(source='bodc', HLW="dLW")
         self.plot_scatter_river(source='bodc', HLW="dHW")
         self.plot_scatter_river(source='bodc', HLW="XX")
+        self.plot_scatter_river(source='bodc', HLW="FW")
         self.plot_scatter_river(source='api', HLW="HW")
+        self.plot_scatter_river(source='api', HLW="FW")
         self.plot_scatter_date(source='api', HLW="HW")
         self.plot_scatter_date(source='bodc', HLW="HW")
+        self.plot_scatter_date(source='bodc', HLW="FW")
         self.plot_scatter_date(source='harmonic', HLW="HW")
         self.plot_scatter_wind(source='api', HLW="HW")
         self.plot_scatter_wind(source='bodc', HLW="HW")
+        self.plot_scatter_wind(source='bodc', HLW="FW")
         self.plot_scatter_wind(source='harmonic', HLW="HW")
 
     def river_lag_timing(self, HLW="HW", source="api"):
