@@ -62,17 +62,29 @@ class Databucket():
     def process(self, tg:GAUGE=None, HLW:str="HW"):
         """
         Save into an dataset which is indexed against tide table HW times.
+
+        tg: dataset to process. E.g. full timeseries from chester
         """
 
         loc = "ctr"
         print(f"loc: {loc}")
 
+        tt =  GAUGE()
+        print( tg.dataset.time.min() )
+
         if HLW == 'HW':
             time_var = 'time_highs'
             measure_var = 'sea_level_highs'
+            # TideTable dataset truncated to relevant period
+            tt.dataset = self.glad_HLW.dataset.sel( time_highs=slice(tg.dataset.time.min(), tg.dataset.time.max()) )
+            winsize = [3,3] #4h for HW, 6h for LW. +/- search distance for nearest extreme value
+
         elif HLW == 'LW':
             time_var = 'time_lows'
             measure_var = 'sea_level_lows'
+            # TideTable dataset truncated to relevant period
+            tt.dataset = self.glad_HLW.dataset.sel( time_lows=slice(tg.dataset.time.min(), tg.dataset.time.max()) )
+            winsize = [-3,9] #4h for HW, 6h for LW. +/- search distance for nearest extreme value
         else:
             print('This should not have happened...')
 
@@ -83,7 +95,6 @@ class Databucket():
         HT_lag = [] # lag between liv HT and tg_HT
         ind_t = [] # store index times. Input guess_time
         ind_h = [] # store index height. Input height(guess_time)
-        winsize = 3 #4h for HW, 6h for LW. +/- search distance for nearest extreme value
 
         tt =  GAUGE()
         print( tg.dataset.time.min() )
@@ -102,7 +113,7 @@ class Databucket():
                     # This produces an xr.dataset with sea_level_highs and sea_level_lows
                     # with time variables time_highs and time_lows.
                     win = GAUGE()
-                    win.dataset = tg.dataset.sel( time=slice(guess_time - np.timedelta64(winsize, "h"), guess_time + np.timedelta64(winsize, "h"))  )
+                    win.dataset = tg.dataset.sel( time=slice(guess_time - np.timedelta64(winsize[0], "h"), guess_time + np.timedelta64(winsize[1], "h"))  )
                     #if HLW == "LW":
                     #    print(f"win.dataset {win.dataset}")
                     #print(i," win.dataset.time.size", win.dataset.time.size)
@@ -141,14 +152,28 @@ class Databucket():
                     if (i % 12) == 0:
                         fig = plt.figure()
 
+                    if HLW == "HW":
+                        xlim = [HT_t[-1] - np.timedelta64(winsize[0],'h'),
+                                  HT_t[-1] + np.timedelta64(winsize[1],'h')]
+                    elif HLW == "LW":
+                        xlim = [guess_time - np.timedelta64(winsize[0],'h'),
+                                  guess_time + np.timedelta64(winsize[1],'h')]
+                    else:
+                        print(f"Not expecting HLW:{HLW}")
+                    if loc == 'ctr':
+                        ylim = [4,7]
+
+                    elif loc == 'liv':
+                        ylim = [0,11]
+                    else:
+                        ylim = [0,11]
                     plt.subplot(3,4,(i%12)+1)
                     plt.plot(tg.dataset.time, tg.dataset.sea_level)
                     plt.plot( HT_t[-1], HT_h[-1], 'r+' )
                     plt.plot( [guess_time, guess_time],[0,11],'k')
-                    plt.xlim([HT_t[-1] - np.timedelta64(5,'h'),
-                              HT_t[-1] + np.timedelta64(5,'h')])
-                    plt.ylim([0,11])
-                    plt.text( HT_t[-1]-np.timedelta64(5,'h'),1,  HT_t[-1].astype('M8[ns]').astype('M8[ms]').item().strftime('%Y-%m-%d'))
+                    plt.xlim(xlim)
+                    plt.ylim(ylim) #[0,11])
+                    plt.text( HT_t[-1]-np.timedelta64(winsize[0],'h'),ylim[0]+ 0.05*(ylim[1]-ylim[0]),  HT_t[-1].astype('M8[ns]').astype('M8[ms]').item().strftime('%Y-%m-%d'))
                     # Turn off tick labels
                     plt.gca().axes.get_xaxis().set_visible(False)
                     #plt.xaxis_date()
@@ -255,17 +280,17 @@ def histogram_CTR_LIV_lag():
     plt.figure()
     plt.plot(  tt.ctr_lag / np.timedelta64(1, 'm'), tt.liv_height, '+')
     plt.xlim([0,100])
-    plt.xlabel('Timing CTR HT, minutes after LIV')
-    plt.ylabel('Liverpool HT (m)')
+    plt.xlabel(f"Timing CTR {HLW}, minutes after LIV")
+    plt.ylabel(f"Liverpool {HLW} (m)")
     plt.plot([0,100],[8.05, 8.05])  # 13/10/2021  04:39 BST    8.05
     plt.savefig("tt.png")
 
     lag = tt.ctr_lag.where(tt.liv_height > 7.9).where(tt.liv_height < 8.2) / np.timedelta64(1, 'm')
     fig, ax = plt.subplots(figsize =(10, 7))
     ax.hist(lag, bins = np.linspace(40,100,10))
-    plt.xlabel('Timing CTR HT, minutes after LIV')
+    plt.xlabel(f"Timing CTR {HLW}, minutes after LIV")
     plt.ylabel('bin count. Liv HT: 7.9 - 8.2m')
-    plt.title('Histogram of CTR HT timing 2020-21')
+    plt.title(f"Histogram of CTR {HLW} timing 2020-21")
     plt.savefig('hh.png')
 
 ################################################################################
