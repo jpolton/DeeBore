@@ -96,14 +96,12 @@ class Databucket():
         ind_t = [] # store index times. Input guess_time
         ind_h = [] # store index height. Input height(guess_time)
 
-        tt =  GAUGE()
-        print( tg.dataset.time.min() )
-        tt.dataset = self.glad_HLW.dataset.sel( time_highs=slice(tg.dataset.time.min(), tg.dataset.time.max()) )
 
-        for i in range(len(tt.dataset.time_highs)):
-            try:
+
+        for i in range(len(tt.dataset[time_var])):
+            if(1):#try:
                 HH = None
-                guess_time = tt.dataset.time_highs[i].values
+                guess_time = tt.dataset[time_var][i].values
 
                 # Extracting the highest and lowest value with a cubic spline is
                 # very memory costly. Only need to use the cubic method for the
@@ -128,11 +126,12 @@ class Databucket():
                             print(f"This should not have happened... HLW:{HLW}")
                 # Save the largest
                 try:
+                    #print("tg_HLW.dataset[measure_var]",i, tg_HLW.dataset[measure_var])
                     HH = tg_HLW.dataset[measure_var][tg_HLW.dataset[measure_var].argmax()]
                     lag = (tg_HLW.dataset[time_var][tg_HLW.dataset[measure_var].argmax()] - guess_time).astype('timedelta64[m]')
                 except:
                     HH = xr.DataArray([np.NaN], dims=(time_var), coords={time_var: [guess_time]})[0]
-                    lag = xr.DataArray([np.datetime64('NaT')], dims=(time_var), coords={time_var: [guess_time]})[0]
+                    lag = xr.DataArray([np.datetime64('NaT').astype('timedelta64[m]')], dims=(time_var), coords={time_var: [guess_time]})[0]
 
                 #print("time,HH,lag:",i, guess_time, HH.values, lag.values)
                 if type(HH) is xr.DataArray: ## Actually I think they are alway xr.DataArray with time, but the height can be nan.
@@ -141,8 +140,8 @@ class Databucket():
                     #print('len(HT_h)', len(HT_h))
                     HT_t.append( HH[time_var].values )
                     HT_lag.append( lag.values )
-                    ind_t.append( tt.dataset.time_highs[i].values ) # guess_time
-                    ind_h.append( tt.dataset.sea_level_highs[i].values )
+                    ind_t.append( tt.dataset[time_var][i].values ) # guess_time
+                    ind_h.append( tt.dataset[measure_var][i].values )
                     #print('len(HT_t)', len(HT_t))
                     #print(f"i:{i}, {HT_t[-1].astype('M8[ns]').astype('M8[ms]').item()}" )
                     #print(HT_t[-1].astype('M8[ns]').astype('M8[ms]').item().strftime('%Y-%m-%d'))
@@ -188,7 +187,7 @@ class Databucket():
                     print(f"Did not find a high water near this guess")
 
 
-            except:
+            if(0):#except:
                 logging.warning('Issue with appending HLW data')
                 print('Issue with appending HLW data')
 
@@ -247,8 +246,8 @@ class Databucket():
         """
 
         ctr = GAUGE()
-        #ctr.dataset = xr.open_dataset("archive_shoothill/ctr_2021.nc")
-        ctr.dataset = xr.open_mfdataset("archive_shoothill/ctr2_202*.nc")
+        ctr.dataset = xr.open_dataset("archive_shoothill/ctr_2021.nc")
+        #ctr.dataset = xr.open_mfdataset("archive_shoothill/ctr2_202*.nc")
 
         #ctr_HLW = ctr.find_high_and_low_water(var_str='sea_level', method="cubic")
         self.ctr = ctr
