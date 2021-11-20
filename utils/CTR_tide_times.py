@@ -17,9 +17,7 @@ Example usage:
 
 
 To Do:
-    * fix: --> 296         self.bore[loc+'_height_'+HLW] = xr.DataArray( np.array(HT_h), coords=coords, dims=['time'])
-    bore note defined
-    * add min search to process()
+    * add min search to process(). Probably linked to CTR HT search
  """
 
 import os
@@ -303,35 +301,16 @@ if __name__ == "__main__":
     now_str = datetime.datetime.now().strftime("%d%b%y %H:%M")
     logging.info(f"-----{now_str}-----")
 
-    # Plot lag vs Gladstone heights for Chester HT
-    # Plot the histogram of CTR lags for a window of Liv heights.
-    histogram_CTR_LIV_lag()
+    ## Plot lag vs Gladstone heights for Chester HT
+    ## Plot the histogram of CTR lags for a window of Liv heights.
+    #histogram_CTR_LIV_lag()
 
-    if(0):
+    if(1):
         tt = Databucket()
         tt.load_tidetable()
         tt.load_ctr()
-        #tt.load_liv()
 
-        #tt.liv_height, tt.liv_time, tt.liv_lag, tt.liv_height = tt.process(tg = tt.liv)
-
-        tt.ctr_height, tt.ctr_time, tt.ctr_lag, tt.liv_height = tt.process(tg = tt.ctr)
-
-        plt.figure()
-        tt.glad_HLW.dataset.sea_level_highs[0:10].plot()
-        plt.savefig("tt.png")
-
-
-        plt.figure()
-        plt.plot(  tt.ctr_lag / np.timedelta64(1, 'm'), tt.liv_height, '+')
-        plt.xlim([0,100])
-        plt.xlabel('Timing CTR HT, minutes after LIV')
-        plt.ylabel('Liverpool HT (m)')
-
-        plt.plot([0,100],[8.05, 8.05])  # 13/10/2021  04:39 BST    8.05
-
-        #tt.glad_HLW.dataset.sea_level_highs[0:10].plot()
-        plt.savefig("tt.png")
+        tt.ctr_height, tt.ctr_time, tt.ctr_lag, tt.liv_height = tt.process(tg = tt.ctr, HLW="LW")
 
 
 
@@ -346,14 +325,3 @@ if __name__ == "__main__":
 
         #tt.glad_HLW.dataset.sea_level_highs[0:10].plot()
         plt.savefig("dd.png")
-
-
-
-
-        lag = tt.ctr_lag.where(tt.liv_height > 7.9).where(tt.liv_height < 8.2) / np.timedelta64(1, 'm')
-        fig, ax = plt.subplots(figsize =(10, 7))
-        ax.hist(lag, bins = np.linspace(40,100,10))
-        plt.xlabel('Timing CTR HT, minutes after LIV')
-        plt.ylabel('bin count. Liv HT: 7.9 - 8.2m')
-        plt.title('Histogram of CTR HT timing 2020-21')
-        plt.savefig('hh.png')
