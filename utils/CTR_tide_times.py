@@ -1,10 +1,25 @@
 """
- Investigate the correlation between CTR HT and Liverpool HT
+Investigate the correlation between CTR HT and Liverpool HT
 
- Author: jpolton
- Date: 9 Oct 2021
+Author: jpolton
+Date: 9 Oct 2021
 
- Currently developing in coast_env
+
+Conda environment:
+    coast + requests,
+    (E.g. workshop_env w/ requests)
+
+Example usage:
+
+    python utils/CTR_tide_times.py
+    ipython$
+    run utils/CTR_tide_times
+
+
+To Do:
+    * fix: --> 296         self.bore[loc+'_height_'+HLW] = xr.DataArray( np.array(HT_h), coords=coords, dims=['time'])
+    bore note defined
+    * add min search to process()
  """
 
 import os
