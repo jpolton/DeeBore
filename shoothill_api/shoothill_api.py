@@ -50,10 +50,18 @@ import coast
 import datetime
 import numpy as np
 import xarray as xr
+import scipy
 
 import logging
 logging.basicConfig(filename='shoothill2.log', filemode='w+')
 logging.getLogger().setLevel(logging.INFO)
+
+#%% ################################################################################
+
+def smooth(y, box_pts):
+    box = np.ones(box_pts)/box_pts
+    y_smooth = np.convolve(y, box, mode='same')
+    return y_smooth
 
 
 #%% ################################################################################
@@ -177,8 +185,10 @@ class GAUGE(coast.Tidegauge):
         Returns in a new TIDEGAUGE object with similar data format to
         a TIDETABLE.
 
-        The derivative is first taken (2nd order accurate central difference),
-        then maxima/minima of the derivatives are then found and returned.
+        Apply rolling smoother to iron out kinks - only interested in the
+        steepest, near linear, part of the timeseries.
+        The the derivative is taken (2nd order accurate central difference).
+        Then maxima/minima of the derivatives are then found and returned.
 
         Methods:
         'comp' :: Find inflection by comparison with neighbouring values.
@@ -192,7 +202,7 @@ class GAUGE(coast.Tidegauge):
 
         See also:
             coast.Tidegauge.find_high_and_low_water()
-            
+
         Example:
         import coast
         liv= xr.open_mfdataset("archive_shoothill/liv_2021.nc")
@@ -200,19 +210,62 @@ class GAUGE(coast.Tidegauge):
         winsize = 6
         win = GAUGE()
         win.dataset = liv.sel( time=slice(obs_time - np.timedelta64(winsize, "h"), obs_time + np.timedelta64(winsize, "h"))  )
-        y = win.dataset.sea_level
-        x = win.dataset.time
+        y = win.dataset.sea_level.compute()
+        x = win.dataset.time.compute()
         f = y.differentiate("time")
         time_max, values_max = coast.stats_util.find_maxima(x, f, method="comp")
         interp = y.interp(time=time_max)
         plt.plot( win.dataset.time, win.dataset.sea_level); plt.plot(interp.time, interp,'+'); plt.show()
         """
-        y = self.dataset[var_str]
+        y = self.dataset[var_str].rolling(time=3, center=True).mean() # Rolling smoothing. Note we are only interested in the steep bit when it is near linear.
         f = y.differentiate("time")
         x = self.dataset.time
 
+        if(0):
+            # Convert x to float64 (assuming f is/similar to np.float64)
+            if type(x.values[0]) == np.datetime64:  # convert to decimal sec since 1970
+                x_float = ((x.values - np.datetime64("1970-01-01T00:00:00")) / np.timedelta64(1, "s")).astype("float64")
+                # x_float = x.values.astype('float64')
+                f_float = f.values.astype("float64")
+                flag_dt64 = True
+            else:
+                x_float = x.values.astype("float64")
+                f_float = f.values.astype("float64")
+                flag_dt64 = False
+
+            if type(f.values[0]) != np.float64:
+                print("find_maxima(): type(f)=", type(f))
+                print("I was expecting a np.float64")
+
+            ## Fit cubic spline
+            #f_smooth = scipy.interpolate.InterpolatedUnivariateSpline(x_float, f_float, k=5)
+
+            #x = np.linspace(0,2*np.pi,100)
+            #y = np.sin(x) + np.random.random(100) * 0.8
+            #plot(x, y,'o')
+            #plot(x, smooth(y,3), 'r-', lw=2)
+            #plot(x, smooth(y,19), 'g-', lw=2)
+            #f_smooth = smooth(f_float,5)
+            #f_smooth = smooth(y,5)
+
+            ## FROM STATS_UTIL.PY
+            # Convert back to datetime64 if appropriate (to nearest second)
+            if flag_dt64:
+                N = len(x_float)
+                x_out = [
+                    np.datetime64("1970-01-01T00:00:00") + np.timedelta64(int(x_float[i]), "s") for i in range(N)
+                ]
+            else:
+                x_out = x_float
+
+        # Package into xr.DataSet for find_maxima method
+        #f_ds = xr.Dataset({"sea_level_dt": ("time", f_smooth(x_float))}, coords={"time": x_out})
+        #f_ds = xr.Dataset({"sea_level_dt": ("time", f)}, coords={"time": x_out})
+
         time_max, values_max = coast.stats_util.find_maxima(x, f, method=method, **kwargs)
         time_min, values_min = coast.stats_util.find_maxima(x, -f, method=method, **kwargs)
+        #time_max, values_max = coast.stats_util.find_maxima(f_ds.time, f_ds.sea_level_dt, method=method, **kwargs)
+        #time_min, values_min = coast.stats_util.find_maxima(f_ds.time, -f_ds.sea_level_dt, method=method, **kwargs)
 
         #print(f"values_max {values_max.data}")
         #print(f"test  {self.dataset.sea_level.interp(time=[np.datetime64('2021-11-12T17:40')])}")
@@ -221,8 +274,16 @@ class GAUGE(coast.Tidegauge):
         #print(f"test2  {y.interp(time=[np.datetime64('2021-11-12T17:40')])}")
 
         #print(f"interpolated: {y.interp(time=time_max)}")
-        inflection_flood = y.interp(time=time_max)
-        inflection_ebb = y.interp(time=time_min)
+
+        #inflection_flood = y.interp(time=time_max[values_max.values.argmax()])
+        #inflection_ebb = y.interp(time=time_min[values_min.values.argmax()])
+
+        ## Extract the large value (i.e. corresponding to steepest sea level)
+        inflection_flood = y.interp(time=time_max.where( values_max == values_max.max(), drop=True ))
+        inflection_ebb = y.interp(time=time_min.where( values_min == values_min.max(), drop=True ))
+        #inflection_flood = y.interp(time=time_max)
+        #inflection_ebb = y.interp(time=time_min)
+
         #print(f"interpolated2: {y.interp(time=time_max.data)}")
 
         new_dataset = xr.Dataset()
