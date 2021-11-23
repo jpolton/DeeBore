@@ -65,23 +65,26 @@ class Databucket():
         """
 
         loc = "ctr"
-        print(f"loc: {loc}")
+        HLW = "HW"
+        print(f"loc: {loc} {HLW}")
 
         tt =  GAUGE()
         print( tg.dataset.time.min() )
 
+        # TideTable dataset truncated to relevant period for both highs and lows
+        tt.dataset = self.glad_HLW.dataset.sel(
+            time_highs=slice(tg.dataset.time.min(), tg.dataset.time.max()),
+            time_lows =slice(tg.dataset.time.min(), tg.dataset.time.max()) )
+
         if HLW == 'HW':
             time_var = 'time_highs'
             measure_var = 'sea_level_highs'
-            # TideTable dataset truncated to relevant period
-            tt.dataset = self.glad_HLW.dataset.sel( time_highs=slice(tg.dataset.time.min(), tg.dataset.time.max()) )
             winsize = [3,3] #4h for HW, 6h for LW. +/- search distance for nearest extreme value
 
         elif HLW == 'LW':
             time_var = 'time_lows'
             measure_var = 'sea_level_lows'
             # TideTable dataset truncated to relevant period
-            tt.dataset = self.glad_HLW.dataset.sel( time_lows=slice(tg.dataset.time.min(), tg.dataset.time.max()) )
             winsize = [-3,9] #4h for HW, 6h for LW. +/- search distance for nearest extreme value
         else:
             print('This should not have happened...')
@@ -91,15 +94,22 @@ class Databucket():
         HT_h = [] # Extrema - height
         HT_t = [] # Extrema - time
         HT_lag = [] # lag between liv HT and tg_HT
-        ind_t = [] # store index times. Input guess_time
-        ind_h = [] # store index height. Input height(guess_time)
-
-
+        LT_h = [] # Extrema low tide - height
+        LT_t = [] # Extrema low tide - time
+        LT_lag = [] # lag between Liv HT and tg_LT
+        ref_HT_t = [] # store index HT times. Input guess_time
+        ref_HT_h = [] # store index HT height. Input height(guess_time)
+        ref_LT_t = [] # store index LT times. Input guess_time
+        ref_LT_h = [] # store index LT height.
 
         for i in range(len(tt.dataset[time_var])):
             if(1):#try:
+                time_var = 'time_highs'
+                measure_var = 'sea_level_highs'
+
                 HH = None
                 guess_time = tt.dataset[time_var][i].values
+                print(f"guess: {guess_time}")
 
                 # Extracting the highest and lowest value with a cubic spline is
                 # very memory costly. Only need to use the cubic method for the
@@ -111,35 +121,126 @@ class Databucket():
                     win = GAUGE()
                     win.dataset = tg.dataset.sel( time=slice(guess_time - np.timedelta64(winsize[0], "h"), guess_time + np.timedelta64(winsize[1], "h"))  )
                     #if HLW == "LW":
-                    #    print(f"win.dataset {win.dataset}")
-                    #print(i," win.dataset.time.size", win.dataset.time.size)
-                    if win.dataset.time.size == 0:
-                        tg_HLW = GAUGE()
-                        tg_HLW.dataset = xr.Dataset({measure_var: (time_var, [np.NaN])}, coords={time_var: [guess_time]})
+                    # print(f"win.dataset {win.dataset}")
+                    print(i," win.dataset.time.size", win.dataset.time.size)
+                    if win.dataset.time.size <= 3:
+                        tg_HW = GAUGE()
+                        tg_HW.dataset = xr.Dataset({measure_var: (time_var, [np.NaN])}, coords={time_var: [guess_time]})
                     else:
                         if HLW == "HW" or HLW == "LW":
-                            tg_HLW = win.find_high_and_low_water(var_str='sea_level',method='cubic')
-                            print(f"max points: {len(tg_HLW.dataset[time_var])}")
+                            #win.dataset['sea_level_trend'] = win.dataset.sea_level.differentiate("time")
+                            tg_HW = win.find_high_and_low_water(var_str='sea_level',method='cubic')
+                            #tg_inf = win.find_high_and_low_water(var_str='sea_level_trend',method='cubic')
+
+                            print(f"max points: {len(tg_HW.dataset[time_var])}")
                         else:
-                            print(f"This should not have happened... HLW:{HLW}")
+                            print(f"This should not have happened... HLW:{HW}")
                 # Save the largest
                 try:
                     #print("tg_HLW.dataset[measure_var]",i, tg_HLW.dataset[measure_var])
-                    HH = tg_HLW.dataset[measure_var][tg_HLW.dataset[measure_var].argmax()]
-                    lag = (tg_HLW.dataset[time_var][tg_HLW.dataset[measure_var].argmax()] - guess_time).astype('timedelta64[m]')
+                    HH = tg_HW.dataset[measure_var][tg_HW.dataset[measure_var].argmax()]
+                    event_time = tg_HW.dataset[time_var][tg_HW.dataset[measure_var].argmax()]
+                    HH_lag = (event_time - guess_time).astype('timedelta64[m]')
                 except:
                     HH = xr.DataArray([np.NaN], dims=(time_var), coords={time_var: [guess_time]})[0]
-                    lag = xr.DataArray([np.datetime64('NaT').astype('timedelta64[m]')], dims=(time_var), coords={time_var: [guess_time]})[0]
+                    HH_lag = xr.DataArray([np.datetime64('NaT').astype('timedelta64[m]')], dims=(time_var), coords={time_var: [guess_time]})[0]
 
-                #print("time,HH,lag:",i, guess_time, HH.values, lag.values)
+                #print("time,HH,HH_lag:",i, guess_time, HH.values, HH_lag.values)
                 if type(HH) is xr.DataArray: ## Actually I think they are alway xr.DataArray with time, but the height can be nan.
-                    #print(f"HW: {HW}")
+                    print(f"HH: {HH}")
                     HT_h.append( HH.values )
                     #print('len(HT_h)', len(HT_h))
                     HT_t.append( HH[time_var].values )
-                    HT_lag.append( lag.values )
-                    ind_t.append( tt.dataset[time_var][i].values ) # guess_time
-                    ind_h.append( tt.dataset[measure_var][i].values )
+                    HT_lag.append( HH_lag.values )
+
+                    ref_HT_t.append( tt.dataset[time_var][i].values ) # guess_time
+                    ref_HT_h.append( tt.dataset[measure_var][i].values )
+
+                ##################
+                # Find the turning/shock point before HT.
+                # Remove a linear trend from HT-3 : HT. Find minimum.
+                time_var = 'time_lows'
+                measure_var = 'sea_level_lows'
+
+                win_mod = GAUGE()
+                win_mod.dataset = tg.dataset.sel( time=slice(guess_time - np.timedelta64(winsize[0], "h"), HH.time_highs.values)  )
+                if win_mod.dataset.time.size == 0:
+                    tg_LW = GAUGE()
+                    tg_LW.dataset = xr.Dataset({measure_var: (time_var, [np.NaN])}, coords={time_var: [guess_time]})
+                else:
+                    print(f"win_mod.dataset.time.size : {win_mod.dataset.time.size}")
+                    nt = len(win_mod.dataset.sea_level)
+                    y0 = win_mod.dataset.sea_level[0].values
+                    y1 = win_mod.dataset.sea_level[-1].values
+                    win_mod.dataset['sea_level'] = win_mod.dataset.sea_level - [(y0*(nt-1-kk) + y1*kk)/(nt-1) for kk in range(nt)]
+                    tg_LW = win_mod.find_high_and_low_water(var_str='sea_level',method='comp')
+
+                    if(0):
+                        plt.close('all')
+                        plt.figure()
+                        plt.plot( win_mod.dataset.time, win_mod.dataset.sea_level, 'g.' )
+                        plt.plot( win_mod.dataset.time, win_mod.dataset.sea_level, 'g' )
+                        plt.plot( tg_LW.dataset.time_lows, tg_LW.dataset.sea_level_lows, 'r+')
+                        plt.plot( tg_LW.dataset.time_lows, tg_LW.dataset.sea_level_lows, 'r')
+                        plt.xlim([guess_time - np.timedelta64(winsize[0],'h'),
+                                  guess_time + np.timedelta64(winsize[1],'h')])
+                        plt.show()
+
+
+
+                try:
+                    # Find time. Interpolate time onto original timeseries
+                    #print(f"tg_LW.dataset:{tg_LW.dataset}")
+                    #print(f"---")
+                    #print(f"tg_LW.dataset[measure_var].argmin():{tg_LW.dataset[measure_var].argmin().values}")
+
+                    event_time = tg_LW.dataset[time_var][tg_LW.dataset[measure_var].argmin().values]
+                    #print(f"event_time: {event_time}")
+                    # interpolate back onto original sea_level timeseries (not needed for method="comp")
+                    LL = win.dataset.sea_level.interp(time=event_time, method='cubic') # two coords: {time_lows, time} inherited from {event_time, win_mod.dataset}
+                    #print(f"LL.values: {LL.values}")
+                    #print("tg_LW.dataset[measure_var]",i, tg_LW.dataset[measure_var])
+                    #LL = tg_HLW.dataset[measure_var][tg_inf.dataset[measure_trend_var].argmax()] # Units: (m), not (m/s)
+                    LL_lag = (event_time - guess_time).astype('timedelta64[m]')
+                except:
+                    LL = xr.DataArray([np.NaN], dims=(time_var), coords={time_var: [guess_time]})[0]
+                    LL_lag = xr.DataArray([np.datetime64('NaT').astype('timedelta64[m]')], dims=(time_var), coords={time_var: [guess_time]})[0]
+
+                # Find the preceeding minima
+
+                #print("time,LL,LL_lag:",i, guess_time, LL.values, LL_lag.values)
+                if type(LL) is xr.DataArray: ## Actually I think they are alway xr.DataArray with time, but the height can be nan.
+                    LT_h.append( LL.values )
+                    #print('len(HT_h)', len(HT_h))
+                    LT_t.append( LL[time_var].values )
+                    LT_lag.append( LL_lag.values )
+
+                    print(f"Check guess: {tt.dataset.time_highs[i].values}")
+                    try: #if(1):
+                        if (tt.dataset.time_lows[i].values < tt.dataset.time_highs[i].values) and \
+                            (tt.dataset.time_lows[i].values > (tt.dataset.time_highs[i].values - np.timedelta64(12, 'h'))):
+                            print('HT_t(i)-12 < LT_t(i) < HT_t(i)')
+                            ref_LT_t.append( tt.dataset[time_var][i].values )
+                            ref_LT_h.append( tt.dataset[measure_var][i].values )
+                        elif (tt.dataset.time_lows[i-1].values < tt.dataset.time_highs[i].values) and \
+                            (tt.dataset.time_lows[i-1].values > (tt.dataset.time_highs[i].values - np.timedelta64(12, 'h'))):
+                            print('HT_t(i)-12 < LT_t(i-1) < HT_t(i)')
+                            ref_LT_t.append( tt.dataset[time_var][i-1].values )
+                            ref_LT_h.append( tt.dataset[measure_var][i-1].values )
+                        elif (tt.dataset.time_lows[i+1].values < tt.dataset.time_highs[i].values) and \
+                            (tt.dataset.time_lows[i+1].values > (tt.dataset.time_highs[i].values - np.timedelta64(12, 'h'))):
+                            print('HT_t(i)-12 < LT_t(i+1) < HT_t(i)')
+                            ref_LT_t.append( tt.dataset[time_var][i+1].values )
+                            ref_LT_h.append( tt.dataset[measure_var][i+1].values )
+                        else:
+                            #print('LT_t(i) !< HT_t(i)')
+                            print(f"LT:{tt.dataset.time_lows[i].values}. HT:{tt.dataset.time_highs[i].values}")
+                            ref_LT_t.append( np.datetime64('NaT').astype('timedelta64[m]') )
+                            ref_LT_h.append( np.nan )
+                    except:
+                            ref_LT_t.append( np.datetime64('NaT').astype('timedelta64[m]') )
+                            ref_LT_h.append( np.nan )
+
                     #print('len(HT_t)', len(HT_t))
                     #print(f"i:{i}, {HT_t[-1].astype('M8[ns]').astype('M8[ms]').item()}" )
                     #print(HT_t[-1].astype('M8[ns]').astype('M8[ms]').item().strftime('%Y-%m-%d'))
@@ -158,15 +259,20 @@ class Databucket():
                     else:
                         print(f"Not expecting HLW:{HLW}")
                     if loc == 'ctr':
-                        ylim = [4,7]
+                        ylim = [2,7]
 
                     elif loc == 'liv':
                         ylim = [0,11]
                     else:
                         ylim = [0,11]
                     plt.subplot(3,4,(i%12)+1)
-                    plt.plot(tg.dataset.time, tg.dataset.sea_level)
+                    plt.plot(tg.dataset.time, tg.dataset.sea_level,'b')
+                    plt.plot(tg.dataset.time, tg.dataset.sea_level,'b.')
+                    #plt.plot(tg.dataset.time, ylim[0]+1e13*tg.dataset.sea_level.differentiate("time"),'g')
+                    print(f"LT_h[-1]: {LT_h[-1]}")
+                    print(f"LT_t[-1]: {LT_t[-1]}")
                     plt.plot( HT_t[-1], HT_h[-1], 'r+' )
+                    plt.plot( LT_t[-1], LT_h[-1], 'g+' )
                     plt.plot( [guess_time, guess_time],[0,11],'k')
                     plt.xlim(xlim)
                     plt.ylim(ylim) #[0,11])
@@ -198,18 +304,24 @@ class Databucket():
 
 
         # Save a xarray objects
-        coords = {'time': (('time'), ind_t)}
+        coords = {'time': (('time'), ref_HT_t)}
         #print("length of data:", len(np.array(HT_h)) )
-        height_xr = xr.DataArray( np.array(HT_h), coords=coords, dims=['time'])
-        time_xr = xr.DataArray( np.array(HT_t), coords=coords, dims=['time'])
-        lag_xr = xr.DataArray( np.array(HT_lag), coords=coords, dims=['time'])
-        ind_xr = xr.DataArray( np.array(ind_h), coords=coords, dims=['time'])
+        HT_height_xr = xr.DataArray( np.array(HT_h), coords=coords, dims=['time'])
+        HT_time_xr = xr.DataArray( np.array(HT_t), coords=coords, dims=['time'])
+        HT_lag_xr = xr.DataArray( np.array(HT_lag), coords=coords, dims=['time'])
+        HT_ref_h_xr = xr.DataArray( np.array(ref_HT_h), coords=coords, dims=['time'])
 
+
+        LT_height_xr = xr.DataArray( np.array(LT_h), coords=coords, dims=['time'])
+        LT_time_xr = xr.DataArray( np.array(LT_t), coords=coords, dims=['time'])
+        LT_lag_xr = xr.DataArray( np.array(LT_lag), coords=coords, dims=['time'])
+        LT_ref_h_xr = xr.DataArray( np.array(ref_LT_h), coords=coords, dims=['time'])
+        LT_ref_t_xr = xr.DataArray( np.array(ref_LT_t), coords=coords, dims=['time'])
         #logging.debug(f"len(self.bore[loc+'_time_'{HLW}]): {len(self.bore[loc+'_time_'+HLW])}")
         #logging.info(f'len(self.bore.liv_time)', len(self.bore.liv_time))
         logging.debug(f"type(HT_t): {type(HT_t)}")
         logging.debug(f"type(HT_h): {type(HT_h)}")
-        return height_xr, time_xr, lag_xr, ind_xr
+        return HT_height_xr, HT_time_xr, HT_lag_xr, HT_ref_h_xr, LT_height_xr, LT_time_xr, LT_lag_xr, LT_ref_h_xr, LT_ref_t_xr
 
 
     def load_tidetable(self):
@@ -244,11 +356,18 @@ class Databucket():
         """
 
         ctr = GAUGE()
-        ctr.dataset = xr.open_dataset("archive_shoothill/ctr_2021.nc")
+        #ctr.dataset = xr.open_dataset("archive_shoothill/ctr_2021.nc")
+        #ctr.dataset = ctr.dataset.sel( time=slice(np.datetime64('2021-03-31T06:00:00'), np.datetime64('2021-03-31T18:00:00')) )
+
+        ctr.dataset = xr.open_mfdataset("archive_shoothill/ctr2_2020.nc")
+        #ctr.dataset = ctr.dataset.sel( time=slice(np.datetime64('2020-04-14T04:00:00'), np.datetime64('2020-04-16T18:00:00')) )
+        ctr.dataset = ctr.dataset.sel( time=slice(np.datetime64('2020-01-01T04:00:00'), np.datetime64('2020-04-16T18:00:00')) )
+
         #ctr.dataset = xr.open_mfdataset("archive_shoothill/ctr2_202*.nc")
 
         #ctr_HLW = ctr.find_high_and_low_water(var_str='sea_level', method="cubic")
         self.ctr = ctr
+
         #self.ctr_HLW = ctr_HLW
 
     def load_liv(self):
@@ -310,18 +429,32 @@ if __name__ == "__main__":
         tt.load_tidetable()
         tt.load_ctr()
 
-        tt.ctr_height, tt.ctr_time, tt.ctr_lag, tt.liv_height = tt.process(tg = tt.ctr, HLW="LW")
+        #tt.ctr_height, tt.ctr_time, tt.ctr_lag, tt.liv_height = tt.process(tg = tt.ctr, HLW="HW")
+        HT_height_xr, HT_time_xr, HT_lag_xr, HT_ref_h_xr, LT_height_xr, LT_time_xr, LT_lag_xr, LT_ref_h_xr, LT_ref_t_xr = tt.process(tg = tt.ctr, HLW="HW")
 
 
 
         plt.figure()
-        plt.plot(  tt.ctr_lag / np.timedelta64(1, 'm'), tt.liv_height-tt.ctr_height, '+')
+        #plt.plot(  tt.ctr_lag / np.timedelta64(1, 'm'), tt.liv_height-tt.ctr_height, '+')
+        plt.plot(  HT_lag_xr / np.timedelta64(1, 'm'), HT_ref_h_xr-HT_height_xr, '+')
         plt.xlim([0,100])
         plt.ylim([3,5.5])
         plt.xlabel('Timing CTR HT, minutes after LIV')
         plt.ylabel('Liverpool-Chester HT (m)')
-
-        #plt.plot([0,100],[4.05, 4.05])  # 13/10/2021  04:39 BST    8.05
-
-        #tt.glad_HLW.dataset.sea_level_highs[0:10].plot()
         plt.savefig("dd.png")
+
+
+        plt.figure()
+        #plt.plot(  tt.ctr_lag / np.timedelta64(1, 'm'), tt.liv_height-tt.ctr_height, '+')
+        plt.scatter(  (HT_lag_xr - LT_lag_xr) / np.timedelta64(1, 'm'),
+            HT_height_xr-LT_height_xr,
+            c=HT_ref_h_xr, marker='+')
+        #plt.xlim([0,100])
+        #plt.ylim([3,5.5])
+        #legend
+        cbar = plt.colorbar()
+        cbar.set_label('High Water at Liverpool (m)', rotation=270)
+        plt.xlabel('time(LT:HT) at CTR, mins')
+        plt.ylabel('hight(HT-LT) at Chester (m)')
+        plt.title('Magnitude and duration of rising tide at CTR')
+        plt.savefig("deltaH_deltaT_CTR.png")
