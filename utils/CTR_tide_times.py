@@ -432,8 +432,24 @@ if __name__ == "__main__":
         #tt.ctr_height, tt.ctr_time, tt.ctr_lag, tt.liv_height = tt.process(tg = tt.ctr, HLW="HW")
         HT_height_xr, HT_time_xr, HT_lag_xr, HT_ref_h_xr, LT_height_xr, LT_time_xr, LT_lag_xr, LT_ref_h_xr, LT_ref_t_xr = tt.process(tg = tt.ctr, HLW="HW")
 
+        # Create pandas dataframe
+        zipped = list(zip(HT_height_xr.values,
+                         HT_time_xr.values,
+                         HT_lag_xr.values,
+                         HT_ref_h_xr.values,
+                         LT_height_xr.values,
+                         LT_time_xr.values,
+                         LT_lag_xr.values,
+                         LT_ref_h_xr.values,
+                         LT_ref_t_xr.values))
 
+        columns=['HT_height', 'HT_time', 'HT_lag', 'HT_ref_h',
+                 'LT_height', 'LT_time', 'LT_lag',
+                 'LT_ref_h', 'LT_ref_t']
 
+        df = pd.DataFrame(zipped, columns=columns)
+
+        # Make some plots
         plt.figure()
         #plt.plot(  tt.ctr_lag / np.timedelta64(1, 'm'), tt.liv_height-tt.ctr_height, '+')
         plt.plot(  HT_lag_xr / np.timedelta64(1, 'm'), HT_ref_h_xr-HT_height_xr, '+')
