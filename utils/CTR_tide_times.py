@@ -333,7 +333,16 @@ class Databucket():
         #logging.info(f'len(self.bore.liv_time)', len(self.bore.liv_time))
         logging.debug(f"type(HT_t): {type(HT_t)}")
         logging.debug(f"type(HT_h): {type(HT_h)}")
-        return HT_height_xr, HT_time_xr, HT_lag_xr, HT_ref_h_xr, LT_height_xr, LT_time_xr, LT_lag_xr, LT_ref_h_xr, LT_ref_t_xr
+
+        #return HT_height_xr, HT_time_xr, HT_lag_xr, HT_ref_h_xr, LT_height_xr, LT_time_xr, LT_lag_xr, LT_ref_h_xr, LT_ref_t_xr
+
+        # lags are referenced to liv_HT_t, which is also the index variable
+        return xr.Dataset(data_vars={
+                    "ctr_HT_h": HT_height_xr, "ctr_HT_t": HT_time_xr, "ctr_HT_dt": HT_lag_xr,
+                    "liv_HT_h" : HT_ref_h_xr, "liv_HT_t" : HT_ref_h_xr.time,
+                    "ctr_LT_h" : LT_height_xr, "ctr_LT_t": LT_time_xr, "ctr_LT_dt": LT_lag_xr,
+                    "liv_LT_h" : LT_ref_h_xr, "liv_LT_t" : LT_ref_t_xr
+                    })
 
 
     def load_tidetable(self):
@@ -395,6 +404,18 @@ class Databucket():
         #liv_HLW = liv.find_high_and_low_water(var_str='sea_level', method="cubic")
         self.liv = liv
         #self.liv_HLW = liv_HLW
+
+class PostProcess():
+    """
+    Test the hypothesis that the data can collapse to a shallow water propagation
+    problem, with a reference height to be determined. Ignoring effects of variable
+    river depth
+    """
+    ############################################################################
+    #%% Initialising and Finishing methods
+    ############################################################################
+    def __init__(self):
+        pass
 
     def load_databucket(self):
         """
@@ -469,6 +490,49 @@ def histogram_CTR_LIV_lag():
     plt.title(f"Histogram of CTR {HLW} timing 2020-21")
     plt.savefig('hh.png')
 
+
+def main1():
+    """ Read and process timeseries. Create xarray dataset. Export and pickly dataframe
+    Plot graphs """
+    data_bucket = Databucket()
+    data_bucket.load_tidetable()
+    data_bucket.load_ctr()
+
+    #HT_height_xr, HT_time_xr, HT_lag_xr, HT_ref_h_xr, LT_height_xr, LT_time_xr, LT_lag_xr, LT_ref_h_xr, LT_ref_t_xr = data_bucket.process(tg = tt.ctr, HLW="HW")
+    ds = data_bucket.process(tg = data_bucket.ctr, HLW="HW")
+    data_bucket.ds = ds
+    data_bucket.to_pickle()
+
+
+
+    # Make some plots
+    plt.figure()
+    #plt.plot(  tt.ctr_lag / np.timedelta64(1, 'm'), tt.liv_height-tt.ctr_height, '+')
+    plt.plot(  ds.ctr_HT_dt / np.timedelta64(1, 'm'), ds.liv_HT_h-ds.ctr_HT_h, '+')
+    plt.xlim([0,100])
+    plt.ylim([3,5.5])
+    plt.xlabel('Timing CTR HT, minutes after LIV')
+    plt.ylabel('Liverpool-Chester HT (m)')
+    plt.savefig("dd.png")
+
+
+    plt.figure()
+    #plt.plot(  tt.ctr_lag / np.timedelta64(1, 'm'), tt.liv_height-tt.ctr_height, '+')
+    plt.scatter(  (ds.ctr_HT_dt - ds.ctr_LT_dt) / np.timedelta64(1, 'm'),
+        ds.ctr_HT_h - ds.ctr_LT_h,
+        c=ds.liv_HT_h, marker='+')
+    #plt.xlim([0,100])
+    #plt.ylim([3,5.5])
+    #legend
+    cbar = plt.colorbar()
+    cbar.set_label('High Water at Liverpool (m)', rotation=270)
+    plt.xlabel('time(LT:HT) at CTR, mins')
+    plt.ylabel('hight(HT-LT) at Chester (m)')
+    plt.title('Magnitude and duration of rising tide at CTR')
+    plt.savefig("deltaH_deltaT_CTR.png")
+
+
+
 ################################################################################
 ################################################################################
 #%% Main Routine
@@ -488,53 +552,20 @@ if __name__ == "__main__":
     ## Plot the histogram of CTR lags for a window of Liv heights.
     #histogram_CTR_LIV_lag()
 
+    ## Read and process timeseries. Create xarray dataset. Export and pickly dataframe
+    ##  Plot graphs
+    #main1()
+
     if(1):
-        tt = Databucket()
-        tt.load_tidetable()
-        tt.load_ctr()
+        aa = PostProcess()
+        ds = aa.load_databucket()
+        ds = aa.ref_height_from_ds(ds)
+        # For a river river height (LT_height), is 'a' about constant? Well it does depend on the Glad HT_h...
+        #ax1 = df.plot.scatter(x='a', y='LT_height', c='HT_ref_h') #; plt.show()
+        plt.scatter( ds.a , ds.ctr_LT_h, c=ds.liv_HT_h )
+        plt.show()
 
-        #tt.ctr_height, tt.ctr_time, tt.ctr_lag, tt.liv_height = tt.process(tg = tt.ctr, HLW="HW")
-        HT_height_xr, HT_time_xr, HT_lag_xr, HT_ref_h_xr, LT_height_xr, LT_time_xr, LT_lag_xr, LT_ref_h_xr, LT_ref_t_xr = tt.process(tg = tt.ctr, HLW="HW")
-
-        # Create pandas dataframe
-        zipped = list(zip(HT_height_xr.values,
-                         HT_time_xr.values,
-                         HT_lag_xr.values,
-                         HT_ref_h_xr.values,
-                         LT_height_xr.values,
-                         LT_time_xr.values,
-                         LT_lag_xr.values,
-                         LT_ref_h_xr.values,
-                         LT_ref_t_xr.values))
-
-        columns=['HT_height', 'HT_time', 'HT_lag', 'HT_ref_h',
-                 'LT_height', 'LT_time', 'LT_lag',
-                 'LT_ref_h', 'LT_ref_t']
-
-        df = pd.DataFrame(zipped, columns=columns)
-
-        # Make some plots
-        plt.figure()
-        #plt.plot(  tt.ctr_lag / np.timedelta64(1, 'm'), tt.liv_height-tt.ctr_height, '+')
-        plt.plot(  HT_lag_xr / np.timedelta64(1, 'm'), HT_ref_h_xr-HT_height_xr, '+')
-        plt.xlim([0,100])
-        plt.ylim([3,5.5])
-        plt.xlabel('Timing CTR HT, minutes after LIV')
-        plt.ylabel('Liverpool-Chester HT (m)')
-        plt.savefig("dd.png")
-
-
-        plt.figure()
-        #plt.plot(  tt.ctr_lag / np.timedelta64(1, 'm'), tt.liv_height-tt.ctr_height, '+')
-        plt.scatter(  (HT_lag_xr - LT_lag_xr) / np.timedelta64(1, 'm'),
-            HT_height_xr-LT_height_xr,
-            c=HT_ref_h_xr, marker='+')
-        #plt.xlim([0,100])
-        #plt.ylim([3,5.5])
-        #legend
-        cbar = plt.colorbar()
-        cbar.set_label('High Water at Liverpool (m)', rotation=270)
-        plt.xlabel('time(LT:HT) at CTR, mins')
-        plt.ylabel('hight(HT-LT) at Chester (m)')
-        plt.title('Magnitude and duration of rising tide at CTR')
-        plt.savefig("deltaH_deltaT_CTR.png")
+        ds = aa.ref_L_from_ds(ds)
+        #ax1 = df.plot.scatter(x='L', y='LT_height', c='HT_ref_h'); plt.show()
+        plt.scatter( ds.L , ds.ctr_LT_h, c=ds.liv_HT_h )
+        plt.show()
