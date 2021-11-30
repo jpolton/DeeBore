@@ -56,12 +56,24 @@ class Databucket():
     def __init__(self):
         pass
 
+    def to_pickle(self):
+        """ save copy of self.ds into pickle file, if requested """
+        print('Pickle data.')
+        os.system('rm -f '+DATABUCKET_FILE)
+        if(1):
+            with open(DATABUCKET_FILE, 'wb') as file_object:
+                pickle.dump(self.ds, file_object)
+        else:
+            print("Don't save as pickle file")
+        return
 
     def process(self, tg:GAUGE=None, HLW:str="HW"):
         """
         Save into an dataset which is indexed against tide table HW times.
 
         tg: dataset to process. E.g. full timeseries from chester
+
+        return xr.DataSet of tide events and variables indexed by Liv HT time
         """
 
         loc = "ctr"
@@ -384,6 +396,54 @@ class Databucket():
         self.liv = liv
         #self.liv_HLW = liv_HLW
 
+    def load_databucket(self):
+        """
+        Auto load databucket from pickle file if it exists.
+        """
+        #global DATABUCKET_FILE
+        #databucket = DataBucket()
+        logging.info("Auto load databucket from pickle file if it exists")
+        print("Add to pickle file, if it exists")
+        try:
+            if os.path.exists(DATABUCKET_FILE):
+                template = "...Loading (%s)"
+                print(template%DATABUCKET_FILE)
+                with open(DATABUCKET_FILE, 'rb') as file_object:
+                    self.ds = pickle.load(file_object)
+                    self.load_bore_flag = True
+
+            else:
+                print("... %s does not exist"%DATABUCKET_FILE)
+        except KeyError:
+            print('ErrorA ')
+        except (IOError, RuntimeError):
+            print('ErrorB ')
+
+        return self.ds
+
+
+
+    def ref_height_from_ds(self, ds):
+        """ Compute a reference height from xr.dataset
+        dt_LW = dt(ctr_LW_t:Glad_LW_t) = ctr_t - Glad_HW_t + Glad_HW_t - Glad_LW_t
+                = LT_lag + HT_ref_t - LT_ref_t
+        """
+        dt_LW_sq = ( (ds.ctr_LT_dt + ds.liv_HT_t.time - ds.liv_LT_t)/np.timedelta64(1, 's') )**2
+        dt_HW_sq = ( ds.ctr_HT_dt/np.timedelta64(1, 's') )**2
+        den = dt_HW_sq - dt_LW_sq
+
+        a = (ds.liv_LT_h*dt_LW_sq - ds.liv_HT_h*dt_HW_sq) / den
+        ds['a'] = a
+        return ds
+
+    def ref_L_from_ds(self, ds):
+        """ Compute hyperthetical distance that linear wave travels, given reference height a"""
+        dt_HW_sq = ( ds.ctr_HT_dt/np.timedelta64(1, 's') )**2
+        L = np.sqrt( (ds.a + ds.liv_HT_h)*9.81 * dt_HW_sq )/1000. # in km
+        ds['L'] = L  # in km
+        return ds
+
+
 
 def histogram_CTR_LIV_lag():
 
@@ -415,6 +475,10 @@ def histogram_CTR_LIV_lag():
 ################################################################################
 ################################################################################
 if __name__ == "__main__":
+
+    #### Constants
+    DATABUCKET_FILE = "CTR_tide_times.pkl"
+
 
     #### Initialise logging
     now_str = datetime.datetime.now().strftime("%d%b%y %H:%M")
