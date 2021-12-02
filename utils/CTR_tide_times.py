@@ -372,7 +372,7 @@ class Databucket():
 
         ctr.dataset = xr.open_mfdataset("archive_shoothill/ctr2_2020.nc")
         #ctr.dataset = ctr.dataset.sel( time=slice(np.datetime64('2020-04-14T04:00:00'), np.datetime64('2020-04-16T18:00:00')) )
-        ctr.dataset = ctr.dataset.sel( time=slice(np.datetime64('2020-01-01T04:00:00'), np.datetime64('2020-04-16T18:00:00')) )
+        #ctr.dataset = ctr.dataset.sel( time=slice(np.datetime64('2020-01-01T04:00:00'), np.datetime64('2020-04-16T18:00:00')) )
 
         #ctr.dataset = xr.open_mfdataset("archive_shoothill/ctr2_202*.nc")
 
@@ -480,7 +480,9 @@ class PostProcess():
         ds['L'] = L  # in km
         return ds
 
-
+############################################################################
+## Bespoke methods
+############################################################################
 
 def histogram_CTR_LIV_lag():
 
@@ -488,17 +490,18 @@ def histogram_CTR_LIV_lag():
     tt.load_tidetable()
     tt.load_ctr()
 
-    tt.ctr_height, tt.ctr_time, tt.ctr_lag, tt.liv_height = tt.process(tg = tt.ctr)
+    HLW = "HW"
+    ds = tt.process(tg = tt.ctr, HLW=HLW)
 
     plt.figure()
-    plt.plot(  tt.ctr_lag / np.timedelta64(1, 'm'), tt.liv_height, '+')
+    plt.plot(  ds.ctr_HT_dt / np.timedelta64(1, 'm'),ds.liv_HT_h, '+')
     plt.xlim([0,100])
     plt.xlabel(f"Timing CTR {HLW}, minutes after LIV")
     plt.ylabel(f"Liverpool {HLW} (m)")
     plt.plot([0,100],[8.05, 8.05])  # 13/10/2021  04:39 BST    8.05
     plt.savefig("tt.png")
 
-    lag = tt.ctr_lag.where(tt.liv_height > 7.9).where(tt.liv_height < 8.2) / np.timedelta64(1, 'm')
+    lag = ds.ctr_HT_dt.where(ds.liv_HT_h > 7.9).where(ds.liv_HT_h < 8.2) / np.timedelta64(1, 'm')
     fig, ax = plt.subplots(figsize =(10, 7))
     ax.hist(lag, bins = np.linspace(40,100,10))
     plt.xlabel(f"Timing CTR {HLW}, minutes after LIV")
@@ -576,7 +579,7 @@ if __name__ == "__main__":
     ##  Plot graphs
     #main1()
 
-    if(1):
+    if(0):
         aa = PostProcess()
         #ds = aa.load_databucket()
 
