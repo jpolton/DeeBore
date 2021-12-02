@@ -578,7 +578,12 @@ if __name__ == "__main__":
 
     if(1):
         aa = PostProcess()
-        ds = aa.load_databucket()
+        #ds = aa.load_databucket()
+
+        pickle_jar = PickleJar(pickle_file="CTR_tide_times.pkl")
+        pickle_jar.load()
+        ds = pickle_jar.dataset
+
         ds = aa.ref_height_from_ds(ds)
         # For a river river height (LT_height), is 'a' about constant? Well it does depend on the Glad HT_h...
         #ax1 = df.plot.scatter(x='a', y='LT_height', c='HT_ref_h') #; plt.show()
