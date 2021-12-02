@@ -56,16 +56,6 @@ class Databucket():
     def __init__(self):
         pass
 
-    def to_pickle(self):
-        """ save copy of self.ds into pickle file, if requested """
-        print('Pickle data.')
-        os.system('rm -f '+DATABUCKET_FILE)
-        if(1):
-            with open(DATABUCKET_FILE, 'wb') as file_object:
-                pickle.dump(self.ds, file_object)
-        else:
-            print("Don't save as pickle file")
-        return
 
     def process(self, tg:GAUGE=None, HLW:str="HW"):
         """
@@ -405,6 +395,58 @@ class Databucket():
         self.liv = liv
         #self.liv_HLW = liv_HLW
 
+class PickleJar():
+    """ Class to handle pickle methods """
+    def __init__(self, pickle_file:str=""):
+        print(f"pickle file: {pickle_file}")
+        self.pickle_file = pickle_file
+        pass
+
+    def load(self):
+        """
+        Auto load databucket from pickle file if it exists.
+
+        Return:
+            self.dataset
+            self.load_pickle_flag [True/False]
+
+        """
+        print("Add to pickle file, if it exists")
+        self.load_pickle_flag = False
+        self.dataset = []
+        try:
+            if os.path.exists(self.pickle_file):
+                template = "...Loading (%s)"
+                print(template%self.pickle_file)
+                with open(self.pickle_file, 'rb') as file_object:
+                    self.dataset = pickle.load(file_object)
+                    self.load_pickle_flag = True
+            else:
+                print("... %s does not exist"%pickle_file)
+        except KeyError:
+            print('ErrorA ')
+        except (IOError, RuntimeError):
+            print('ErrorB ')
+
+
+    def to_pickle(self):
+        """
+        Save copy of self.dataset into pickle file, if requested
+        Inputs:
+            self.dataset    [xr.dataset]
+            pickle_file  [str]
+        Returns:
+            pkl file
+        """
+        print('Pickle data.')
+        os.system('rm -f '+self.pickle_file)
+        try:
+            with open(self.pickle_file, 'wb') as file_object:
+                pickle.dump(self.dataset, file_object)
+        except:
+            print(f"Problem saving pickle file {self.pickle_file}")
+
+
 class PostProcess():
     """
     Test the hypothesis that the data can collapse to a shallow water propagation
@@ -416,32 +458,6 @@ class PostProcess():
     ############################################################################
     def __init__(self):
         pass
-
-    def load_databucket(self):
-        """
-        Auto load databucket from pickle file if it exists.
-        """
-        #global DATABUCKET_FILE
-        #databucket = DataBucket()
-        logging.info("Auto load databucket from pickle file if it exists")
-        print("Add to pickle file, if it exists")
-        try:
-            if os.path.exists(DATABUCKET_FILE):
-                template = "...Loading (%s)"
-                print(template%DATABUCKET_FILE)
-                with open(DATABUCKET_FILE, 'rb') as file_object:
-                    self.ds = pickle.load(file_object)
-                    self.load_bore_flag = True
-
-            else:
-                print("... %s does not exist"%DATABUCKET_FILE)
-        except KeyError:
-            print('ErrorA ')
-        except (IOError, RuntimeError):
-            print('ErrorB ')
-
-        return self.ds
-
 
 
     def ref_height_from_ds(self, ds):
@@ -500,9 +516,13 @@ def main1():
 
     #HT_height_xr, HT_time_xr, HT_lag_xr, HT_ref_h_xr, LT_height_xr, LT_time_xr, LT_lag_xr, LT_ref_h_xr, LT_ref_t_xr = data_bucket.process(tg = tt.ctr, HLW="HW")
     ds = data_bucket.process(tg = data_bucket.ctr, HLW="HW")
-    data_bucket.ds = ds
-    data_bucket.to_pickle()
+    #data_bucket.ds = ds
+    #data_bucket.to_pickle()
 
+
+    pickle_jar = PickleJar(pickle_file="CTR_tide_times.pkl")
+    pickle_jar.dataset = ds
+    pickle_jar.to_pickle()
 
 
     # Make some plots
