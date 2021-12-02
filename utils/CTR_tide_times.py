@@ -588,9 +588,17 @@ if __name__ == "__main__":
         # For a river river height (LT_height), is 'a' about constant? Well it does depend on the Glad HT_h...
         #ax1 = df.plot.scatter(x='a', y='LT_height', c='HT_ref_h') #; plt.show()
         plt.scatter( ds.a , ds.ctr_LT_h, c=ds.liv_HT_h )
+        plt.xlabel('Estimated displacement depth (m)')
+        plt.ylabel('CTR LT waterlevel (m)')
+        clb=plt.colorbar()
+        clb.ax.set_ylabel('Liv HT (m)')
         plt.show()
 
         ds = aa.ref_L_from_ds(ds)
         #ax1 = df.plot.scatter(x='L', y='LT_height', c='HT_ref_h'); plt.show()
         plt.scatter( ds.L , ds.ctr_LT_h, c=ds.liv_HT_h )
+        plt.xlabel('Estimated separation distance (km)')
+        plt.ylabel('CTR LT waterlevel (m)')
+        clb=plt.colorbar()
+        clb.ax.set_ylabel('Liv HT (m)')
         plt.show()
