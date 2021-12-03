@@ -117,6 +117,15 @@ class Databucket():
                 # very memory costly. Only need to use the cubic method for the
                 # bodc and api sources, so compute the high and low waters in a
                 # piecewise approach around observations times.
+                """
+                INPUT:
+                        xr.dataset of river data.
+                        guess_time : liv_HW time
+                        2 part window for time clipping
+                RETURNS:
+                        xr.dataset single values for river HW height, time and lag, using cubic fit
+                        xr.dataset NaN, not enough data
+                """
                 if(1):
                     # This produces an xr.dataset with sea_level_highs and sea_level_lows
                     # with time variables time_highs and time_lows.
@@ -147,6 +156,7 @@ class Databucket():
                     HH = xr.DataArray([np.NaN], dims=(time_var), coords={time_var: [guess_time]})[0]
                     HH_lag = xr.DataArray([np.datetime64('NaT').astype('timedelta64[m]')], dims=(time_var), coords={time_var: [guess_time]})[0]
 
+                """ Append HW event data [floats, np.datetime64] """
                 #print("time,HH,HH_lag:",i, guess_time, HH.values, HH_lag.values)
                 if type(HH) is xr.DataArray: ## Actually I think they are alway xr.DataArray with time, but the height can be nan.
                     print(f"HH: {HH}")
@@ -161,6 +171,15 @@ class Databucket():
                 ##################
                 # Find the turning/shock point before HT.
                 # Remove a linear trend from HT-3 : HT. Find minimum.
+                """
+                INPUT:
+                        xr.dataset of river data.
+                        guess_time : liv_HW time
+                        2 part window for time clipping [window[0] : rivHW_t]
+                RETURNS:
+                        xr.dataset single values for river LW height, time and lag, using cubic fit
+                        xr.dataset NaN, not enough data
+                """
                 time_var = 'time_lows'
                 measure_var = 'sea_level_lows'
 
@@ -188,8 +207,6 @@ class Databucket():
                                   guess_time + np.timedelta64(winsize[1],'h')])
                         plt.show()
 
-
-
                 try:
                     # Find time. Interpolate time onto original timeseries
                     #print(f"tg_LW.dataset:{tg_LW.dataset}")
@@ -210,6 +227,7 @@ class Databucket():
 
                 # Find the preceeding minima
 
+                """ Append LW event data, being careful to get the appropriate liv LT [floats, np.datetime64] """
                 #print("time,LL,LL_lag:",i, guess_time, LL.values, LL_lag.values)
                 if type(LL) is xr.DataArray: ## Actually I think they are alway xr.DataArray with time, but the height can be nan.
                     LT_h.append( LL.values )
