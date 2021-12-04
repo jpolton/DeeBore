@@ -615,7 +615,7 @@ class Controller():
             'LIV2103.txt', 'LIV2104.txt',
             'LIV2105.txt', 'LIV2106.txt',
             'LIV2107.txt', 'LIV2108.txt',
-            'LIV2109.txt']
+            'LIV2109.txt', 'LIV2110.txt']
             tg  = GAUGE()
             for file in filelist:
                 tg0=GAUGE()
