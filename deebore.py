@@ -62,6 +62,163 @@ import logging
 logging.basicConfig(filename='bore.log', filemode='w+')
 logging.getLogger().setLevel(logging.DEBUG)
 
+
+class marine_gauge():
+    """
+    Process event for a 'deep water' tide. I.e. harmonic
+
+    ref_time [np.datetime64] - time about which to search. Also called guess_time, or time of observation
+    HLW [str] HW/LW/FW/EW - switch controlling parameters related to the tidal state of interest
+    source [str] bodc/harmonic/api/ctr/harmonic_rec - data source
+    winsize [int] +/- hrs to search around ref_time
+    """
+    def __init__(self, tg:GAUGE=None, ref_time:np.datetime64=None,
+                HLW:str="HW", source:str="bodc", winsize:int=6):
+        self.winsize = winsize
+        self.ref_time = ref_time
+        self.HLW = HLW
+        self.source   = source
+        self.tg = tg
+        if ref_time == None:
+            print(f"Expected an input time: ref_time")
+            return
+        if tg == None:
+            print(f"Expected an input gauge dataset: tg")
+            return
+
+    def get_extrema(cls):
+
+        HW = None
+        LW = None
+        tg = cls.tg
+        obs_time = cls.ref_time
+        HLW = cls.HLW
+        source = cls.source
+        winsize = cls.winsize
+
+        if HLW == 'HW':
+            time_var = 'time_highs'
+            measure_var = 'sea_level_highs'
+        elif HLW == 'LW':
+            time_var = 'time_lows'
+            measure_var = 'sea_level_lows'
+        elif HLW == 'FW':
+            time_var = 'time_flood'
+            measure_var = 'sea_level_flood'
+        elif HLW == 'EW':
+            time_var = 'time_ebb'
+            measure_var = 'sea_level_ebb'
+        else:
+            print('This should not have happened...')
+
+        # Extracting the highest and lowest value with a cubic spline is
+        # very memory costly. Only need to use the cubic method for the
+        # bodc and api sources, so compute the high and low waters in a
+        # piecewise approach around observations times.
+        if source == "bodc" or source == "api":
+            # This produces an xr.dataset with sea_level_highs and sea_level_lows
+            # with time variables time_highs and time_lows.
+            win = GAUGE()
+            win.dataset = tg.dataset.sel( time=slice(obs_time - np.timedelta64(winsize, "h"), obs_time + np.timedelta64(winsize, "h"))  )
+            #if HLW == "LW":
+            #    print(f"win.dataset {win.dataset}")
+            #print(i," win.dataset.time.size", win.dataset.time.size)
+            if win.dataset.time.size == 0:
+                tg_HLW = GAUGE()
+                tg_HLW.dataset = xr.Dataset({measure_var: (time_var, [np.NaN])}, coords={time_var: [obs_time]})
+            else:
+                if HLW == "FW" or HLW == "EW":
+                    tg_HLW = win.find_flood_and_ebb_water(var_str='sea_level',method='cubic')
+                    #print(f"inflection point time: {tg_HLW.dataset[time_var]}")
+                    print(f"inflection points: {len(tg_HLW.dataset[time_var])}")
+                elif HLW == "HW" or HLW == "LW":
+                    tg_HLW = win.find_high_and_low_water(var_str='sea_level',method='cubic')
+                    print(f"max points: {len(tg_HLW.dataset[time_var])}")
+                else:
+                    print(f"This should not have happened... HLW:{HLW}")
+        else:
+            tg_HLW = tg.find_high_and_low_water(var_str='sea_level')
+
+        HW = tg_HLW.get_tide_table_times(
+                                time_guess=obs_time,
+                                time_var=time_var,
+                                measure_var=measure_var,
+                                method='nearest_1',
+                                winsize=winsize ) #4h for HW, 6h for LW
+
+        #print("time,HW:",obs_time, HW.values)
+        #if type(HW) is xr.DataArray: ## Actually I think they are alway xr.DataArray with time, but the height can be nan.
+            #print(f"HW: {HW}")
+            #HT_h.append( HW.values )
+            #print('len(HT_h)', len(HT_h))
+            #HT_t.append( HW[time_var].values )
+            #print('len(HT_t)', len(HT_t))
+            #self.bore['LT_h'][i] = HLW.dataset.sea_level[HLW.dataset['sea_level'].argmin()]
+            #self.bore['LT_t'][i] = HLW.dataset.time[HLW.dataset['sea_level'].argmin()]
+            #ind.append(i)
+            #print(f"i:{i}, {HT_t[-1].astype('M8[ns]').astype('M8[ms]').item()}" )
+            #print(HT_t[-1].astype('M8[ns]').astype('M8[ms]').item().strftime('%Y-%m-%d'))
+
+            ### PLOTTING, plot_event(), WENT HERE
+
+        #else:
+        #    logging.info(f"Did not find a high water near this guess")
+        #    print(f"Did not find a high water near this guess")
+
+
+
+        return HW
+
+
+    def plot_event(self):
+            ## Make timeseries plot around the highwater maxima to check
+            # values are being extracted as expected.
+            if (i % 12) == 0:
+                fig, axes = plt.subplots(3,4)
+            ax = axes.flat[i%12]
+            #plt.subplot(3,4,(i%12)+1)
+            ax.plot(self.tg.dataset.time, self.tg.dataset.sea_level)
+            ax.plot( HT_t[-1], HT_h[-1], 'r+' )
+            ax.plot( [self.bore.time[i].values,self.bore.time[i].values],[0,11],'k')
+            ax.set_xlim([HT_t[-1] - np.timedelta64(5,'h'),
+                      HT_t[-1] + np.timedelta64(5,'h')])
+            ax.set_ylim([0,11])
+            ax.text( HT_t[-1]-np.timedelta64(5,'h'),10, self.bore.location[i].values)
+            ax.text( HT_t[-1]-np.timedelta64(5,'h'),1,  HT_t[-1].astype('M8[ns]').astype('M8[ms]').item().strftime('%Y-%m-%d'))
+            # Turn off tick labels
+            ax.axes.get_xaxis().set_visible(False)
+
+            ## Add inset zoom at extrema
+            if source == "ctr":
+                ins = inset_axes(ax,width="30%", height="30%", loc="upper right")
+            else:
+                if HLW == "EW":
+                    ins = inset_axes(ax,width="30%", height="30%", loc="center right")
+                elif HLW == "FW":
+                    ins = inset_axes(ax,width="30%", height="30%", loc="center left")
+                else:
+                    ins = inset_axes(ax,width="30%", height="30%", loc="center")
+
+
+            #ins = ax.inset_axes([0.6,0.6,0.3,0.3])
+
+            ins_dataset = self.tg.dataset.sel( time=slice(HT_t[-1] - np.timedelta64(40,'m'), HT_t[-1] + np.timedelta64(40,'m'))  )
+            #ins.plot(self.tg.dataset.time, self.tg.dataset.sea_level,'b+')
+            ins.plot(ins_dataset.time, ins_dataset.sea_level,'b+')
+            ins.plot( HT_t[-1], HT_h[-1], 'r+' )
+            #ins.set_xlim([HT_t[-1] - np.timedelta64(30,'m'),
+            #          HT_t[-1] + np.timedelta64(30,'m')])
+            #ins.set_ylim([HT_h[-1]-0.25,HT_h[-1]+0.25])
+            ins.set_xticks([])
+            ins.set_yticks([])
+            ins.set_xticklabels([])
+            ins.set_yticklabels([])
+            ins.patch.set_alpha(0.5)
+
+            if (i%12) == 12-1:
+                plt.savefig('figs/check_get_tidetabletimes_'+str(i//12).zfill(2)+'_'+HLW+'_'+source+'.png')
+                plt.close('all')
+
 ################################################################################
 class OpenWeather:
     """
@@ -566,6 +723,223 @@ class Controller():
 
 
     def get_Glad_data(self, source:str='harmonic', HLW_list=["HW"]):
+        #def get_Glad_data(self, source:str='harmonic', HLW:str="HW"):
+        """
+        Get Gladstone HLW data from external source
+        These data are reported in the bore.csv file but not consistently and it
+        is laborous to find old values.
+        It was considered a good idea to automate this step.
+
+        inputs:
+        source: 'harmonic' [default] - load HLW from harmonic prediction
+                'harmonic_rec' - reconstruct time series from harmonic constants
+                'bodc' - measured and processed data
+                'api' - load recent, un processed data from shoothill API
+        HLW_list: ["LW","HW","FW","EW"] - the data is either processed for High or Low water
+                events, or Flood or Ebb (inflection) events
+        """
+        loc = "liv" # default location - Liverpool
+
+        logging.info("Get Gladstone HLW data")
+        if source == "harmonic": # Load tidetable data from files
+            filnam1 = '/Users/jeff/GitHub/DeeBore/data/Liverpool_2005_2014_HLW.txt'
+            filnam2 = '/Users/jeff/GitHub/DeeBore/data/Liverpool_2015_2020_HLW.txt'
+            filnam3 = '/Users/jeff/GitHub/DeeBore/data/Liverpool_2021_2022_HLW.txt'
+            tg  = GAUGE()
+            tg1 = GAUGE()
+            tg2 = GAUGE()
+            tg3 = GAUGE()
+            tg1.dataset = tg1.read_hlw_to_xarray(filnam1)#, self.bore.time.min().values, self.bore.time.max().values)
+            tg2.dataset = tg2.read_hlw_to_xarray(filnam2)#, self.bore.time.min().values, self.bore.time.max().values)
+            tg3.dataset = tg3.read_hlw_to_xarray(filnam3)#, self.bore.time.min().values, self.bore.time.max().values)
+            tg.dataset = xr.concat([ tg1.dataset, tg2.dataset, tg3.dataset], dim='time')
+
+            # This produces an xr.dataset with sea_level_highs and sea_level_lows
+            # with time variables time_highs and time_lows.
+            tg_HLW = tg.find_high_and_low_water(var_str='sea_level')
+
+        elif source == "bodc": # load full 15min data from BODC files, extract HLW
+            dir = '/Users/jeff/GitHub/DeeBore/data/BODC_processed/'
+            filelist = ['2005LIV.txt',
+            '2006LIV.txt', '2007LIV.txt',
+            '2008LIV.txt', '2009LIV.txt',
+            '2010LIV.txt', '2011LIV.txt',
+            '2012LIV.txt', '2013LIV.txt',
+            '2014LIV.txt', '2015LIV.txt',
+            '2016LIV.txt', '2017LIV.txt',
+            '2018LIV.txt', '2019LIV.txt',
+            '2020LIV.txt',
+            'LIV2101.txt', 'LIV2102.txt',
+            'LIV2103.txt', 'LIV2104.txt',
+            'LIV2105.txt', 'LIV2106.txt',
+            'LIV2107.txt', 'LIV2108.txt',
+            'LIV2109.txt', 'LIV2110.txt']
+            tg  = GAUGE()
+            for file in filelist:
+                tg0=GAUGE()
+                tg0.dataset = tg0.read_bodc_to_xarray(dir+file)
+                if tg.dataset is None:
+                    tg.dataset = tg0.dataset
+                else:
+                    tg.dataset = xr.concat([ tg.dataset, tg0.dataset], dim='time')
+            # Use QC to drop null values
+            #tg.dataset['sea_level'] = tg.dataset.sea_level.where( np.logical_or(tg.dataset.qc_flags=='', tg.dataset.qc_flags=='T'), drop=True)
+            tg.dataset['sea_level'] = tg.dataset.sea_level.where( tg.dataset.qc_flags!='N', drop=True)
+            # Fix some attributes (others might not be correct for all data)
+            tg.dataset['start_date'] = tg.dataset.time.min().values
+            tg.dataset['end_date'] = tg.dataset.time.max().values
+            # This produces an xr.dataset with sea_level_highs and sea_level_lows
+            # with time variables time_highs and time_lows.
+            #tg_HLW = tg.find_high_and_low_water(var_str='sea_level',method='cubic') #'cubic')
+
+        elif source == "api": # load full tidal signal from shoothill, extract HLW
+            date_start=np.datetime64('2005-04-01')
+            date_end=np.datetime64('now','D')
+            fn_archive = "liv" # File head for netcdf archive of api call
+
+            # Load timeseries from local file if it exists
+            try:
+                tg1 = GAUGE()
+                tg2 = GAUGE()
+                tg = GAUGE()
+
+                # Load local file. Created with archive_shoothill.py
+                dir = "archive_shoothill/"
+                tg1.dataset = xr.open_mfdataset(dir + fn_archive + "_????.nc") # Tidal port Gladstone Dock, Liverpool
+                tg1.dataset = tg1.dataset.sel(time=slice(date_start, date_end))
+                print(f"{len(tg1.dataset.time)} pts loaded from netcdf")
+                if (tg1.dataset.time[-1].values < date_end):
+                    tg2 = GAUGE()
+                    tg2.dataset = tg2.read_shoothill_to_xarray(date_start=tg1.dataset.time[-1].values, date_end=date_end)
+                    tg.dataset = xr.concat([ tg1.dataset, tg2.dataset], dim='time')
+                    print(f"{len(tg2.dataset.time)} pts loaded from API")
+                else:
+                    tg = tg1
+            except:
+                tg.dataset = tg.read_shoothill_to_xarray(date_start=date_start, date_end=date_end)
+
+            # This produces an xr.dataset with sea_level_highs and sea_level_lows
+            # with time variables time_highs and time_lows.
+            #tg_HLW = tg.find_high_and_low_water(var_str='sea_level',method='cubic') #'cubic')
+
+
+        elif source == "ctr": # use api to load chester weir. Reset loc variable
+            loc = "ctr"
+            tg = GAUGE()
+            date_start=np.datetime64('2014-01-01')
+            date_end=np.datetime64('now','D')
+            #station_id = 7900 # below weir
+            station_id = 7899 # above weir
+            fn_archive = "ctr" # File head for netcdf archive of api call
+
+            station_id = 968
+            fn_archive = "iron"
+
+            # Load timeseries from local file if it exists
+            try:
+                tg1 = GAUGE()
+                tg2 = GAUGE()
+                tg = GAUGE()
+
+                # Load local file. Created with archive_shoothill.py
+                dir = "archive_shoothill/"
+                tg1.dataset = xr.open_mfdataset(dir + fn_archive + "_????.nc") # Tidal port Gladstone Dock, Liverpool
+                tg1.dataset = tg1.dataset.sel(time=slice(date_start, date_end))
+                print(f"{len(tg1.dataset.time)} pts loaded from netcdf")
+                if (tg1.dataset.time[-1].values < date_end):
+                    tg2 = GAUGE()
+                    tg2.dataset = tg2.read_shoothill_to_xarray(station_id=station_id, date_start=tg1.dataset.time[-1].values, date_end=date_end)
+                    tg.dataset = xr.concat([ tg1.dataset, tg2.dataset], dim='time')
+                    print(f"{len(tg2.dataset.time)} pts loaded from API")
+                else:
+                    tg = tg1
+            except:
+                tg.dataset = tg.read_shoothill_to_xarray(station_id=station_id ,date_start=date_start, date_end=date_end)
+
+            # This produces an xr.dataset with sea_level_highs and sea_level_lows
+            # with time variables time_highs and time_lows.
+            tg_HLW = tg.find_high_and_low_water(var_str='sea_level')
+
+        elif source == 'harmonic_rec': # load full tidal signal using anyTide code, extract HLW
+            tg = GAUGE()
+            #date_start=np.datetime64('now')
+            #ndays = 5
+            #tg.dataset = tg.anyTide_to_xarray(date_start=date_start, ndays=5)
+            date_start=np.datetime64('2005-04-01')
+            date_end=np.datetime64('now','D')
+            tg.dataset = tg.anyTide_to_xarray(date_start=date_start, date_end=date_end)
+            # This produces an xr.dataset with sea_level_highs and sea_level_lows
+            # with time variables time_highs and time_lows.
+            tg_HLW = tg.find_high_and_low_water(var_str='sea_level')
+        else:
+            logging.debug(f"Did not expect this eventuality...")
+
+        self.tg = tg
+
+        ## Process the *_highs or *_lows
+        for HLW in HLW_list:
+            print(f"HLW: {HLW}")
+            #time_var = 'time_highs'
+            #measure_var = 'sea_level_highs'
+            #ind = [] # list of indices in the obs bore data where gladstone data is found
+            if HLW == 'HW':
+                time_var = 'time_highs'
+                measure_var = 'sea_level_highs'
+            elif HLW == 'LW':
+                time_var = 'time_lows'
+                measure_var = 'sea_level_lows'
+            elif HLW == 'FW':
+                time_var = 'time_flood'
+                measure_var = 'sea_level_flood'
+            elif HLW == 'EW':
+                time_var = 'time_ebb'
+                measure_var = 'sea_level_ebb'
+            else:
+                print('This should not have happened...')
+
+            HT_h = [] # Extrema - height
+            HT_t = [] # Extrema - time
+
+            winsize = 6 #4h for HW, 6h for LW. +/- search distance for nearest extreme value
+
+            for i in range(len(self.bore.time)):
+                mg = marine_gauge(tg=tg, ref_time=self.bore.time[i].values,
+                    HLW=HLW, source=source, winsize=winsize)
+                HW = mg.get_extrema()
+                HT_h.append( HW.values )
+                #print('len(HT_h)', len(HT_h))
+                HT_t.append( HW[time_var].values )
+
+
+
+            # Save a xarray objects
+            coords = {'time': (('time'), self.bore.time.values)}
+            #print("number of obs:",len(self.bore.time))
+            #print("length of time", len(self.bore.time.values))
+            #print("length of data:", len(np.array(HT_h)) )
+            self.bore[loc+'_height_'+HLW+'_'+source] = xr.DataArray( np.array(HT_h), coords=coords, dims=['time'])
+            self.bore[loc+'_time_'+HLW+'_'+source] = xr.DataArray( np.array(HT_t), coords=coords, dims=['time'])
+
+            print('There is a supressed plot.scatter here')
+            #self.bore.plot.scatter(x='liv_time', y='liv_height'); plt.show()
+
+            logging.debug(f"len(self.bore[loc+'_time_'{HLW}'_'{source}]): {len(self.bore[loc+'_time_'+HLW+'_'+source])}")
+            #logging.info(f'len(self.bore.liv_time)', len(self.bore.liv_time))
+            logging.debug(f"type(HT_t): {type(HT_t)}")
+            logging.debug(f"type(HT_h): {type(HT_h)}")
+
+            if loc=='liv':
+                logging.debug('log time, orig tide table, new tide table lookup')
+                for i in range(len(self.bore.time)):
+                    logging.debug( f"{self.bore.time[i].values}, {self.bore['Liv (Gladstone Dock) HT time (GMT)'][i].values}, {self.bore['liv_time_'+HLW+'_'+source][i].values}")
+
+
+            #print('log time, orig tide table, new tide table lookup')
+            #for i in range(len(self.bore.time)):
+            #    print( self.bore.time[i].values, self.bore['Liv (Gladstone Dock) HT time (GMT)'][i].values, self.bore['liv_time'][i].values)
+
+
+    def get_Glad_data_SAFE(self, source:str='harmonic', HLW_list=["HW"]):
         #def get_Glad_data(self, source:str='harmonic', HLW:str="HW"):
         """
         Get Gladstone HLW data from external source
