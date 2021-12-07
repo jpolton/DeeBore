@@ -43,7 +43,8 @@ conda install requests
 
 Usage:
     Edit year variable
-    python archive_shoothill.py
+    ipython
+    run utils/archive_shoothill
 
 To do:
     * tidy implementation of year selection
@@ -80,7 +81,7 @@ def save_method(loc, ofile=None):
 
     # Check the exported file is as you expect.
     # Load file as see that the xarray structure is preserved.
-    ofile = "../archive_shoothill/" + ofile + ".nc"
+    ofile = "archive_shoothill/" + ofile + ".nc"
     try:
         object = xr.open_dataset(ofile)
         object.close() # close file associated with this object
