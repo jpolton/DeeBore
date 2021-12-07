@@ -1,4 +1,11 @@
 date + logged time,date + logged time (GMT),Quality,logger,Liv HT (reported by logger),location,Liv (Gladstone Dock) HT time (GMT),Liv (Gladstone Dock) HT height (m),Liv (Gladstone Dock) prev. LT height (m),Chester Weir height: CHESTER WEIR 15 MIN SG,Dee at Ironbridge (m),Time difference: Glad-Saltney,wind_speed (m/s),wind_deg (from),,,,note,Queensferry to Saltney speed (km/h),Saltney to CTR speed (km/h)
+07/12/2021 11:50,07/12/2021 11:50,A,Nick,2021-12-07T12:59+0000 9.62 m,bridge,12:59,9.62,1.5,4.59159698138501,4.835,1h 8m 6s,11.1736111111111,135,,,,"MO : SE, 25mph. 10.92 km/h (Pylons to FB). 13.2 km/h past the pylons to the telegraph pole (500m)
+slow down over 300m 
+10.7 km/h  past the house towards the outlet (500m)
+11.6 km/h sped up past outlet (200m)
+10.8 km/h to FB
+
+",10.8,
 06/12/2021 10:43,06/12/2021 10:43,A,Jeff,2021-12-06T12:10+0000 9.81 m,bridge,12:10,9.81,1.21,4.609491191771,4.894,1h 27m,6.70416666666667,180,,,,"MO: S, 15mph. Nick, Jeff, Kester, Mike. Rode for 10s. Missed Nick, Hit Kester. Harder to estimate speed: Peak 14.05 km/h, ave to FB ~14.55 km/h
 ",14.55,
 05/12/2021 10:03,05/12/2021 10:03,A,Jeff,2021-12-05T11:23+0000 9.84 m,bridge,11:23,9.84,1.11,4.6152537340987,4.913,1h 19m 40s,6.25722222222222,315,,,,"MO: NW, 14mph. Ran with wave: 11.8km/h for 500m, then 12.8km/h for 500m. (0.41-0.12 km)/(2.02 - 0.62 mins)*60 = 12.43km/h. Watch Mike ride (47s) with E+E+N. Bore passed piers at 09:54:48",12.43,
