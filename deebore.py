@@ -36,6 +36,7 @@ import datetime
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 import xarray as xr
 import sklearn.metrics as metrics
 import pytz
@@ -799,21 +800,47 @@ class Controller():
                         ## Make timeseries plot around the highwater maxima to check
                         # values are being extracted as expected.
                         if (i % 12) == 0:
-                            fig = plt.figure()
-
-                        plt.subplot(3,4,(i%12)+1)
-                        plt.plot(self.tg.dataset.time, self.tg.dataset.sea_level)
-                        plt.plot( HT_t[-1], HT_h[-1], 'r+' )
-                        plt.plot( [self.bore.time[i].values,self.bore.time[i].values],[0,11],'k')
-                        plt.xlim([HT_t[-1] - np.timedelta64(5,'h'),
+                            fig, axes = plt.subplots(3,4)
+                        ax = axes.flat[i%12]
+                        #plt.subplot(3,4,(i%12)+1)
+                        ax.plot(self.tg.dataset.time, self.tg.dataset.sea_level)
+                        ax.plot( HT_t[-1], HT_h[-1], 'r+' )
+                        ax.plot( [self.bore.time[i].values,self.bore.time[i].values],[0,11],'k')
+                        ax.set_xlim([HT_t[-1] - np.timedelta64(5,'h'),
                                   HT_t[-1] + np.timedelta64(5,'h')])
-                        plt.ylim([0,11])
-                        plt.text( HT_t[-1]-np.timedelta64(5,'h'),10, self.bore.location[i].values)
-                        plt.text( HT_t[-1]-np.timedelta64(5,'h'),1,  HT_t[-1].astype('M8[ns]').astype('M8[ms]').item().strftime('%Y-%m-%d'))
+                        ax.set_ylim([0,11])
+                        ax.text( HT_t[-1]-np.timedelta64(5,'h'),10, self.bore.location[i].values)
+                        ax.text( HT_t[-1]-np.timedelta64(5,'h'),1,  HT_t[-1].astype('M8[ns]').astype('M8[ms]').item().strftime('%Y-%m-%d'))
                         # Turn off tick labels
-                        plt.gca().axes.get_xaxis().set_visible(False)
-                        #plt.xaxis_date()
-                        #plt.autoscale_view()
+                        ax.axes.get_xaxis().set_visible(False)
+
+                        ## Add inset zoom at extrema
+                        if source == "ctr":
+                            ins = inset_axes(ax,width="30%", height="30%", loc="upper right")
+                        else:
+                            if HLW == "EW":
+                                ins = inset_axes(ax,width="30%", height="30%", loc="center right")
+                            elif HLW == "FW":
+                                ins = inset_axes(ax,width="30%", height="30%", loc="center left")
+                            else:
+                                ins = inset_axes(ax,width="30%", height="30%", loc="center")
+
+
+                        #ins = ax.inset_axes([0.6,0.6,0.3,0.3])
+
+                        ins_dataset = self.tg.dataset.sel( time=slice(HT_t[-1] - np.timedelta64(40,'m'), HT_t[-1] + np.timedelta64(40,'m'))  )
+                        #ins.plot(self.tg.dataset.time, self.tg.dataset.sea_level,'b+')
+                        ins.plot(ins_dataset.time, ins_dataset.sea_level,'b+')
+                        ins.plot( HT_t[-1], HT_h[-1], 'r+' )
+                        #ins.set_xlim([HT_t[-1] - np.timedelta64(30,'m'),
+                        #          HT_t[-1] + np.timedelta64(30,'m')])
+                        #ins.set_ylim([HT_h[-1]-0.25,HT_h[-1]+0.25])
+                        ins.set_xticks([])
+                        ins.set_yticks([])
+                        ins.set_xticklabels([])
+                        ins.set_yticklabels([])
+                        ins.patch.set_alpha(0.5)
+
                         if (i%12) == 12-1:
                             plt.savefig('figs/check_get_tidetabletimes_'+str(i//12).zfill(2)+'_'+HLW+'_'+source+'.png')
                             plt.close('all')
