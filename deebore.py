@@ -166,7 +166,8 @@ class marine_gauge():
         #    logging.info(f"Did not find a high water near this guess")
         #    print(f"Did not find a high water near this guess")
 
-
+        if len(HW.coords) != 1:
+            print(f"Only one event was expected. {len(HW.coords)} events found!")
 
         return HW
 
