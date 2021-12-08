@@ -719,7 +719,7 @@ class Controller():
 
 
 
-    def check_plot(self, height:float=None, time:np.datetime64=None, windowsize:int=5,
+    def check_plot(self, HW:xr.Dataset=None, windowsize:int=5,
             source:str="bodc", HLW:str="HW"):
         """
         Plot of event as a time series with key points identified
@@ -731,9 +731,9 @@ class Controller():
             self.bore.location
 
         Inputs:
-            # HW [xr.dataset] - Could n't figure out how to pass h,t as xr w/o specifying variables names, so pass them it explicitly
-            height [float] - processed tidal event height
-            time [np.datetime64] - processed tidal event time
+            HW [xr.dataset] - Pass h,t as xr w/o specifying variables names
+            #height [float] - processed tidal event height
+            #time [np.datetime64] - processed tidal event time
 
             windowsize [int] - xlim:+/- windowsize
             source [str] -  datasource [ctr/bodc/api/harm/harm_rec]
@@ -746,10 +746,12 @@ class Controller():
 
         ins_winsize = 40 # window size (mins) for inset window
         i = self.counter
-        HT_t = []
-        HT_h = []
-        HT_h.append( height )
-        HT_t.append( time )
+        # Extract height and time from xr.Dataset
+        try:
+            time = HW[np.array(HW.coords)[0]].values
+            height = HW.values
+        except:
+            print(f"Problem extracting tide event (h,t) from xr.Dataset: {HW}")
 
         ## Make timeseries plot around the highwater maxima to check
         # values are being extracted as expected.
@@ -758,13 +760,13 @@ class Controller():
         ax = self.axes.flat[i%12]
         #plt.subplot(3,4,(i%12)+1)
         ax.plot(self.tg.dataset.time, self.tg.dataset.sea_level)
-        ax.plot( HT_t[-1], HT_h[-1], 'r+' )
+        ax.plot( time, height, 'r+' )
         ax.plot( [self.bore.time[i].values,self.bore.time[i].values],[0,11],'k')
-        ax.set_xlim([HT_t[-1] - np.timedelta64(windowsize,'h'),
-                  HT_t[-1] + np.timedelta64(windowsize,'h')])
+        ax.set_xlim([time - np.timedelta64(windowsize,'h'),
+                  time + np.timedelta64(windowsize,'h')])
         ax.set_ylim([0,11])
-        ax.text( HT_t[-1]-np.timedelta64(windowsize,'h'),10, self.bore.location[i].values)
-        ax.text( HT_t[-1]-np.timedelta64(windowsize,'h'),1,  HT_t[-1].astype('M8[ns]').astype('M8[ms]').item().strftime('%Y-%m-%d'))
+        ax.text( time-np.timedelta64(windowsize,'h'),10, self.bore.location[i].values)
+        ax.text( time-np.timedelta64(windowsize,'h'),1,  time.astype('M8[ns]').astype('M8[ms]').item().strftime('%Y-%m-%d'))
         # Turn off tick labels
         ax.axes.get_xaxis().set_visible(False)
 
@@ -780,13 +782,9 @@ class Controller():
                 ins = inset_axes(ax,width="30%", height="30%", loc="center")
 
 
-        ins_dataset = self.tg.dataset.sel( time=slice(HT_t[-1] - np.timedelta64(ins_winsize,'m'), HT_t[-1] + np.timedelta64(ins_winsize,'m'))  )
-        #ins.plot(self.tg.dataset.time, self.tg.dataset.sea_level,'b+')
+        ins_dataset = self.tg.dataset.sel( time=slice(time - np.timedelta64(ins_winsize,'m'), time + np.timedelta64(ins_winsize,'m'))  )
         ins.plot(ins_dataset.time, ins_dataset.sea_level,'b+')
-        ins.plot( HT_t[-1], HT_h[-1], 'r+' )
-        #ins.set_xlim([HT_t[-1] - np.timedelta64(30,'m'),
-        #          HT_t[-1] + np.timedelta64(30,'m')])
-        #ins.set_ylim([HT_h[-1]-0.25,HT_h[-1]+0.25])
+        ins.plot( time, height, 'r+' )
         ins.set_xticks([])
         ins.set_yticks([])
         ins.set_xticklabels([])
@@ -990,7 +988,9 @@ class Controller():
                 #print('len(HT_h)', len(HT_h))
                 HT_t.append( HW[time_var].values )
                 self.counter = i
-                self.check_plot(height=HW.values, time=HW[time_var].values,
+                #self.check_plot(height=HW.values, time=HW[time_var].values,
+                #                windowsize=5, source=source, HLW=HLW )
+                self.check_plot(HW=HW,
                                 windowsize=5, source=source, HLW=HLW )
 
 
