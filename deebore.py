@@ -718,6 +718,84 @@ class Controller():
 
 
 
+    def check_plot(self, height:float=None, time:np.datetime64=None, windowsize:int=5,
+            source:str="bodc", HLW:str="HW"):
+        """
+        Plot of event as a time series with key points identified
+        Uses:
+            self.counter / i [int] - event counter
+            self.fig, self.axes - carries the plot information
+            self.tg.dataset
+            self.bore.time
+            self.bore.location
+
+        Inputs:
+            # HW [xr.dataset] - Could n't figure out how to pass h,t as xr w/o specifying variables names, so pass them it explicitly
+            height [float] - processed tidal event height
+            time [np.datetime64] - processed tidal event time
+
+            windowsize [int] - xlim:+/- windowsize
+            source [str] -  datasource [ctr/bodc/api/harm/harm_rec]
+            HLW [str]  - parameter describing tidal state: "FW", "EW"
+
+        Output:
+            creates file:
+            figs/check_get_tidetabletimes_'+str(i//12).zfill(2)+'_'+HLW+'_'+source+'.png'
+        """
+
+        ins_winsize = 40 # window size (mins) for inset window
+        i = self.counter
+        HT_t = []
+        HT_h = []
+        HT_h.append( height )
+        HT_t.append( time )
+
+        ## Make timeseries plot around the highwater maxima to check
+        # values are being extracted as expected.
+        if (i % 12) == 0:
+            self.fig, self.axes = plt.subplots(3,4)
+        ax = self.axes.flat[i%12]
+        #plt.subplot(3,4,(i%12)+1)
+        ax.plot(self.tg.dataset.time, self.tg.dataset.sea_level)
+        ax.plot( HT_t[-1], HT_h[-1], 'r+' )
+        ax.plot( [self.bore.time[i].values,self.bore.time[i].values],[0,11],'k')
+        ax.set_xlim([HT_t[-1] - np.timedelta64(windowsize,'h'),
+                  HT_t[-1] + np.timedelta64(windowsize,'h')])
+        ax.set_ylim([0,11])
+        ax.text( HT_t[-1]-np.timedelta64(windowsize,'h'),10, self.bore.location[i].values)
+        ax.text( HT_t[-1]-np.timedelta64(windowsize,'h'),1,  HT_t[-1].astype('M8[ns]').astype('M8[ms]').item().strftime('%Y-%m-%d'))
+        # Turn off tick labels
+        ax.axes.get_xaxis().set_visible(False)
+
+        ## Add inset zoom at extrema
+        if source == "ctr":
+            ins = inset_axes(ax,width="30%", height="30%", loc="upper right")
+        else:
+            if HLW == "EW":
+                ins = inset_axes(ax,width="30%", height="30%", loc="center right")
+            elif HLW == "FW":
+                ins = inset_axes(ax,width="30%", height="30%", loc="center left")
+            else:
+                ins = inset_axes(ax,width="30%", height="30%", loc="center")
+
+
+        ins_dataset = self.tg.dataset.sel( time=slice(HT_t[-1] - np.timedelta64(ins_winsize,'m'), HT_t[-1] + np.timedelta64(ins_winsize,'m'))  )
+        #ins.plot(self.tg.dataset.time, self.tg.dataset.sea_level,'b+')
+        ins.plot(ins_dataset.time, ins_dataset.sea_level,'b+')
+        ins.plot( HT_t[-1], HT_h[-1], 'r+' )
+        #ins.set_xlim([HT_t[-1] - np.timedelta64(30,'m'),
+        #          HT_t[-1] + np.timedelta64(30,'m')])
+        #ins.set_ylim([HT_h[-1]-0.25,HT_h[-1]+0.25])
+        ins.set_xticks([])
+        ins.set_yticks([])
+        ins.set_xticklabels([])
+        ins.set_yticklabels([])
+        ins.patch.set_alpha(0.5)
+
+        if (i%12) == 12-1:
+            plt.savefig('figs/check_get_tidetabletimes_'+str(i//12).zfill(2)+'_'+HLW+'_'+source+'.png')
+            plt.close('all')
+
 
 
 
@@ -902,6 +980,7 @@ class Controller():
 
             winsize = 6 #4h for HW, 6h for LW. +/- search distance for nearest extreme value
 
+            ## Process events individually
             for i in range(len(self.bore.time)):
                 mg = marine_gauge(tg=tg, ref_time=self.bore.time[i].values,
                     HLW=HLW, source=source, winsize=winsize)
@@ -909,6 +988,8 @@ class Controller():
                 HT_h.append( HW.values )
                 #print('len(HT_h)', len(HT_h))
                 HT_t.append( HW[time_var].values )
+                self.counter = i
+                self.check_plot(height=HW.values, time=HW[time_var].values, windowsize=5, source=source, HLW=HLW )
 
 
 
