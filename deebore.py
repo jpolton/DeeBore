@@ -86,7 +86,8 @@ class marine_gauge():
             print(f"Expected an input gauge dataset: tg")
             return
 
-    def get_extrema(cls):
+    def get_event(cls):
+        """ Get HW, LW, FW, EW event. Return single height and time."""
 
         HW = None
         LW = None
@@ -984,7 +985,7 @@ class Controller():
             for i in range(len(self.bore.time)):
                 mg = marine_gauge(tg=tg, ref_time=self.bore.time[i].values,
                     HLW=HLW, source=source, winsize=winsize)
-                HW = mg.get_extrema()
+                HW = mg.get_event()
                 HT_h.append( HW.values )
                 #print('len(HT_h)', len(HT_h))
                 HT_t.append( HW[time_var].values )
