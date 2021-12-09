@@ -535,7 +535,8 @@ class Controller():
         HLW: [LW/HW] - the data is either processed for High or Low water events
         """
         print('loading '+source+' tide data')
-        self.get_Glad_data(source=source, HLW_list=HLW_list)
+        self.load_gauge_timeseries(source=source, HLW_list=HLW_list)
+        self.process_gauge_timeseries(source=source, HLW_list=HLW_list)
         #self.compare_Glad_HLW()
         print('Calculating the Gladstone to Saltney time difference')
         self.calc_Glad_Saltney_time_lag(source=source, HLW_list=HLW_list)
@@ -594,7 +595,8 @@ class Controller():
             print('Not expecting that possibility here')
         else:
             # Obtain CTR data for LW for the observations times.
-            self.get_Glad_data(source='ctr',HLW_list=["LW"])
+            self.load_gauge_timeseries(source='ctr',HLW_list=["LW"])
+            self.process_gauge_timeseries(source='ctr',HLW_list=["LW"])
             alph = self.bore['Chester Weir height: CHESTER WEIR 15 MIN SG'] *np.NaN
             beta = self.bore['ctr_height_LW_ctr']
             #print( self.bore['ctr_height_LW_ctr'][0:10] )
@@ -720,7 +722,7 @@ class Controller():
 
 
 
-    def check_plot(self, HW:xr.Dataset=None, windowsize:int=5,
+    def check_event_plot(self, HW:xr.Dataset=None, windowsize:int=5,
             source:str="bodc", HLW:str="HW"):
         """
         Plot of event as a time series with key points identified
@@ -800,7 +802,7 @@ class Controller():
 
 
 
-    def get_Glad_data(self, source:str='harmonic', HLW_list=["HW"]):
+    def load_gauge_timeseries(self, source:str='harmonic', HLW_list=["HW"]):
         #def get_Glad_data(self, source:str='harmonic', HLW:str="HW"):
         """
         Get Gladstone HLW data from external source
@@ -954,6 +956,27 @@ class Controller():
 
         self.tg = tg
 
+
+    def process_gauge_timeseries(self, source:str='harmonic', HLW_list=["HW"]):
+        #def get_Glad_data(self, source:str='harmonic', HLW:str="HW"):
+        """
+        Extract the HW, LW, etc tide events, for each observation, from the gauge timeseries.
+        Save to bore object
+
+        inputs:
+        source: 'harmonic' [default] - load HLW from harmonic prediction
+                'harmonic_rec' - reconstruct time series from harmonic constants
+                'bodc' - measured and processed data
+                'api' - load recent, un processed data from shoothill API
+        HLW_list: ["LW","HW","FW","EW"] - the data is either processed for High or Low water
+                events, or Flood or Ebb (inflection) events
+        """
+
+        if source == "ctr": # used in event variables names
+            loc = "ctr"
+        else:
+            loc = "liv"
+
         ## Process the *_highs or *_lows
         for HLW in HLW_list:
             print(f"HLW: {HLW}")
@@ -982,16 +1005,16 @@ class Controller():
 
             ## Process events individually
             for i in range(len(self.bore.time)):
-                mg = marine_gauge(tg=tg, ref_time=self.bore.time[i].values,
+                mg = marine_gauge(tg=self.tg, ref_time=self.bore.time[i].values,
                     HLW=HLW, source=source, winsize=winsize)
                 HW = mg.get_event()
                 HT_h.append( HW.values )
                 #print('len(HT_h)', len(HT_h))
                 HT_t.append( HW[time_var].values )
                 self.counter = i
-                #self.check_plot(height=HW.values, time=HW[time_var].values,
+                #self.check_event_plot(height=HW.values, time=HW[time_var].values,
                 #                windowsize=5, source=source, HLW=HLW )
-                self.check_plot(HW=HW,
+                self.check_event_plot(HW=HW,
                                 windowsize=5, source=source, HLW=HLW )
 
 
