@@ -422,6 +422,9 @@ class Controller():
                 print('load and process harmonic reconstructed data')
                 self.load_and_process(source="harmonic_rec", HLW_list=["HW", "LW"])
                 #self.load_and_process(source="harmonic_rec", HLW="LW")
+                print('Explore combinations of HLW times and heights for best fit')
+                self.fits_to_data(qc_flag=True)
+                self.fits_to_data(qc_flag=False)
 
             elif command == "0":
                 print('load bore observations')
@@ -476,6 +479,11 @@ class Controller():
                 plt.close('all');self.plot_surge_effect('api')
                 plt.close('all');self.plot_surge_effect('bodc')
 
+            elif command == "5":
+                print('Explore combinations of HLW times and heights for best fit')
+                self.fits_to_data(qc_flag=True)
+                self.fits_to_data(qc_flag=False)
+
             elif command == "d1":
                 print('load and plot HLW data')
                 self.load_and_plot_hlw_data()
@@ -483,11 +491,6 @@ class Controller():
             elif command == "d2":
                 print("shoothill dev")
                 self.shoothill()
-
-            elif command == "d3":
-                print('Explore combinations of HLW times and heights for best fit')
-                self.fits_to_data(qc_flag=True)
-                self.fits_to_data(qc_flag=False)
 
             elif command == "d4":
                 print('Plot combinations of HLW times, heights and rivers')
@@ -1829,6 +1832,7 @@ if __name__ == "__main__":
     2       show bore dataset
     3       plot bore data (lag vs tidal height)
     4       plot difference between predicted and measured (lag vs tidal height)
+    5       Explore different RMSE fits to the data
 
     6       Predict bore event for date
 
@@ -1842,7 +1846,7 @@ if __name__ == "__main__":
     DEV:
     d1     load and plot HLW data
     d2     shoothill dev
-    d3     Explore different RMSE fits to the data
+    d3     <empty>
     d4     Plot different combinations of Lag,HLW w/ rivers
     d5     Explore how rivers affect bore timing
     """
