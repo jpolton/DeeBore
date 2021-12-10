@@ -1384,23 +1384,69 @@ class Controller():
             X = self.bore['Saltney_lag_'+HLW+'_'+source]
             Y = self.bore['liv_height_'+HLW+'_'+source]
 
-        S = [40 if self.bore['Quality'][i] == "A" else 5 for i in range(len(self.bore['Quality']))]
-        lab = [ self.bore.time[i].values.astype('datetime64[D]').astype(object).strftime('%d%b%y') if self.bore['Quality'][i] == "A" else "" for i in range(len(self.bore['Quality']))]
 
-        ss= plt.scatter( X, Y, \
-            c=self.bore['ctr_height_LW'],
-            s=S,
+        self.process_fit(source=source, HLW_list=[HLW], X=X,Y=Y)
+
+        ## Plot all data
+        try:
+            lab_fit = "RMSE:"+self.bore.attrs['rmse_'+HLW+'_'+source]
+            lab_dot = "all"
+        except:
+            lab_fit = ""
+            lab_dot = "all"
+
+        JJ = np.isfinite(X.values)
+        ss= plt.scatter( X[JJ], Y[JJ], \
+            c=self.bore['ctr_height_LW'][JJ],
+            s=5,
             #cmap='magma',
             cmap='jet',
             vmin=4.4,
             vmax=5.5, # 4.6
-            label="RMSE:"+self.bore.attrs['rmse_'+HLW+'_'+source]
+            label=lab_dot
+            )
+
+        # Regression for all data
+        try:
+            Xfit = self.bore['linfit_lag_'+HLW+'_'+source]
+            plt.plot(Xfit, Y, linewidth=1.0, color='k', label=lab_fit)
+        except:
+            pass
+
+
+        ## Plot class A data
+        try:
+            lab_fit = "(A)RMSE:"+self.bore.attrs['rmse_A_'+HLW+'_'+source]
+            lab_dot = "class A"
+        except:
+            lab_fit = ""
+            lab_dot = "class A"
+
+
+        JJ = (self.bore['Quality'] == "A") & (np.isfinite(X.values))
+        ss= plt.scatter( X[JJ], Y[JJ], \
+            c=self.bore['ctr_height_LW'][JJ],
+            s=40,
+            #cmap='magma',
+            cmap='jet',
+            vmin=4.4,
+            vmax=5.5, # 4.6
+            label=lab_dot
             )
         cbar = plt.colorbar(ss)
 
+        # Regression for Class A
+        try:
+            Xfit = self.bore['linfit_A_lag_'+HLW+'_'+source]
+            plt.plot(Xfit, Y, linewidth=2.0, color='k', label=lab_fit)
+        except:
+            pass
+
+
+        # Add dates to class A only
+        lab = [ self.bore.time[i].values.astype('datetime64[D]').astype(object).strftime('%d%b%y') if self.bore['Quality'][i] == "A" else "" for i in range(len(self.bore['Quality']))]
         for ind in range(len(self.bore['Quality'])):
         # zip joins x and y coordinates in pairs
-
 
             plt.annotate(lab[ind], # this is the text
                          (X[ind],Y[ind]), # this is the point to label
