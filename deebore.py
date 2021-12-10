@@ -60,8 +60,8 @@ class GladstoneTideTable:
     tg = GladstoneTideTable().to_tidegauge()
     """
     def __init__(self):
-        
-        logging.info("Get Gladstone HLW data")    
+
+        logging.info("Get Gladstone HLW data")
         filnam1 = '/Users/jeff/GitHub/DeeBore/data/Liverpool_2005_2014_HLW.txt'
         filnam2 = '/Users/jeff/GitHub/DeeBore/data/Liverpool_2015_2020_HLW.txt'
         filnam3 = '/Users/jeff/GitHub/DeeBore/data/Liverpool_2021_2022_HLW.txt'
@@ -74,7 +74,7 @@ class GladstoneTideTable:
         tg3.dataset = tg3.read_hlw_to_xarray(filnam3)#, self.bore.time.min().values, self.bore.time.max().values)
         tg.dataset = xr.concat([ tg1.dataset, tg2.dataset, tg3.dataset], dim='time')
         self.tg = tg
-        
+
     def to_tidegauge(self):
         return self.tg
 
@@ -115,19 +115,19 @@ class BODC:
         tg.dataset['start_date'] = tg.dataset.time.min().values
         tg.dataset['end_date'] = tg.dataset.time.max().values
         self.tg = tg
-        
+
     def to_tidegauge(self):
         return self.tg
-    
-    
+
+
 class GladstoneAPI:
     """
     if source == "api": # load full tidal signal from shoothill
     tg = GladstoneAPI().to_tidegauge()
     """
     def __init__(self):
-        
-        
+
+
         date_start=np.datetime64('2005-04-01')
         date_end=np.datetime64('now','D')
         fn_archive = "liv" # File head for netcdf archive of api call
@@ -152,9 +152,9 @@ class GladstoneAPI:
                 tg = tg1
         except:
             tg.dataset = tg.read_shoothill_to_xarray(date_start=date_start, date_end=date_end)
-        
+
         self.tg = tg
-        
+
     def to_tidegauge(self):
         return self.tg
 
@@ -165,7 +165,7 @@ class ChesterAPI:
     tg = ChesterAPI().to_tidegauge()
     """
     def __init__(self):
-        
+
         tg = GAUGE()
         date_start=np.datetime64('2014-01-01')
         date_end=np.datetime64('now','D')
@@ -193,12 +193,12 @@ class ChesterAPI:
                 tg = tg1
         except:
             tg.dataset = tg.read_shoothill_to_xarray(station_id=station_id ,date_start=date_start, date_end=date_end)
-        
+
         self.tg = tg
-        
+
     def to_tidegauge(self):
         return self.tg
-    
+
 
 class IronbridgeAPI:
     """
@@ -206,7 +206,7 @@ class IronbridgeAPI:
     tg = IronbridgeAPI().to_tidegauge()
     """
     def __init__(self):
-        
+
         tg = GAUGE()
         date_start=np.datetime64('2014-01-01')
         date_end=np.datetime64('now','D')
@@ -234,14 +234,14 @@ class IronbridgeAPI:
                 tg = tg1
         except:
             tg.dataset = tg.read_shoothill_to_xarray(station_id=station_id ,date_start=date_start, date_end=date_end)
-        
+
         self.tg = tg
-        
+
     def to_tidegauge(self):
         return self.tg
-    
-    
-    
+
+
+
 class GladstoneHarmonicReconstruction:
     """
     if source == 'harmonic_rec': # load full tidal signal using anyTide code
@@ -254,9 +254,9 @@ class GladstoneHarmonicReconstruction:
         #tg.dataset = tg.anyTide_to_xarray(date_start=date_start, ndays=5)
         date_start=np.datetime64('2005-04-01')
         date_end=np.datetime64('now','D')
-        tg.dataset = tg.anyTide_to_xarray(date_start=date_start, date_end=date_end)   
+        tg.dataset = tg.anyTide_to_xarray(date_start=date_start, date_end=date_end)
         self.tg = tg
-        
+
     def to_tidegauge(self):
         return self.tg
 
@@ -425,7 +425,7 @@ class marine_gauge():
         return HW
 
 
- 
+
 
 
 ################################################################################
@@ -1040,14 +1040,14 @@ class Controller():
             tg = GladstoneTideTable().to_tidegauge()
 
 
-        
+
         elif source == "bodc": # Load gauge data from BODC files
             tg = BODC().to_tidegauge()
-        
+
 
         elif source == "api": # load full tidal signal from shoothill
             tg = GladstoneAPI().to_tidegauge()
-        
+
 
         elif source == "ctr": # use api to load river data.
             tg = IronbridgeAPI().to_tidegauge()
@@ -1251,9 +1251,9 @@ class Controller():
             plt.plot( Xblue_api,Yliv_api, 'bo', label='Bluebridge API')
             plt.plot( Xsalt_api_latest,Yliv_api_latest, 'go', label='Saltney latest: '+lab)
             plt.plot( Xsalt_api[I],Yliv_api[I], 'k+')
-            
 
-            
+
+
         else:
             Yliv = self.bore['liv_height_'+HLW+'_'+source]
             Xsalt = self.bore['Saltney_lag_'+HLW+'_'+source]
@@ -1279,8 +1279,8 @@ class Controller():
             plt.plot( Xsalt_latest,Yliv_latest, 'go', label='Saltney latest: '+lab)
             plt.plot( Xsalt[I],Yliv[I], 'k+')
             #plt.plot( Xblue[0],Yliv[0], 'b+', label='Bluebridge recent')
-            
-         
+
+
 
         plt.ylabel('Liv (Gladstone Dock) '+HLW+' (m)')
         plt.xlabel('Arrival time (mins) relative to Liv '+HLW)
