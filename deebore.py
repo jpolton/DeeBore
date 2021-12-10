@@ -1133,22 +1133,12 @@ class Controller():
             logging.debug(f"type(HT_t): {type(HT_t)}")
             logging.debug(f"type(HT_h): {type(HT_h)}")
 
-            if loc=='liv':
-                logging.debug('log time, orig tide table, new tide table lookup')
-                for i in range(len(self.bore.time)):
-                    logging.debug( f"{self.bore.time[i].values}, {self.bore['Liv (Gladstone Dock) HT time (GMT)'][i].values}, {self.bore['liv_time_'+HLW+'_'+source][i].values}")
+            #if loc=='liv':
+            #    logging.debug('log time, orig tide table, new tide table lookup')
+            #    for i in range(len(self.bore.time)):
+            #        logging.debug( f"{self.bore.time[i].values}, {self.bore['Liv (Gladstone Dock) HT time (GMT)'][i].values}, {self.bore['liv_time_'+HLW+'_'+source][i].values}")
 
 
-            if(0): # Exploring the use of Classes
-                weights, rmse = stats(bore=self.bore, source=source, HLW=HLW, loc=loc).linear_fit_classA()
-                self.bore.attrs['weights_A_'+HLW+'_'+source] = weights
-                self.bore.attrs['rmse_A_'+HLW+'_'+source] = rmse
-                weights, rmse = stats(bore=self.bore, source=source, HLW=HLW, loc=loc).linear_fit_all()
-                self.bore.attrs['weights_'+HLW+'_'+source] = weights
-                self.bore.attrs['rmse_'+HLW+'_'+source] = rmse
-            #print('log time, orig tide table, new tide table lookup')
-            #for i in range(len(self.bore.time)):
-            #    print( self.bore.time[i].values, self.bore['Liv (Gladstone Dock) HT time (GMT)'][i].values, self.bore['liv_time'][i].values)
 
 
 
@@ -1183,7 +1173,7 @@ class Controller():
             self.bore['bluebridge_lag_'+HLW+'_'+source] = xr.DataArray( bluebridge_lag, coords=coords, dims=['time'])
 
 
-    def linearfit(self, X, Y):
+    def linearfit_X(self, X, Y):
         """
         Linear regression. Calculates linear fit weights and RMSE
 
