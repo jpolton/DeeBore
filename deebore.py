@@ -63,6 +63,60 @@ logging.basicConfig(filename='bore.log', filemode='w+')
 logging.getLogger().setLevel(logging.DEBUG)
 
 
+class Stats():
+    """
+    Class to handle RMS and best line fits.
+
+    mask = self.bore['Quality'].values=="A"
+    """
+    def __init__(cls, X, Y, mask):
+        cls.X = X
+        cls.Y = Y
+        cls.mask = mask
+
+    def linearfit(cls, X , Y):
+        """
+        Linear regression. Calculates linear fit weights and RMSE
+
+        Is used after computing the lag between Gladstone and Saltney events,
+            during load_and_process(), to find a fit between Liverpool heights
+            and Saltney arrival lag.
+
+        Returns polynomal function for linear fit that can be used in reconstruction:
+        E.g.
+        X=range(10)
+        np.poly1d(weights)( range(10) )
+
+        Also returns RMSE
+        """
+        idx = np.isfinite(X).values & np.isfinite(Y).values
+        weights = np.polyfit( X[idx], Y[idx], 1)
+        logging.debug("weights: {weights}")
+        #self.linfit = np.poly1d(weights)
+        #self.bore['linfit_lag'] =  self.linfit(X)
+        #self.bore.attrs['weights'] = np.poly1d(weights)
+        #self.bore.attrs['weights'](range(10))
+        Y_fit = np.poly1d(weights)(X)
+        rmse = '{:4.1f} mins'.format( np.sqrt(np.nanmean((Y.values - Y_fit)**2)) )
+        return np.poly1d(weights), rmse
+
+    def linear_fit_classA(cls):
+        """ Only fit to values where mask==1 """
+        weights,rmse = cls.linearfit( cls.X.where( cls.mask ),
+                    cls.Y.where( cls.mask ) )
+        #print(f"{cls.source} class A| {cls.args['label']}: {rmse}")
+        return weights, rmse
+
+    def linear_fit_all(cls):
+        """ Fit to all values """
+
+        weights,rmse = cls.linearfit( cls.X, cls.Y )
+        #print(f"{cls.source} all | {cls.args['label']}: {rmse}")
+
+        return weights, rmse
+
+
+
 class marine_gauge():
     """
     Process event for a 'deep water' tide. I.e. harmonic
@@ -550,11 +604,13 @@ class Controller():
     def process_fit(self, source:str="harmonic", HLW_list=["HW"]):
         for HLW in HLW_list:
             # Get linear fit with rmse
-            self.bore.attrs['weights_'+HLW+'_'+source], self.bore.attrs['rmse_'+HLW+'_'+source] = self.linearfit(
-                    self.bore['liv_height_'+HLW+'_'+source],
-                    self.bore['Saltney_lag_'+HLW+'_'+source]
-                    )
+            stats = Stats(self.bore['liv_height_'+HLW+'_'+source],
+                        self.bore['Saltney_lag_'+HLW+'_'+source],
+                        self.bore['Quality'].values=="A")
+            self.bore.attrs['weights_A_'+HLW+'_'+source], self.bore.attrs['rmse_A_'+HLW+'_'+source] = stats.linear_fit_classA()
+            self.bore.attrs['weights_'+HLW+'_'+source], self.bore.attrs['rmse_'+HLW+'_'+source] = stats.linear_fit_all()
             # Apply linear model
+            self.bore['linfit_A_lag_'+HLW+'_'+source] = self.bore.attrs['weights_A_'+HLW+'_'+source](self.bore['liv_height_'+HLW+'_'+source])
             self.bore['linfit_lag_'+HLW+'_'+source] = self.bore.attrs['weights_'+HLW+'_'+source](self.bore['liv_height_'+HLW+'_'+source])
             #self.bore['rmse_'+HLW+'_'+source] = '{:4.1f} mins'.format(self.stats(source=source, HLW=HLW))
 
@@ -1042,6 +1098,13 @@ class Controller():
                     logging.debug( f"{self.bore.time[i].values}, {self.bore['Liv (Gladstone Dock) HT time (GMT)'][i].values}, {self.bore['liv_time_'+HLW+'_'+source][i].values}")
 
 
+            if(0): # Exploring the use of Classes
+                weights, rmse = stats(bore=self.bore, source=source, HLW=HLW, loc=loc).linear_fit_classA()
+                self.bore.attrs['weights_A_'+HLW+'_'+source] = weights
+                self.bore.attrs['rmse_A_'+HLW+'_'+source] = rmse
+                weights, rmse = stats(bore=self.bore, source=source, HLW=HLW, loc=loc).linear_fit_all()
+                self.bore.attrs['weights_'+HLW+'_'+source] = weights
+                self.bore.attrs['rmse_'+HLW+'_'+source] = rmse
             #print('log time, orig tide table, new tide table lookup')
             #for i in range(len(self.bore.time)):
             #    print( self.bore.time[i].values, self.bore['Liv (Gladstone Dock) HT time (GMT)'][i].values, self.bore['liv_time'][i].values)
@@ -1142,7 +1205,7 @@ class Controller():
             Yliv_api_latest  = Yliv_api.where( xr.ufuncs.isfinite(Xsalt_api), drop=True)[0]
 
             plt.plot( Xsalt,Yliv, 'r.', label='Saltney: rmse '+'{:4.1f}'.format(self.stats('bodc'))+'mins')
-            plt.plot( Xsalt[I],Yliv[I], 'k+', label='1st hand')
+            plt.plot( Xsalt[I],Yliv[I], 'k+', label='Class A')
             plt.plot( Xblue,Yliv, 'b.', label='Bluebridge')
             plt.plot( Xfit,Yliv, 'k-')
             plt.plot( Xsalt_api,Yliv_api, 'ro', label='Saltney API')
