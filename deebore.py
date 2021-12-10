@@ -1307,8 +1307,8 @@ class Controller():
         """
         # Example plot
         from matplotlib.collections import LineCollection
-        from matplotlib import colors as mcolors
-        import matplotlib.dates as mdates
+        #from matplotlib import colors as mcolors
+        #import matplotlib.dates as mdates
         if source=='api':
             last_bodc_time = self.bore['liv_time_'+HLW+'_bodc']\
                 .where(np.isfinite(self.bore['liv_height_'+HLW+'_bodc'].values))\
