@@ -754,17 +754,24 @@ class Controller():
         self.process_fit(source=source, HLW_list=HLW_list)
 
 
-    def process_fit(self, source:str="harmonic", HLW_list=["HW"]):
+    def process_fit(self, source:str="harmonic", HLW_list=["HW"], X:xr.DataArray=None, Y:xr.DataArray=None):
         for HLW in HLW_list:
             # Get linear fit with rmse
-            stats = Stats(self.bore['liv_height_'+HLW+'_'+source],
-                        self.bore['Saltney_lag_'+HLW+'_'+source],
-                        self.bore['Quality'].values=="A")
+            if (X is None) or (Y is None):
+                Y = self.bore['liv_height_'+HLW+'_'+source]
+                X = self.bore['Saltney_lag_'+HLW+'_'+source]
+                stats = Stats(Y, X, self.bore['Quality'].values=="A")
+                #stats = Stats(self.bore['liv_height_'+HLW+'_'+source],
+                #            self.bore['Saltney_lag_'+HLW+'_'+source],
+                #            self.bore['Quality'].values=="A")
+            else:
+                stats = Stats(Y, X,
+                            self.bore['Quality'].values=="A")
             self.bore.attrs['weights_A_'+HLW+'_'+source], self.bore.attrs['rmse_A_'+HLW+'_'+source] = stats.linear_fit_classA()
             self.bore.attrs['weights_'+HLW+'_'+source], self.bore.attrs['rmse_'+HLW+'_'+source] = stats.linear_fit_all()
             # Apply linear model
-            self.bore['linfit_A_lag_'+HLW+'_'+source] = self.bore.attrs['weights_A_'+HLW+'_'+source](self.bore['liv_height_'+HLW+'_'+source])
-            self.bore['linfit_lag_'+HLW+'_'+source] = self.bore.attrs['weights_'+HLW+'_'+source](self.bore['liv_height_'+HLW+'_'+source])
+            self.bore['linfit_A_lag_'+HLW+'_'+source] = self.bore.attrs['weights_A_'+HLW+'_'+source](Y)
+            self.bore['linfit_lag_'+HLW+'_'+source] = self.bore.attrs['weights_'+HLW+'_'+source](Y)
             #self.bore['rmse_'+HLW+'_'+source] = '{:4.1f} mins'.format(self.stats(source=source, HLW=HLW))
 
     def load_csv(self):
