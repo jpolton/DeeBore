@@ -1232,28 +1232,34 @@ class Controller():
             Xsalt_api = self.bore['Saltney_lag_'+HLW+'_api'].where( np.isnan(self.bore['liv_height_'+HLW+'_bodc']))
             Xblue_api = self.bore['bluebridge_lag_'+HLW+'_api'].where( np.isnan(self.bore['liv_height_'+HLW+'_bodc']))
             Xfit = self.bore['linfit_lag_'+HLW+'_bodc']
-            Xsalt_api_latest = Xsalt_api.where( xr.ufuncs.isfinite(Xsalt_api), drop=True)[0]
-            Yliv_api_latest  = Yliv_api.where( xr.ufuncs.isfinite(Xsalt_api), drop=True)[0]
+            Xsalt_api_latest = Xsalt_api.where( xr.ufuncs.isfinite(Xsalt_api), drop=True)[0] # NB obs are in reverse time order
+            Yliv_api_latest  = Yliv_api.where( xr.ufuncs.isfinite(Xsalt_api), drop=True)[0] # NB obs are in reverse time order
+            lab = self.bore.time.where( xr.ufuncs.isfinite(Xsalt_api), drop=True)[0].values.astype('datetime64[D]').astype(object).strftime('%d%b%y')
 
-            plt.plot( Xsalt,Yliv, 'r.', label='Saltney: rmse '+'{:4.1f}'.format(self.stats('bodc'))+'mins')
+            plt.plot( Xsalt,Yliv, 'r.', label='Saltney')
             plt.plot( Xsalt[I],Yliv[I], 'k+', label='Class A')
             plt.plot( Xblue,Yliv, 'b.', label='Bluebridge')
-            plt.plot( Xfit,Yliv, 'k-')
+            plt.plot( Xfit,Yliv, 'k-', label='bodc: rmse '+'{:4.1f}'.format(self.stats('bodc'))+'mins')
             plt.plot( Xsalt_api,Yliv_api, 'ro', label='Saltney API')
             plt.plot( Xblue_api,Yliv_api, 'bo', label='Bluebridge API')
-            plt.plot( Xsalt_api_latest,Yliv_api_latest, 'go', label='Saltney latest')
+            plt.plot( Xsalt_api_latest,Yliv_api_latest, 'go', label='Saltney latest: '+lab)
             plt.plot( Xsalt_api[I],Yliv_api[I], 'k+')
+            
+
+            
         else:
             Yliv = self.bore['liv_height_'+HLW+'_'+source]
             Xsalt = self.bore['Saltney_lag_'+HLW+'_'+source]
             Xblue = self.bore['bluebridge_lag_'+HLW+'_'+source]
             Xfit = self.bore['linfit_lag_'+HLW+'_'+source]
-            plt.plot( Xsalt,Yliv, 'r.', label='Saltney: rmse '+'{:4.1f}'.format(self.stats(source,HLW))+'mins')
-            plt.plot( Xsalt[I],Yliv[I], 'k+', label='1st hand')
+            plt.plot( Xsalt,Yliv, 'r.', label='Saltney')
+            plt.plot( Xsalt[I],Yliv[I], 'k+', label='Class A')
             plt.plot( Xblue,Yliv, 'b.', label='Bluebridge')
-            plt.plot( Xfit,Yliv, 'k-')
+            plt.plot( Xfit,Yliv, 'k-', label=source+': rmse '+'{:4.1f}'.format(self.stats(source,HLW))+'mins')
             Xsalt_latest = Xsalt.where( xr.ufuncs.isfinite(Xsalt), drop=True)[0]
             Yliv_latest  = Yliv.where( xr.ufuncs.isfinite(Xsalt), drop=True)[0]
+            lab = self.bore.time.where( xr.ufuncs.isfinite(Xsalt), drop=True)[0].values.astype('datetime64[D]').astype(object).strftime('%d%b%y')
+
             # Highlight recent data
             Yliv = self.bore['liv_height_'+HLW+'_'+source].where( self.bore.time > np.datetime64('2021-01-01') )
             Xsalt = self.bore['Saltney_lag_'+HLW+'_'+source].where( self.bore.time > np.datetime64('2021-01-01') )
@@ -1261,11 +1267,13 @@ class Controller():
             #Yliv = self.bore['liv_height_'+HLW+'_'+source].where( np.isnan(self.bore['liv_height_'+HLW+'_bodc']))
             #Xsalt = self.bore['Saltney_lag_'+HLW+'_'+source].where( np.isnan(self.bore['liv_height_'+HLW+'_bodc']))
             #Xblue = self.bore['bluebridge_lag_'+HLW+'_'+source].where( np.isnan(self.bore['liv_height_'+HLW+'_bodc']))
-            plt.plot( Xsalt,Yliv, 'ro', label='Saltney 2021')
-            plt.plot( Xblue,Yliv, 'bo', label='Bluebridge 2021')
-            plt.plot( Xsalt_latest,Yliv_latest, 'go', label='Saltney latest')
+            plt.plot( Xsalt,Yliv, 'ro', label='Saltney 2021+')
+            plt.plot( Xblue,Yliv, 'bo', label='Bluebridge 2021+')
+            plt.plot( Xsalt_latest,Yliv_latest, 'go', label='Saltney latest: '+lab)
             plt.plot( Xsalt[I],Yliv[I], 'k+')
             #plt.plot( Xblue[0],Yliv[0], 'b+', label='Bluebridge recent')
+            
+         
 
         plt.ylabel('Liv (Gladstone Dock) '+HLW+' (m)')
         plt.xlabel('Arrival time (mins) relative to Liv '+HLW)
@@ -1275,8 +1283,9 @@ class Controller():
         if source =='bodc': str='measured only QCd'
         if source == 'api': str='measured w/o QC'
         plt.title(f"Bore arrival time at Saltney Ferry ({str} data)")
-        #plt.xlim([-125, -40])   # minutes
-        #plt.ylim([8.2, 10.9]) # metres
+        if HLW == "HW":
+            plt.xlim([-125, -45])   # minutes
+            plt.ylim([8.2, 10.9]) # metres
         plt.legend()
         #plt.show()
         plt.savefig('figs/SaltneyArrivalLag_vs_LivHeight_'+HLW+'_'+source+'.png')
