@@ -1755,14 +1755,16 @@ class Controller():
         for args in args_list:
             self.bore.attrs[args['wvar']] = []
             self.bore.attrs[args['rvar']] = []
+
+            stats = Stats(args['xvar'], args['yvar'],
+                        self.bore['Quality'].values=="A")
             if qc_flag:
-                weights,rmse = self.linearfit( args['xvar'].where( self.bore['Quality'].values=="A"),
-                            args['yvar'].where( self.bore['Quality'].values=="A" ) )
+                weights,rmse = stats.linear_fit_classA()
                 print(f"{source} class A| {args['label']}: {rmse}")
-                self.bore.attrs[args['wvar']] = weights
-                self.bore.attrs[args['rvar']] = rmse
+                self.bore.attrs[args['wvar'].replace('weights_','weights_A_')] = weights
+                self.bore.attrs[args['rvar'].replace('rmse_','rmse_A_')] = rmse
             else:
-                weights,rmse = self.linearfit( args['xvar'], args['yvar'] )
+                weights,rmse = stats.linear_fit_all()
                 print(f"{source}| {args['label']}: {rmse}")
                 self.bore.attrs[args['wvar']] = weights
                 self.bore.attrs[args['rvar']] = rmse
