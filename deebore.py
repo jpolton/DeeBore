@@ -1866,7 +1866,7 @@ class Controller():
             Y = self.bore['liv_height_'+HLW+'_'+source]
 
         S = [40 if self.bore['Quality'][i] == "A" else 10 for i in range(len(self.bore['Quality']))]
-        lab = [ self.bore.time[i].values.astype('datetime64[D]').astype(object).strftime('%b%y') for i in range(len(self.bore['Quality']))]
+        lab = [ self.bore.time[i].values.astype('datetime64[D]').astype(object).strftime('%d%b%y') if self.bore['Quality'][i] == "A" else "" for i in range(len(self.bore['Quality']))]
 
         ss= plt.scatter( X, Y, \
             c=self.bore.time, #self.bore['ctr_height_LW'],
@@ -1922,7 +1922,7 @@ class Controller():
                 Y = self.bore['liv_height_'+HLW+'_'+source]
 
             S = [40 if self.bore['Quality'][i] == "A" else 10 for i in range(len(self.bore['Quality']))]
-            lab = [ self.bore.time[i].values.astype('datetime64[D]').astype(object).strftime('%b%y') for i in range(len(self.bore['Quality']))]
+            lab = [ self.bore.time[i].values.astype('datetime64[D]').astype(object).strftime('%d%b%y') if self.bore['Quality'][i] == "A" else "" for i in range(len(self.bore['Quality']))]
             if dirn == "along":
                 spd = self.bore.wind_speed * np.cos((315 - self.bore.wind_deg)*np.pi/180.)
             elif dirn == "across":
