@@ -1377,21 +1377,25 @@ class Controller():
             clabel = "River height (m)"
             vmin=4.4
             vmax=5.5 # 4.6
+            cmap = "jet"
         elif colour_var_str == "date":
             col_var = self.bore["time"] #     c=self.bore.time, #self.bore['ctr_height_LW'],
             clabel = "date"
             vmin = None
             vmax = None
+            cmap = "jet"
         elif colour_var_str == "wind_along":
             col_var = self.bore.wind_speed * np.cos((315 - self.bore.wind_deg)*np.pi/180.)
             clabel = "along estuary wind (m/s), from Hawarden/Connahs Quay"
             vmin = -7
             vmax = 7
+            cmap = "Spectral"
         elif colour_var_str == "wind_across":
             col_var = self.bore.wind_speed * np.sin((315 - self.bore.wind_deg)*np.pi/180.)
             clabel = "across estuary wind (m/s), from Hawarden/Connahs Quay"
             vmin = -7
             vmax = 7
+            cmap = "Spectral"
         else:
             print(f"Was not expecting that value of colour_var_str: {colour_var_str}")
 
@@ -1410,7 +1414,7 @@ class Controller():
             X = self.bore['Saltney_lag_'+HLW+'_'+source]
             Y = self.bore['liv_height_'+HLW+'_'+source]
 
-
+        # Get the rmse scores and linear fits
         self.process_fit(source=source, HLW_list=[HLW], X=X,Y=Y)
 
         ## Plot all data
@@ -1426,7 +1430,7 @@ class Controller():
             c=col_var[JJ],
             s=5,
             #cmap='magma',
-            cmap='jet',
+            cmap=cmap,
             vmin=vmin,
             vmax=vmin, # 4.6
             label=lab_dot
@@ -1454,7 +1458,7 @@ class Controller():
             c=col_var[JJ],
             s=40,
             #cmap='magma',
-            cmap='jet',
+            cmap=cmap,
             vmin=vmin,
             vmax=vmax, # 4.6
             label=lab_dot
