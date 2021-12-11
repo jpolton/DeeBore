@@ -1366,9 +1366,35 @@ class Controller():
         plt.close('all')
 
 
-    def plot_scatter_river(self, source:str='bodc', HLW:str="HW"):
+    def plot_scatter(self, source:str='bodc', HLW:str="HW", colour_var_str:str="river"):
         """
+        scatter plot the h vs lag observations. Colour by 3rd variable.
+        Add linear regression lines to both class A and all data points.
         """
+
+        if colour_var_str  == "river": # LW on river
+            col_var =  self.bore["ctr_height_LW"]
+            clabel = "River height (m)"
+            vmin=4.4
+            vmax=5.5 # 4.6
+        elif colour_var_str == "date":
+            col_var = self.bore["time"] #     c=self.bore.time, #self.bore['ctr_height_LW'],
+            clabel = "date"
+            vmin = None
+            vmax = None
+        elif colour_var_str == "wind_along":
+            col_var = self.bore.wind_speed * np.cos((315 - self.bore.wind_deg)*np.pi/180.)
+            clabel = "along estuary wind (m/s), from Hawarden/Connahs Quay"
+            vmin = -7
+            vmax = 7
+        elif colour_var_str == "wind_across":
+            col_var = self.bore.wind_speed * np.sin((315 - self.bore.wind_deg)*np.pi/180.)
+            clabel = "across estuary wind (m/s), from Hawarden/Connahs Quay"
+            vmin = -7
+            vmax = 7
+        else:
+            print(f"Was not expecting that value of colour_var_str: {colour_var_str}")
+
         plt.close('all')
         fig = plt.figure(figsize=(8, 6), dpi=120)
         if HLW=="dLW":
@@ -1397,12 +1423,12 @@ class Controller():
 
         JJ = np.isfinite(X.values)
         ss= plt.scatter( X[JJ], Y[JJ], \
-            c=self.bore['ctr_height_LW'][JJ],
+            c=col_var[JJ],
             s=5,
             #cmap='magma',
             cmap='jet',
-            vmin=4.4,
-            vmax=5.5, # 4.6
+            vmin=vmin,
+            vmax=vmin, # 4.6
             label=lab_dot
             )
 
@@ -1425,12 +1451,12 @@ class Controller():
 
         JJ = (self.bore['Quality'] == "A") & (np.isfinite(X.values))
         ss= plt.scatter( X[JJ], Y[JJ], \
-            c=self.bore['ctr_height_LW'][JJ],
+            c=col_var[JJ],
             s=40,
             #cmap='magma',
             cmap='jet',
-            vmin=4.4,
-            vmax=5.5, # 4.6
+            vmin=vmin,
+            vmax=vmax, # 4.6
             label=lab_dot
             )
         cbar = plt.colorbar(ss)
@@ -1458,11 +1484,11 @@ class Controller():
         # Linear fit
         #x = self.df['Liv (Gladstone Dock) HT height (m)']
         #plt.plot( x, self.df['linfit_lag'], '-' )
-        cbar.set_label('River height (m)')
+        cbar.set_label(clabel)
         plt.title('Bore arrival time at Saltney Ferry')
         plt.xlabel('Arrival time (mins) relative to Liv '+HLW)
         plt.ylabel('Liv (Gladstone Dock) '+HLW+' height (m)')
-        plt.savefig('figs/SaltneyArrivalLag_vs_LivHeight_river_'+HLW+'_'+source+'.png')
+        plt.savefig('figs/SaltneyArrivalLag_vs_LivHeight_'+colour_var_str+'_'+HLW+'_'+source+'.png')
 
     ############################################################################
     #%% DIAGNOSTICS
@@ -1775,24 +1801,41 @@ class Controller():
     def combinations_lag_hlw_river(self):
         """
         Plot different combinations of Lag,HLW w/ rivers
+        plot_scatter(self, source:str='bodc', HLW:str="HW", colour_var_str:str="river")
         """
-        self.plot_scatter_river(source='harmonic', HLW="HW")
-        self.plot_scatter_river(source='bodc', HLW="HW")
-        self.plot_scatter_river(source='bodc', HLW="LW")
-        self.plot_scatter_river(source='bodc', HLW="dLW")
-        self.plot_scatter_river(source='bodc', HLW="dHW")
-        self.plot_scatter_river(source='bodc', HLW="XX")
-        self.plot_scatter_river(source='bodc', HLW="FW")
-        self.plot_scatter_river(source='api', HLW="HW")
-        self.plot_scatter_river(source='api', HLW="FW")
-        self.plot_scatter_date(source='api', HLW="HW")
-        self.plot_scatter_date(source='bodc', HLW="HW")
-        self.plot_scatter_date(source='bodc', HLW="FW")
-        self.plot_scatter_date(source='harmonic', HLW="HW")
-        self.plot_scatter_wind(source='api', HLW="HW")
-        self.plot_scatter_wind(source='bodc', HLW="HW")
-        self.plot_scatter_wind(source='bodc', HLW="FW")
-        self.plot_scatter_wind(source='harmonic', HLW="HW")
+        if(0):
+            self.plot_scatter(source='harmonic', HLW="HW", colour_var_str="river")
+            self.plot_scatter(source='bodc', HLW="HW", colour_var_str="river")
+            self.plot_scatter(source='bodc', HLW="LW", colour_var_str="river")
+            self.plot_scatter(source='bodc', HLW="dLW", colour_var_str="river")
+            self.plot_scatter(source='bodc', HLW="dHW", colour_var_str="river")
+            self.plot_scatter(source='bodc', HLW="XX", colour_var_str="river")
+            self.plot_scatter(source='bodc', HLW="FW", colour_var_str="river")
+            self.plot_scatter(source='api', HLW="HW", colour_var_str="river")
+            self.plot_scatter(source='api', HLW="FW", colour_var_str="river")
+
+            self.plot_scatter(source='api', HLW="HW", colour_var_str="date")
+            self.plot_scatter(source='bodc', HLW="HW", colour_var_str="date")
+            self.plot_scatter(source='bodc', HLW="FW", colour_var_str="date")
+            self.plot_scatter(source='harmonic', HLW="HW", colour_var_str="date")
+
+            self.plot_scatter(source='api', HLW="HW", colour_var_str="wind_along")
+            self.plot_scatter(source='bodc', HLW="HW", colour_var_str="wind_along")
+            self.plot_scatter(source='bodc', HLW="FW", colour_var_str="wind_along")
+            self.plot_scatter(source='harmonic', HLW="HW", colour_var_str="wind_along")
+
+            self.plot_scatter(source='api', HLW="HW", colour_var_str="wind_across")
+            self.plot_scatter(source='bodc', HLW="HW", colour_var_str="wind_across")
+            self.plot_scatter(source='bodc', HLW="FW", colour_var_str="wind_across")
+            self.plot_scatter(source='harmonic', HLW="HW", colour_var_str="wind_across")
+
+        for src in ["harmonic", "bodc", "api"]:
+            for state in ["HW", "LW", "dLW", "dHW", "XX", "FW", "EW"]:
+                for col in ["river", "date", "wind_along", "wind_across"]:
+                    try:
+                        self.plot_scatter(source=src, HLW=state, colour_var_str=col)
+                    except:
+                        pass
 
     def river_lag_timing(self, HLW="HW", source="api"):
         """
@@ -1849,118 +1892,6 @@ class Controller():
         plt.savefig('figs/SaltneyArrivalLag_vs_river_LivHeight'+HLW+'_'+source+'.png')
 
 
-    def plot_scatter_date(self, source:str='bodc', HLW:str="HW"):
-        """
-        """
-        plt.close('all')
-        fig = plt.figure(figsize=(8, 6), dpi=120)
-        if HLW=="dLW":
-            X = self.bore['Saltney_lag_LW_'+source]
-            Y = self.bore['liv_height_HW_'+source] - self.bore['liv_height_LW_'+source]
-        elif HLW=="dHW":
-            X = self.bore['Saltney_lag_HW_'+source]
-            Y = self.bore['liv_height_HW_'+source] - self.bore['liv_height_LW_'+source]
-        elif HLW=="XX":
-            X = self.bore['Saltney_lag_HW_'+source]
-            Y = self.bore['liv_height_LW_'+source]
-        else:
-            X = self.bore['Saltney_lag_'+HLW+'_'+source]
-            Y = self.bore['liv_height_'+HLW+'_'+source]
-
-        S = [40 if self.bore['Quality'][i] == "A" else 10 for i in range(len(self.bore['Quality']))]
-        lab = [ self.bore.time[i].values.astype('datetime64[D]').astype(object).strftime('%d%b%y') if self.bore['Quality'][i] == "A" else "" for i in range(len(self.bore['Quality']))]
-
-        ss= plt.scatter( X, Y, \
-            c=self.bore.time, #self.bore['ctr_height_LW'],
-            s=S,
-            #cmap='magma',
-            cmap='jet',
-            #vmin=4.4,
-            #vmax=5.5, # 4.6
-            label="RMSE:"+self.bore.attrs['rmse_'+HLW+'_'+source]
-            )
-        cbar = plt.colorbar(ss)
-
-        for ind in range(len(self.bore['Quality'])):
-        # zip joins x and y coordinates in pairs
-
-
-            plt.annotate(lab[ind], # this is the text
-                         (X[ind],Y[ind]), # this is the point to label
-                         textcoords="offset points", # how to position the text
-                         xytext=(0,6), # distance from text to points (x,y)
-                         ha='center', # horizontal alignment can be left, right or center
-                         fontsize=4)
-        plt.legend()
-        # Linear fit
-        #x = self.df['Liv (Gladstone Dock) HT height (m)']
-        #plt.plot( x, self.df['linfit_lag'], '-' )
-        cbar.set_label('Date')
-        plt.title('Bore arrival time at Saltney Ferry')
-        plt.xlabel('Arrival time (mins) relative to Liv '+HLW)
-        plt.ylabel('Liv (Gladstone Dock) '+HLW+' height (m)')
-        plt.savefig('figs/SaltneyArrivalLag_vs_LivHeight_date_'+HLW+'_'+source+'.png')
-
-
-    def plot_scatter_wind(self, source:str='bodc', HLW:str="HW"):
-        """
-        dir: str [along/across]. PLot either the along or across estuary wind speed
-        """
-        for dirn in ["along", "across"]:
-
-            plt.close('all')
-            fig = plt.figure(figsize=(8, 6), dpi=120)
-            if HLW=="dLW":
-                X = self.bore['Saltney_lag_LW_'+source]
-                Y = self.bore['liv_height_HW_'+source] - self.bore['liv_height_LW_'+source]
-            elif HLW=="dHW":
-                X = self.bore['Saltney_lag_HW_'+source]
-                Y = self.bore['liv_height_HW_'+source] - self.bore['liv_height_LW_'+source]
-            elif HLW=="XX":
-                X = self.bore['Saltney_lag_HW_'+source]
-                Y = self.bore['liv_height_LW_'+source]
-            else:
-                X = self.bore['Saltney_lag_'+HLW+'_'+source]
-                Y = self.bore['liv_height_'+HLW+'_'+source]
-
-            S = [40 if self.bore['Quality'][i] == "A" else 10 for i in range(len(self.bore['Quality']))]
-            lab = [ self.bore.time[i].values.astype('datetime64[D]').astype(object).strftime('%d%b%y') if self.bore['Quality'][i] == "A" else "" for i in range(len(self.bore['Quality']))]
-            if dirn == "along":
-                spd = self.bore.wind_speed * np.cos((315 - self.bore.wind_deg)*np.pi/180.)
-            elif dirn == "across":
-                spd = self.bore.wind_speed * np.sin((315 - self.bore.wind_deg)*np.pi/180.)
-            else:
-                print(f"{dirn}: did not expect that direction option")
-
-            ss= plt.scatter( X, Y, \
-                c=spd, #self.bore['ctr_height_LW'],
-                s=S,
-                cmap='Spectral',
-                vmin=-7,
-                vmax=7, # 4.6
-                label="RMSE:"+self.bore.attrs['rmse_'+HLW+'_'+source]
-                )
-            cbar = plt.colorbar(ss)
-
-            for ind in range(len(self.bore['Quality'])):
-            # zip joins x and y coordinates in pairs
-
-
-                plt.annotate(lab[ind], # this is the text
-                             (X[ind],Y[ind]), # this is the point to label
-                             textcoords="offset points", # how to position the text
-                             xytext=(0,6), # distance from text to points (x,y)
-                             ha='center', # horizontal alignment can be left, right or center
-                             fontsize=4)
-            plt.legend()
-            # Linear fit
-            #x = self.df['Liv (Gladstone Dock) HT height (m)']
-            #plt.plot( x, self.df['linfit_lag'], '-' )
-            cbar.set_label(dirn+' estuary wind (m/s), from Hawarden/Connahs Quay')
-            plt.title('Bore arrival time at Saltney Ferry')
-            plt.xlabel('Arrival time (mins) relative to Liv '+HLW)
-            plt.ylabel('Liv (Gladstone Dock) '+HLW+' height (m)')
-            plt.savefig('figs/SaltneyArrivalLag_vs_LivHeight_'+dirn+'_wind_'+HLW+'_'+source+'.png')
 ################################################################################
 ################################################################################
 #%% Main Routine
