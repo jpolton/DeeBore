@@ -467,6 +467,7 @@ class OpenWeather:
         Coordinates:
           * time        (time) datetime64[ns] 2005-01-01 ... 2021-11-08T23:00:00
         Data variables:
+            pressure    (time) int64 1024 1023 1022 1022 1021 ... 1019 1017 1018 1017
             wind_speed  (time) float64 1.5 2.6 4.6 4.1 5.1 ... 3.6 4.12 0.89 4.02 2.68
             wind_deg    (time) int64 150 170 200 220 210 200 ... 180 190 210 117 239 226
             longitude   float64 53.18
@@ -498,7 +499,7 @@ class OpenWeather:
 
         Returns
         -------
-        xarray.Dataset containing times, wind_speed, wind_deg, lat, lon, city_name
+        xarray.Dataset containing times, wind_speed, wind_deg, pressure, lat, lon, city_name
         """
         import datetime
 
@@ -510,7 +511,7 @@ class OpenWeather:
         data.rename(columns={'dt_iso':'time'}, inplace=True)
         data.set_index('time', inplace=True)
         data.drop(columns=['dt', 'timezone', 'temp',
-           'feels_like', 'temp_min', 'temp_max', 'pressure', 'sea_level',
+           'feels_like', 'temp_min', 'temp_max', 'sea_level',
            'grnd_level', 'humidity', 'rain_1h',
            'rain_3h', 'snow_1h', 'snow_3h', 'clouds_all', 'weather_id',
            'weather_main', 'weather_description', 'weather_icon'], inplace=True)
@@ -782,12 +783,13 @@ class Controller():
         logging.info('Load bore data from csv file')
         self.load_bore_flag = True
         df =  pd.read_csv('data/master-Table 1.csv')
-        df.drop(columns=['date + logged time','Unnamed: 14', \
-                                'Unnamed: 15','Unnamed: 16'], \
+        df.drop(columns=['date + logged time','Unnamed: 15', \
+                                'Unnamed: 16','Unnamed: 17'], \
                                  inplace=True)
         df.rename(columns={"date + logged time (GMT)":"time"}, inplace=True)
         df.rename(columns={"wind_deg (from)":"wind_deg"}, inplace=True)
         df.rename(columns={"wind_speed (m/s)":"wind_speed"}, inplace=True)
+        df.rename(columns={"pressure (hPa)":"pressure"}, inplace=True)
         df['time'] = pd.to_datetime(df['time'], format="%d/%m/%Y %H:%M")
         #df['time'] = pd.to_datetime(df['time'], utc=True, format="%d/%m/%Y %H:%M")
         #df.set_index(['time'], inplace=True)
@@ -843,7 +845,7 @@ class Controller():
         winsize = 6 #4h for HW, 6h for LW. +/- search distance for nearest extreme value
         self.met = xr.Dataset()
 
-        for measure_var in ['wind_speed', 'wind_deg']:
+        for measure_var in ['wind_speed', 'wind_deg', 'pressure']:
 
             met_var = []
             met_time = []
