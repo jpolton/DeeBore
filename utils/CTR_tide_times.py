@@ -390,12 +390,12 @@ class Databucket():
         #ctr.dataset = xr.open_dataset("archive_shoothill/ctr_2021.nc")
         #ctr.dataset = ctr.dataset.sel( time=slice(np.datetime64('2021-03-31T06:00:00'), np.datetime64('2021-03-31T18:00:00')) )
 
-        #ctr.dataset = xr.open_mfdataset("archive_shoothill/ctr2_2020.nc")
+        ctr.dataset = xr.open_mfdataset("archive_shoothill/ctr_2020.nc")
         #ctr.dataset = ctr.dataset.sel( time=slice(np.datetime64('2020-04-14T04:00:00'), np.datetime64('2020-04-16T18:00:00')) )
         #ctr.dataset = ctr.dataset.sel( time=slice(np.datetime64('2020-01-01T04:00:00'), np.datetime64('2020-04-16T18:00:00')) )
 
         #ctr.dataset = xr.open_mfdataset("archive_shoothill/ctr2_202*.nc")
-        ctr.dataset = xr.open_mfdataset("archive_shoothill/ctr2_20[12][17890].nc")
+        #ctr.dataset = xr.open_mfdataset("archive_shoothill/ctr2_20[12][17890].nc")
 
         #ctr_HLW = ctr.find_high_and_low_water(var_str='sea_level', method="cubic")
         self.ctr = ctr
