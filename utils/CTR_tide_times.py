@@ -26,6 +26,7 @@ import datetime
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib.dates as mdates
 import xarray as xr
 import sklearn.metrics as metrics
 import pytz
@@ -145,7 +146,7 @@ class Databucket():
 
                             print(f"max points: {len(tg_HW.dataset[time_var])}")
                         else:
-                            print(f"This should not have happened... HLW:{HW}")
+                            print(f"This should not have happened... HLW:{HLW}")
                 # Save the largest
                 try:
                     #print("tg_HLW.dataset[measure_var]",i, tg_HLW.dataset[measure_var])
@@ -229,7 +230,8 @@ class Databucket():
 
                 """ Append LW event data, being careful to get the appropriate liv LT [floats, np.datetime64] """
                 #print("time,LL,LL_lag:",i, guess_time, LL.values, LL_lag.values)
-                if type(LL) is xr.DataArray: ## Actually I think they are alway xr.DataArray with time, but the height can be nan.
+                #if type(LL) is xr.DataArray: ## Actually I think they are alway xr.DataArray with time, but the height can be nan.
+                try:
                     LT_h.append( LL.values )
                     #print('len(HT_h)', len(HT_h))
                     LT_t.append( LL[time_var].values )
@@ -306,7 +308,7 @@ class Databucket():
                         plt.close('all')
 
 
-                else:
+                except:
                     logging.info(f"Did not find a high water near this guess")
                     print(f"Did not find a high water near this guess")
 
@@ -388,11 +390,12 @@ class Databucket():
         #ctr.dataset = xr.open_dataset("archive_shoothill/ctr_2021.nc")
         #ctr.dataset = ctr.dataset.sel( time=slice(np.datetime64('2021-03-31T06:00:00'), np.datetime64('2021-03-31T18:00:00')) )
 
-        ctr.dataset = xr.open_mfdataset("archive_shoothill/ctr2_2020.nc")
+        #ctr.dataset = xr.open_mfdataset("archive_shoothill/ctr2_2020.nc")
         #ctr.dataset = ctr.dataset.sel( time=slice(np.datetime64('2020-04-14T04:00:00'), np.datetime64('2020-04-16T18:00:00')) )
         #ctr.dataset = ctr.dataset.sel( time=slice(np.datetime64('2020-01-01T04:00:00'), np.datetime64('2020-04-16T18:00:00')) )
 
         #ctr.dataset = xr.open_mfdataset("archive_shoothill/ctr2_202*.nc")
+        ctr.dataset = xr.open_mfdataset("archive_shoothill/ctr2_20[12][17890].nc")
 
         #ctr_HLW = ctr.find_high_and_low_water(var_str='sea_level', method="cubic")
         self.ctr = ctr
@@ -527,7 +530,42 @@ def histogram_CTR_LIV_lag():
     plt.title(f"Histogram of CTR {HLW} timing 2020-21")
     plt.savefig('hh.png')
 
+def find_similar_events():
+    """
+    For a given Liverpool HT height, find such occurances at CTR weir.
+    Plot as timeseries relative to Liv HT time
+    """
+    
+    liv_HT_t = np.datetime64('2021-12-19 11:09') # Time of reference Liv HT. Only used to time reference the plot time axis
+    liv_HT_h = 8.9 # Height of reference Liv HT (m)
+    winsize = 0.1 # +/- increment on HT height (m) over which to search for similar tidal events
+   
+    data_bucket = Databucket()
+    data_bucket.load_tidetable()
+    data_bucket.load_ctr()
+    
 
+    HLW = "HW"
+    ds = data_bucket.process(tg = data_bucket.ctr, HLW=HLW)
+    
+    time = ds.time.where(ds.liv_HT_h > liv_HT_h - winsize).where(ds.liv_HT_h < liv_HT_h + winsize)
+    
+    myFmt = mdates.DateFormatter('%H:%M')
+    fig, ax = plt.subplots()
+    ax.xaxis.set_major_formatter(myFmt)
+
+    for event in time:
+        if np.isfinite(event):
+            ctr = data_bucket.ctr.dataset.sel(time=slice(event - np.timedelta64(1, "h"), event + np.timedelta64(2, "h")))
+            #plt.plot( (ctr.time - event)/ np.timedelta64(1, 'm'), ctr.sea_level, label=time)
+            #plt.xlabel('minutes after Liv HT (11:09)')
+            plt.plot( liv_HT_t + (ctr.time - event), ctr.sea_level, label=time)
+            plt.xlabel('time ')
+            plt.ylabel('Chester water level (m)')
+            plt.title('Chester water level scenarios, with 8.9m tides at Liverpool')
+            
+            
+            
 def main1():
     """ Read and process timeseries. Create xarray dataset. Export and pickly dataframe
     Plot graphs """
@@ -623,3 +661,16 @@ if __name__ == "__main__":
         clb=plt.colorbar()
         clb.ax.set_ylabel('Liv HT (m)')
         plt.show()
+        
+
+    if(0):    
+        main1()
+        plt.plot(  ds.ctr_HT_dt / np.timedelta64(1, 'm'), ds.liv_HT_h, '+')
+        plt.xlabel('CTR HT timing after Liv (mins)')
+        plt.ylabel('Liverpool HT (m)')
+        plt.plot( [0, 100], [8.9,8.9], 'r')
+
+
+## 
+
+
