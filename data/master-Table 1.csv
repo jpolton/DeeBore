@@ -1,148 +1,148 @@
-date + logged time,date + logged time (GMT),Quality,logger,Liv HT (reported by logger),location,Liv (Gladstone Dock) HT time (GMT),Liv (Gladstone Dock) HT height (m),Liv (Gladstone Dock) prev. LT height (m),Chester Weir height: CHESTER WEIR 15 MIN SG,Dee at Ironbridge (m),Time difference: Glad-Saltney,wind_speed (m/s),wind_deg (from),,,,note,Queensferry to Saltney speed (km/h),Saltney to CTR speed (km/h)
-07/12/2021 11:50,07/12/2021 11:50,A,Nick,2021-12-07T12:59+0000 9.62 m,bridge,12:59,9.62,1.5,4.59159698138501,4.835,1h 8m 6s,11.1736111111111,135,,,,"MO : SE, 25mph. 10.92 km/h (Pylons to FB). 13.2 km/h past the pylons to the telegraph pole (500m)
+date + logged time,date + logged time (GMT),Quality,logger,Liv HT (reported by logger),location,Liv (Gladstone Dock) HT time (GMT),Liv (Gladstone Dock) HT height (m),Liv (Gladstone Dock) prev. LT height (m),Chester Weir height: CHESTER WEIR 15 MIN SG,Dee at Ironbridge (m),Time difference: Glad-Saltney,wind_speed (m/s),wind_deg (from),pressure (hPa),,,,note,Queensferry to Saltney speed (km/h),Saltney to CTR speed (km/h)
+07/12/2021 11:50,07/12/2021 11:50,A,Nick,2021-12-07T12:59+0000 9.62 m,bridge,12:59,9.62,1.5,4.59159698138501,4.835,1h 8m 6s,11.1736111111111,135,984,,,,"MO 12pm: SE, 25mph. 10.92 km/h (Pylons to FB). 13.2 km/h past the pylons to the telegraph pole (500m)
 slow down over 300m 
 10.7 km/h  past the house towards the outlet (500m)
 11.6 km/h sped up past outlet (200m)
 10.8 km/h to FB
 
 ",10.8,
-06/12/2021 10:43,06/12/2021 10:43,A,Jeff,2021-12-06T12:10+0000 9.81 m,bridge,12:10,9.81,1.21,4.609491191771,4.894,1h 27m,6.70416666666667,180,,,,"MO: S, 15mph. Nick, Jeff, Kester, Mike. Rode for 10s. Missed Nick, Hit Kester. Harder to estimate speed: Peak 14.05 km/h, ave to FB ~14.55 km/h
+06/12/2021 10:43,06/12/2021 10:43,A,Jeff,2021-12-06T12:10+0000 9.81 m,bridge,12:10,9.81,1.21,4.609491191771,4.894,1h 27m,6.70416666666667,180,1004,,,,"MO:10am S, 15mph. Nick, Jeff, Kester, Mike. Rode for 10s. Missed Nick, Hit Kester. Harder to estimate speed: Peak 14.05 km/h, ave to FB ~14.55 km/h
 ",14.55,
-05/12/2021 10:03,05/12/2021 10:03,A,Jeff,2021-12-05T11:23+0000 9.84 m,bridge,11:23,9.84,1.11,4.6152537340987,4.913,1h 19m 40s,6.25722222222222,315,,,,"MO: NW, 14mph. Ran with wave: 11.8km/h for 500m, then 12.8km/h for 500m. (0.41-0.12 km)/(2.02 - 0.62 mins)*60 = 12.43km/h. Watch Mike ride (47s) with E+E+N. Bore passed piers at 09:54:48",12.43,
+05/12/2021 10:03,05/12/2021 10:03,A,Jeff,2021-12-05T11:23+0000 9.84 m,bridge,11:23,9.84,1.11,4.6152537340987,4.913,1h 19m 40s,6.25722222222222,315,1011,,,,"MO 10am: NW, 14mph. Ran with wave: 11.8km/h for 500m, then 12.8km/h for 500m. (0.41-0.12 km)/(2.02 - 0.62 mins)*60 = 12.43km/h. Watch Mike ride (47s) with E+E+N. Bore passed piers at 09:54:48",12.43,
 04/12/2021 09:06,04/12/2021 09:06,A,Jeff,"2021-12-04T10:36+0000 9.71 m
-",bridge,10:36,9.71,1.18,4.61495044239724,4.912,1h 29m 44s,7.15111111111111,270,,,,"MO: W 16mph. Rode solo. Put in at FB. Still wind with heavy sustained gusts. Rode it fine for 12s, but then the nose got caught.
+",bridge,10:36,9.71,1.18,4.61495044239724,4.912,1h 29m 44s,7.15111111111111,270,995,,,,"MO 9am: W 16mph. Rode solo. Put in at FB. Still wind with heavy sustained gusts. Rode it fine for 12s, but then the nose got caught.
 Continued ~17s but drifting towards the bank and losing speed.
 Peak speed 14.04km/h = 3.89m/s
 30s ride total.
 50m of decent ride, more with the tail off.",14.04,
-03/12/2021 08:31,03/12/2021 08:31,A,Kester,2021-12-03T09:51+0000 9.44 m,bridge,09:51,9.44,1.41,4.62829527726138,4.956,1h 20m,3.57555555555556,293,,,,MO:WNW 8mph.,,
-09/11/2021 12:46,09/11/2021 12:46,A,Jeff,Liv HT:     2021-11-09T13:57+0000 9.13 m,bridge,13:57,9.13,1.95,4.534,4.644,1h 10m 21s,7.60,225,,,,"stiff onshore wind to FB. 0.43 km 2.57mins -->  10.04 km/hr. Undular bore. Prob not ridable.
+03/12/2021 08:31,03/12/2021 08:31,A,Kester,2021-12-03T09:51+0000 9.44 m,bridge,09:51,9.44,1.41,4.62829527726138,4.956,1h 20m,3.57555555555556,293,1002,,,,MO 8am:WNW 8mph. (pressure recovered from https://wow.metoffice.gov.uk,,
+09/11/2021 12:46,09/11/2021 12:46,A,Jeff,Liv HT:     2021-11-09T13:57+0000 9.13 m,bridge,13:57,9.13,1.95,4.534,4.644,1h 10m 21s,7.15111111111111,225,1018,,,,"MO 12pm: SW 16mph: stiff onshore wind to FB. 0.43 km 2.57mins -->  10.04 km/hr. Undular bore. Prob not ridable.
 ",10.04,
-09/11/2021 13:16,09/11/2021 13:16,A,Jeff,Liv HT:     2021-11-09T13:57+0000 9.13 m,The Handbridge,13:57,9.13,1.95,4.534,4.644,40m 49s,7.60,225,,,,"FB - handbridge: 
+09/11/2021 13:16,09/11/2021 13:16,A,Jeff,Liv HT:     2021-11-09T13:57+0000 9.13 m,The Handbridge,13:57,9.13,1.95,4.534,4.644,40m 49s,7.15111111111111,225,1018,,,,"MO 12pm: SW 16mph: FB - handbridge: 
 5.4km, 30mins --> 10.8km/h. Just a rippled by the time it arrived",,10.8
-08/11/2021 11:55,08/11/2021 11:55,A,Jeff,,bridge,13:09,9.55,1.40,4.557,4.721,1h 13m 48s,5.14,150.0,,,,"Mike rode 1m40s. To FB: 3.20 km ; 15mins --> 12.8 km/hr
+08/11/2021 11:55,08/11/2021 11:55,A,Jeff,,bridge,13:09,9.55,1.40,4.557,4.721,1h 13m 48s,5.14,150.0,1020.0,,,,"Mike rode 1m40s. To FB: 3.20 km ; 15mins --> 12.8 km/hr
 Saltney FB to Cop: 3.39km 17:22 --> 11.7km/h",12.8,11.7
-08/11/2021 12:22,08/11/2021 12:22,A,Jeff,,The Handbridge,13:09,9.55,1.40,4.557,4.721,46m 30s,5.14,150.0,,,,"FB: Weir: 5.4km 27:18 --> 11.87 km/h
+08/11/2021 12:22,08/11/2021 12:22,A,Jeff,,The Handbridge,13:09,9.55,1.40,4.557,4.721,46m 30s,5.14,150.0,1020.0,,,,"FB: Weir: 5.4km 27:18 --> 11.87 km/h
 ",,11.87
-07/11/2021 11:01,07/11/2021 11:01,A,Mike,,bridge,12:23,9.84,1.02,4.580,4.796,1h 22m,5.66,280.0,,,,"Mike tried and failed, Neil caught it for 30+ sec. Mike reported FB time from water. Stiff onshore wind.",,
-06/11/2021 10:19,06/11/2021 10:19,A,Jeff,,bridge,11:40,9.95,0.86,4.622,4.934,1h 20m 18s,5.66,240.0,,,,"Rode it! Rode it 580m for 2min 26s. Speed range 14.5 km/h --> 13.5 km/h. Ave bore speed: 14.26 km/h
+07/11/2021 11:01,07/11/2021 11:01,A,Mike,,bridge,12:23,9.84,1.02,4.580,4.796,1h 22m,5.66,280.0,1020.0,,,,"Mike tried and failed, Neil caught it for 30+ sec. Mike reported FB time from water. Stiff onshore wind.",,
+06/11/2021 10:19,06/11/2021 10:19,A,Jeff,,bridge,11:40,9.95,0.86,4.622,4.934,1h 20m 18s,5.66,240.0,1020.0,,,,"Rode it! Rode it 580m for 2min 26s. Speed range 14.5 km/h --> 13.5 km/h. Ave bore speed: 14.26 km/h
 Kester rode to FB: 1.82km, 7m 49s = 13.97 km/h",13.97,
-05/11/2021 09:17,05/11/2021 09:17,A,Jeff,05/11/2021 09:41:47,blue bridge,10:58,9.87,0.91,4.747,5.232,1h 40m 2s,1.03,0.0,,,,Saw it in the distance (about 2km away),,
-05/11/2021 09:41,05/11/2021 09:41,A,Jeff,09:41:47,bridge,10:58,9.87,0.91,4.747,5.232,1h 16m 13s,4.63,290.0,,,,"Rode out. Got puncture. Observed it passing blue bridge to Airbus pier (3.50km, 15m 33s = 13.50 km/h), airbus to Saltney FB (1.82km, 8m 16s = 13.21 km/h). Queensferry to Saltney (5.32km, 23m 49s = 13.40 km/h)",13.4,
-10/10/2021 13:19,10/10/2021 12:19,A,Jeff,,bridge,13:25,9.46,1.26,4.52,4.58,1h 6m,5.66,320.0,,,,Strong inshore wind. Rode 2ndary wave. 11.9 km/h. 60m. 22 sec. Fitted river height from Ironbridge. Extrapolated FB time from speed near pontoon.,11.9,
-09/10/2021 12:30,09/10/2021 11:30,A,Jeff,,bridge,12:43,9.75,0.90,4.56,4.705,1h 13m,2.57,150.0,,,,"I ride it for 23s 60m. Giles: 2 mins  43s,  621m @13.5 km/hr. Tom rode it twice as far to the bridge!! Fitted river height from Ironbridge. Eyeballed FB from upstream; it matched extrapolation from speed near pontoon.
+05/11/2021 09:17,05/11/2021 09:17,A,Jeff,05/11/2021 09:41:47,blue bridge,10:58,9.87,0.91,4.747,5.232,1h 40m 2s,1.03,0.0,1025.0,,,,Saw it in the distance (about 2km away),,
+05/11/2021 09:41,05/11/2021 09:41,A,Jeff,09:41:47,bridge,10:58,9.87,0.91,4.747,5.232,1h 16m 13s,4.63,290.0,1026.0,,,,"Rode out. Got puncture. Observed it passing blue bridge to Airbus pier (3.50km, 15m 33s = 13.50 km/h), airbus to Saltney FB (1.82km, 8m 16s = 13.21 km/h). Queensferry to Saltney (5.32km, 23m 49s = 13.40 km/h)",13.4,
+10/10/2021 13:19,10/10/2021 12:19,A,Jeff,,bridge,13:25,9.46,1.26,4.52,4.58,1h 6m,5.66,320.0,1038.0,,,,Strong inshore wind. Rode 2ndary wave. 11.9 km/h. 60m. 22 sec. Fitted river height from Ironbridge. Extrapolated FB time from speed near pontoon.,11.9,
+09/10/2021 12:30,09/10/2021 11:30,A,Jeff,,bridge,12:43,9.75,0.90,4.56,4.705,1h 13m,2.57,150.0,1035.0,,,,"I ride it for 23s 60m. Giles: 2 mins  43s,  621m @13.5 km/hr. Tom rode it twice as far to the bridge!! Fitted river height from Ironbridge. Eyeballed FB from upstream; it matched extrapolation from speed near pontoon.
 ",13.5,
-08/10/2021 11:50,08/10/2021 10:50,A,Jeff,08/10/2021  13:03    9.87,bridge,12:03,9.87,0.76,4.59,4.775,1h 13m,3.6,170.0,,,,"Cycled with it 2.75km 11.84min. Mike rode it for 6min 20s.  initially 15km/h,
+08/10/2021 11:50,08/10/2021 10:50,A,Jeff,08/10/2021  13:03    9.87,bridge,12:03,9.87,0.76,4.59,4.775,1h 13m,3.6,170.0,1028.0,,,,"Cycled with it 2.75km 11.84min. Mike rode it for 6min 20s.  initially 15km/h,
 slowed to 13km/h. Fitted river height from Ironbridge",13.9,
-07/10/2021 11:09,07/10/2021 10:09,,John,07/10/2021  12:24    9.80,bridge,11:24,9.80,0.85,4.67,5.02,1h 15m,4.63,160.0,,,,John rode it for 10s. Fitted river height from Ironbridge,,
-01/04/2021 12:42,01/04/2021 11:42,A,Jeff,2021-04-01T14:31+0100 9.76 m,Harwarden bridge (white railway),13:31,9.76,0.84,4.669,,1h 49m,4.6,120.0,,,,"Great Bore Run Spring 2021. 12km. 58mins. 1 Apr 2021
+07/10/2021 11:09,07/10/2021 10:09,,John,07/10/2021  12:24    9.80,bridge,11:24,9.80,0.85,4.67,5.02,1h 15m,4.63,160.0,1021.0,,,,John rode it for 10s. Fitted river height from Ironbridge,,
+01/04/2021 12:42,01/04/2021 11:42,A,Jeff,2021-04-01T14:31+0100 9.76 m,Harwarden bridge (white railway),13:31,9.76,0.84,4.669,,1h 49m,4.6,120.0,1028.0,,,,"Great Bore Run Spring 2021. 12km. 58mins. 1 Apr 2021
 ",,
-01/04/2021 12:49,01/04/2021 11:49,A,Jeff,2021-04-01T14:31+0100 9.76 m,blue bridge,13:31,9.76,0.84,4.669,,1h 42m,4.6,120.0,,,,"Great Bore Run Spring 2021. 12km. 58mins. 1 Apr 2021
+01/04/2021 12:49,01/04/2021 11:49,A,Jeff,2021-04-01T14:31+0100 9.76 m,blue bridge,13:31,9.76,0.84,4.669,,1h 42m,4.6,120.0,1028.0,,,,"Great Bore Run Spring 2021. 12km. 58mins. 1 Apr 2021
 Harwarden (white) bridge to Saltney FB
 6.52km 29:56. 4:36min/km. 13.07km/h
 ",13.07,
-01/04/2021 13:14,01/04/2021 12:14,A,Jeff,2021-04-01T14:31+0100 9.76 m,bridge,13:31,9.76,0.84,4.669,,1h 17m,4.6,120.0,,,,"Great Bore Run Spring 2021. 12km. 58mins. 1 Apr 2021
+01/04/2021 13:14,01/04/2021 12:14,A,Jeff,2021-04-01T14:31+0100 9.76 m,bridge,13:31,9.76,0.84,4.669,,1h 17m,4.6,120.0,1028.0,,,,"Great Bore Run Spring 2021. 12km. 58mins. 1 Apr 2021
 Saltney FB to Cop
 3.39km 16:51. 4:58min/km. 12.07km/h
 ",,12.07
-01/04/2021 13:43,01/04/2021 12:43,A,Jeff,2021-04-01T14:31+0100 9.76 m,The Handbridge,13:31,9.76,0.84,4.669,,48m,4.1,130.0,,,,"Great Bore Run Spring 2021. 12km. 58mins. 1 Apr 2021
+01/04/2021 13:43,01/04/2021 12:43,A,Jeff,2021-04-01T14:31+0100 9.76 m,The Handbridge,13:31,9.76,0.84,4.669,,48m,4.1,130.0,1028.0,,,,"Great Bore Run Spring 2021. 12km. 58mins. 1 Apr 2021
 Saltney FB to weir
 29 mins 5.4km. 11.17km/h
 Arrival detected as 'confused waters', then it deepened)",,11.17
-31/03/2021 12:24,31/03/2021 11:24,A,Jeff,2021-03-31T13:49+0100 10.04 m,bridge,12:49,10.04,0.62,4.741,,1h 25m,1.5,360.0,,,,"White water at the pontoon. Just undulating bore towards the FB. Two kayakers rode it. 949.1m in 260s before FB. After FB: 12.49 mins, 2.67 km: 12.83km/hr. Died at The Cop corner. Leading wave was very gentle. Kayaks were in the envelope.",13.14,12.83
-30/03/2021 11:42,30/03/2021 10:42,A,Nick,2021-03-30T13:08+0100 10.09 m,bridge,12:08,10.09,0.64,4.796,,1h 26m,2.6,120.0,,,,"Bore passed seaward of FB at 11:34BST
+31/03/2021 12:24,31/03/2021 11:24,A,Jeff,2021-03-31T13:49+0100 10.04 m,bridge,12:49,10.04,0.62,4.741,,1h 25m,1.5,360.0,1018.0,,,,"White water at the pontoon. Just undulating bore towards the FB. Two kayakers rode it. 949.1m in 260s before FB. After FB: 12.49 mins, 2.67 km: 12.83km/hr. Died at The Cop corner. Leading wave was very gentle. Kayaks were in the envelope.",13.14,12.83
+30/03/2021 11:42,30/03/2021 10:42,A,Nick,2021-03-30T13:08+0100 10.09 m,bridge,12:08,10.09,0.64,4.796,,1h 26m,2.6,120.0,1027.0,,,,"Bore passed seaward of FB at 11:34BST
 (I passed under FB 11:52BST, after bore). Undulating bore. 50cm amp.
 ",,
-28/03/2021 10:16,28/03/2021 09:16,A,Tom,2021-03-28T11:47+0100 9.56 m,bridge,10:47,9.56,1.28,4.506,,1h 31m,5.1,200.0,,,,"10:21 Tom:“a set of 10 to 15 very regular, very small (10cm) waves” Just in sight of the FB approaching from CTR. (53.18184837,-2.9344569). 830m past Saltney FB —> 3.7,5.9mins from FB —> FB@10:15 - 10:17",,
-02/03/2021 11:51,02/03/2021 11:51,A,Jeff,2021-03-02T13:11+0000 9.89 m,bridge,13:11,9.89,0.92,4.663,,1h 20m,5.1,160.0,,,,"Cycled with Y,E,B. Rode 500m before FB with the bore. 0.4332 km in 2.07 mins. Similar speed towards Chester but it dissipated toward the sewage works. I recorded 1.22km in 6.36 mins, before it disappeared at The Cop.",12.56,11.51
-01/03/2021 11:11,01/03/2021 11:11,A,Tim,2021-03-01T12:31+0000 9.89 m,bridge,12:31,9.89,0.94,4.755,,1h 20m,3.1,170.0,,,,A paddle boarder and 2 kayaks failed to catch the toddler.,,
-28/02/2021 10:32,28/02/2021 10:32,A,Mike/Giles,,bridge,11:52,9.72,1.14,4.822,,1h 20m,2.6,140.0,,,,Mike said no bore at the weir. A tiddler at the bridge.,,
-15/11/2020 09:09,15/11/2020 09:09,A,Giles, 2020-11-15T10:43+0000 9.93 m,bridge,10:43,9.93,0.82,4.692,,1h 34m,4.6,190.0,,,,"Giles. 12.20km/h over 34m near Airbus pontoon at 09:02GMT, 1.46km from Saltney FB —> 7.18mins(7m11s) to get FB. Bore at Saltney FB: 09:09. Speed calc distance=34m",12.20,
-20/10/2020 13:18,20/10/2020 12:18,A,Jeff,,Edgars Field,13:14,9.65,1.04,4.524,,56m,6.2,170.0,,,,12.46km/h (5.4km in 26mins: Saltney FB to Edgars Field). Speed calc distance=5.4km,,12.46
-20/10/2020 12:52,20/10/2020 11:52,A,Carol,,bridge,13:14,9.65,1.04,4.524,,1h 22m,6.2,170.0,,,,12:53 it had passed by 200m. Guess 12:52 (at 10+ km/h),,
-19/10/2020 12:08,19/10/2020 11:08,A,Jeff,,bridge,12:30,9.98,0.62,4.535,,1h 22m,4.1,160.0,,,,Jeff/Jake: Undulating bore. Almost caught it. Maxed out at 10.05km/h for 4s. Speed calc durations=4s,10.05,
-18/10/2020 11:54,18/10/2020 10:54,A,Jeff,,Greenway St,11:48,10.11,0.46,4.550,,54m,3.1,140.0,,,,11.57km/h (5.4km in 28mins from Saltney FB to Greenway St.). Speed calc distance=5.4km,,11.57
-18/10/2020 11:26,18/10/2020 10:26,A,Giles,,bridge,11:48,10.11,0.46,4.550,,1h 22m,2.6,140.0,,,,"Undulating bore. Giles rode it 524m at 13.12km/h. Came off at 11:18, 1.8km from FB => bore arrival 1.8*60/13.12 = 8.23 mins later, at 11:26. Speed calc distance=524m",13.12,
-17/10/2020 10:45,17/10/2020 09:45,A,A.S.S,12:06BST 10.05m,bridge,11:06,10.05,0.56,4.560,,1h 21m,2.1,320.0,,,,Undulating bore. Time approximate as we were on the river as it happened,,
-16/10/2020 10:09,16/10/2020 09:09,A,Jeff/Carol/Owen,,bridge,10:24,9.78,0.89,4.582,,1h 15m,1.0,350.0,,,,"Undulating bore. No white water. Kayak rider. 11.3km/h with a hint of slowing. Speed calc distance=1.46km (estimated from other log, actually Airbus to Saltney FB (6mins))",11.3,
-15/10/2020 21:42,15/10/2020 20:42,A,Tim/Tom,,bridge,21:58,9.7,1.57,4.601,,1h 16m,2.1,340.0,,,,,,
-15/10/2020 09:20,15/10/2020 08:20,A,Carol,,bridge,09:42,9.33,1.41,4.621,,1h 22m,2.6,330.0,,,,Carol got there 925am and it had passed the bridge. Estimated at 09:20,,
-19/09/2020 11:31,19/09/2020 10:31,A,Jeff,,blue bridge,12:12,10.00,0.42,4.428,,1h 41m,5.7,70.0,,,,SUP,,
-19/09/2020 11:59,19/09/2020 10:59,,DMPB,Glad HT 12:12,bridge,12:12,10.00,0.42,4.428,,1h 13m,5.7,70.0,,,,,,
-01/08/2020 21:32,01/08/2020 20:32,,Goldluna,,bridge,,,,,,,3.6,240.0,,,,approx time,,
-17/09/2019 12:48,17/09/2019 11:48,,Soniaharry,,bridge,,,,,,,5.7,340.0,,,,,,
-01/09/2019 12:10,01/09/2019 11:10,,coppy wanderers,,bridge,,,,,,,4.6,280.0,,,,,,
-18/08/2019 12:49,18/08/2019 11:49,,Allyweir,,bridge,,,,,,,8.2,230.0,,,,estimated. series of wavelets. seen at airbus,,
-05/08/2019 14:15,05/08/2019 13:15,,Kinghams,,bridge,,,,,,,4.1,250.0,,,,estimated from near the bridge,,
-06/05/2019 11:34,06/05/2019 10:34,,Lime candy,,bridge,,,,,,,4.6,320.0,,,,,,
-21/04/2019 12:08,21/04/2019 11:08,,TmGrandemotte,,bridge,,,,,,,5.1,150.0,,,,,,
-20/04/2019 11:25,20/04/2019 10:25,,keenonkites,Glad HT 12:36BST 9.96m,bridge,,,,,,,3.1,150.0,,,,undular,,
-08/04/2019 12:46,08/04/2019 11:46,,Glen Falcon Terrors,HT 8.6m,bridge,,,,,,,3.6,170.0,,,,undular,,
-11/07/2018 21:42,11/07/2018 20:42,,fizzyvimto,,bridge,,,,,,,3.6,320.0,,,,not sure that the date is right..,,
-29/10/2015 10:30,29/10/2015 10:30,,Cairz,,bridge,,,,,,,3.1,250.0,,,,,,
-02/10/2015 13:03,02/10/2015 12:03,,Wasmiss,13:45GMT 9.39m,blue bridge,13:45,9.39,,,,1h 42m,3.6,160.0,,,,,,
-29/09/2015 11:15,29/09/2015 10:15,,MrandMrsPlantsman,,bridge,,,,,,,2.1,150.0,,,,,,
-20/06/2015 13:16,20/06/2015 12:16,,steveastapleton(sas),,bridge,13:27,8.58,1.52,,,1h 11m,1.0,340.0,,,,anyTide,,
-18/04/2015 10:07,18/04/2015 09:07,A,RoastBeef,,bridge,10:31,9.91,0.80,4.434,,1h 24m,4.36,96.0,,,,Bore speed 8.6km/h over 610m,8.6,
-08/04/2015 13:12,08/04/2015 12:12,A,RoastBeef,Glad HT 14:14,bridge,13:14,8.91,1.57,4.515,,1h 2m,1.87,127.0,,,,waves not bore,,
-22/03/2015 10:49,22/03/2015 10:49,,twolittleducks,,bridge,12:22,10.33,0.30,4.485,,1h 33m,4.6,150.0,,,,,,
-21/03/2015 10:10,21/03/2015 10:10,,Bazonka,,bridge,11:38,10.32,0.41,4.493,,1h 28m,4.6,10.0,,,,anyTide,,
-24/02/2015 14:01,24/02/2015 14:01,,We4jessies,,bridge,14:57,9.23,1.49,,,56m,8.8,270.0,,,,anyTide,,
-13/09/2014 13:24,13/09/2014 12:24,,Team Airborn 12,13:45GMT    9.26m,not bridge,13:45,9.26,1.02,,,1h 21m,3.1,150.0,,,,,,
-11/09/2014 12:07,11/09/2014 11:07,,Champion Lallybop,12:24   GMT 9.90m,not bridge (400m downstream?),12:24,9.9,0.27,,,1h 17m,3.1,170.0,,,,date was wrong,,
-13/08/2014 10:40,13/08/2014 11:40,,pete+becky,12:47 GMT    9.82m,estimated,12:47,9.82,0.21,,,1h 7m,5.1,290.0,,,,must have been reported in GMT as it was stated to be about 10min late,,
-14/07/2014 12:01,14/07/2014 11:01,,Cwm DJ,Glad HT   13:18,bridge,12:18,9.68,0.53,,,30d 1h 17m,4.1,180.0,,,,,,
-28/06/2014 11:40,28/06/2014 10:40,,Harold’s Hawks,,bridge,11:40,8.81,1.65,,,243d 1h,3.1,50.0,,,,,,
-03/04/2014 13:10,03/04/2014 12:10,,Stillroaming,,bridge (I think),13:18,9.32,1.02,,,329d 1h 8m,3.6,150.0,,,,,,
-21/03/2014 12:33,21/03/2014 12:33,,hasenfreund,,bridge,13:46,8.96,1.52,,,342d 1h 13m,8.2,230.0,,,,,,
-03/01/2014 10:38,03/01/2014 10:38,,Wilderness-Girl,,bridge,12:14,10.13,0.84,,,1h 36m,9.3,200.0,,,,,,
-01/01/2014 09:20,01/01/2014 09:20,,smurphys,,bridge,10:36,9.67,1.26,,,1h 16m,4.1,150.0,,,,,,
-03/11/2013 09:13,03/11/2013 09:13,,StidentUK,Liverpool HT 10:30,estimated,10:31,9.49,1.30,,,1h 18m,4.1,250.0,,,,,,
-09/10/2013 13:25,09/10/2013 12:25,,andycop,,estimated,13:33,9.26,1.55,,,505d 1h 8m,6.7,280.0,,,,,,
-05/10/2013 11:00,05/10/2013 10:00,,harriers,,bridge,10:59,9.41,1.24,,,509d 0h 59m,2.6,240.0,,,,,,
-16/09/2013 08:10,16/09/2013 07:10,,steckerl family,,estimated,08:12,8.27,2.27,,,528d 1h 2m,4.6,270.0,,,,,,
-23/08/2013 12:20,23/08/2013 11:20,,4harrisons,,bridge,12:27,9.63,0.44,4.408,,552d 1h 7m,4.6,150.0,,,,,,
-23/08/2013 12:20,23/08/2013 11:20,,Mr Donut WP,,bridge,12:27,9.63,0.44,4.408,,552d 1h 7m,4.6,150.0,,,,,,
-13/08/2013 15:10,13/08/2013 14:10,,Gr & CJ Boz,,not bridge (200m downstream?),14:55,8.47,2.04,,,562d 0h 45m,5.1,320.0,,,,,,
-11/08/2013 13:30,11/08/2013 12:30,,MotteGray,,not bridge,13:35,8.90,1.51,,,564d 1h 5m,5.1,280.0,,,,,,
-07/08/2013 11:30,07/08/2013 10:30,,mel-ray,,estimated,11:22,8.85,1.65,,,568d 0h 52m,1.5,90.0,,,,,,
-14/07/2013 14:43,14/07/2013 13:43,,The Searchdog,,not bridge,14:39,8.37,1.99,,,592d 0h 56m,6.2,320.0,,,,,,
-14/07/2013 14:55,14/07/2013 13:55,,LSC!,,bridge,14:39,8.37,1.99,4.365,,592d 0h 44m,6.2,320.0,,,,,,
-13/07/2013 13:55,13/07/2013 12:55,,SpottyZzebra,,bridge,14:00,8.54,1.8,4.371,,593d 1h 5m,5.1,310.0,,,,,,
-13/07/2013 14:15,13/07/2013 13:15,,The Washers UK,,bridge,14:00,8.54,1.8,4.371,,593d 0h 45m,5.1,310.0,,,,,,
-13/07/2013 14:00,13/07/2013 13:00,,Harveyjj,,not bridge,14:00,8.54,1.8,,,593d 1h,5.1,310.0,,,,,,
-13/07/2013 13:56,13/07/2013 12:56,,linedanceres,,estimated,14:00,8.54,1.8,,,593d 1h 4m,5.1,310.0,,,,,,
-12/01/2013 10:00,12/01/2013 10:00,A,RoastBeef,Glad 11:13; 9.81m,bridge,11:13,9.85,1.07,4.58,,1h 13m,2.1,110.0,,,,,,
-16/12/2012 11:30,16/12/2012 11:30,,board pirates,,bridge,13:00,9.89,1.14,4.784,,1h 30m,4.6,160.0,,,,,,
-15/11/2012 10:20,15/11/2012 10:20,,ianscrim,Liv 11:34; 9.97m,bridge,11:34,10.01,0.87,4.498,,833d 1h 14m,1.5,130.0,est height 0.6 m,est speed 3.8 m/s,est river speed: 0.4 m/s,,13.68,
-14/10/2012 09:38,14/10/2012 08:38,,ScottP55,,bridge,09:48,9.25,1.41,4.662,,865d 1h 10m,0.5,150.0,,,,,,
-18/09/2012 11:00,18/09/2012 11:00,,leanro,,bridge,12:14,9.78,0.72,4.485,,891d 1h 13m 43s,8.2,280.0,,,,logged as GMT,,
-07/06/2012 12:50,07/06/2012 11:50,,Busbi,,maybe,13:04,9.28,0.74,,,994d 1h 14m,7.2,130.0,,,,,,
-08/04/2012 11:30,08/04/2012 10:30,,chilealan,,bridge,11:55,10.01,0.49,4.522,,1054d 1h 25m,5.1,320.0,,,,Kayak,,
-08/04/2012 11:05,08/04/2012 10:05,,the dirty duo,,blue bridge,11:55,10.01,0.49,,,1h 50m,5.1,320.0,,,,,,
-08/04/2012 11:05,08/04/2012 10:05,,j4pne,,Queensferry road bridge,11:55,10.01,0.49,,,1h 50m,5.1,320.0,est height 0.3 m,,,,,
-20/04/2011 11:28,20/04/2011 10:28,,fancysnave,,blue bridge,12:24,9.77,0.53,,,1h 56m,2.6,160.0,,,,,,
-19/02/2011 10:05,19/02/2011 10:05,,TinkYB,,bridge,11:41,10.05,0.75,4.605,,1468d 1h 36m,4.6,170.0,,,,,,
-08/10/2010 10:38,08/10/2010 09:38,,surfski1,,bridge,11:00,9.90,0.53,4.565,,1602d 1h 22m,4.6,140.0,,,,,,
-11/09/2010 12:25,11/09/2010 11:25,,Hartshorns,Liverpool HT 13:46,bridge,12:47,9.81,0.37,4.436,,1629d 1h 22m,7.2,250.0,,,,,,
-11/09/2010 12:25,11/09/2010 11:25,,bazylms,Liverpool HT 13:46 BST,bridge,12:47,9.81,0.37,4.436,,1629d 1h 22m,7.2,250.0,,,,,,
-10/09/2010 11:40,10/09/2010 10:40,,tech17,Liverpool HT 13:05 BST,bridge,12:06,9.97,0.20,4.41,,1630d 1h 26m,5.7,220.0,,,,,,
-16/07/2010 14:06,16/07/2010 13:06,,chesterhunter,Liv 9.15 m,bridge,14:22,9.17,0.78,4.386,,1686d 1h 16m,3.6,260.0,,,,,,
-01/03/2010 09:49,01/03/2010 09:49,,Littleowl1,,bridge,11:27,10.09,0.68,4.495,,1823d 1h 38m,0.0,0.0,,,,,,
-31/01/2010 10:11,31/01/2010 10:11,,Pe__,Liv HT 11:46; 9.9 m,bridge,11:46,9.99,0.92,4.571,,1852d 1h 35m,3.6,290.0,,,,diff -1h 35,,
-22/08/2009 12:02,22/08/2009 11:02,,Grayling Hunters,,bridge,12:15,9.73,0.26,4.439,,2014d 1h 13m,2.6,230.0,,,,,,
-23/07/2009 11:32,23/07/2009 10:32,,geowerm,,bridge,11:50,9.56,0.62,4.517,,2044d 1h 18m,5.1,230.0,,,,diff -1h 28,,
-28/03/2009 10:45,28/03/2009 10:45,,Velcro twins,Liv HT 9.5m,bridge,12:01,9.50,1.06,4.436,,2161d 1h 16m,7.7,320.0,,,,,,
-07/04/2008 11:20,07/04/2008 10:20,,lostnwet,Liv 11:40 GMT; 9.86m,bridge,11:40,9.91,0.74,4.557,,1h 20m,5.1,320.0,,,,,,
-23/03/2008 10:40,23/03/2008 10:40,,Fly Fifers,Liv HT 12:14; 9.48m,bridge,12:03,9.31,1.25,4.567,,1h 23m,6.2,350.0,,,,,,
-11/03/2008 11:57,11/03/2008 11:57,,PedroTheLion,,bridge,13:24,9.70,0.97,4.657,,1h 27m,5.7,150.0,,,,,,
-29/09/2007 12:09,29/09/2007 11:09,,usnu,,bridge,12:25,9.76,0.61,4.548,,1h 16m,2.6,70.0,,,,,,
-08/10/2006 10:37,08/10/2006 09:37,,Herts_Skip,,blue bridge,11:32,9.90,0.43,,,1h 55m,4.1,140.0,,,,,,
-08/10/2006 11:06,08/10/2006 10:06,,The Haywood Hornet,,bridge,11:32,9.90,0.43,4.664,,1h 26m,4.1,140.0,,,,,,
-29/04/2006 11:40,29/04/2006 10:40,,Tizzie,,bridge,11:53,9.69,0.75,4.438,,1h 13m,4.6,340.0,,,,,,
-21/08/2005 11:58,21/08/2005 10:58,,Skippy and Pingu,,bridge,12:09,9.66,0.38,4.396,,1h 11m,1.5,120.0,,,,,,
-21/08/2005 11:52,21/08/2005 10:52,,The Dean Team,Liv HT 12:20 GMT; 9.56m,bridge,12:09,9.66,0.38,4.396,,1h 17m,1.5,120.0,,,,,,
-25/04/2005 11:10,25/04/2005 10:10,,bluemike286,,Airbus,11:31,9.28,1.21,,,1h 21m,0.5,300.0,est height 0.35 m,,,,,
-23/04/2005 10:16,23/04/2005 09:16,,Sir PhilPamAndRob,9m 9s,bridge,10:23,8.90,1.72,,,1h 7m,3.6,80.0,,,,,,
-13/04/2005 13:45,13/04/2005 12:45,,wildtrekker,13:46 GMT,bridge,13:45,8.61,1.77,,,1h,1.0,190.0,est height 0.3 - 0.45 m,,,diff -1h 01,,
-10/04/2005 11:43,10/04/2005 10:43,,Cave TRoll and Eeyore,,bridge,11:59,9.69,0.81,,,1h 16m,7.7,290.0,,,,,,
+28/03/2021 10:16,28/03/2021 09:16,A,Tom,2021-03-28T11:47+0100 9.56 m,bridge,10:47,9.56,1.28,4.506,,1h 31m,5.1,200.0,1013.0,,,,"10:21 Tom:“a set of 10 to 15 very regular, very small (10cm) waves” Just in sight of the FB approaching from CTR. (53.18184837,-2.9344569). 830m past Saltney FB —> 3.7,5.9mins from FB —> FB@10:15 - 10:17",,
+02/03/2021 11:51,02/03/2021 11:51,A,Jeff,2021-03-02T13:11+0000 9.89 m,bridge,13:11,9.89,0.92,4.663,,1h 20m,5.1,160.0,1031.0,,,,"Cycled with Y,E,B. Rode 500m before FB with the bore. 0.4332 km in 2.07 mins. Similar speed towards Chester but it dissipated toward the sewage works. I recorded 1.22km in 6.36 mins, before it disappeared at The Cop.",12.56,11.51
+01/03/2021 11:11,01/03/2021 11:11,A,Tim,2021-03-01T12:31+0000 9.89 m,bridge,12:31,9.89,0.94,4.755,,1h 20m,3.1,170.0,1029.0,,,,A paddle boarder and 2 kayaks failed to catch the toddler.,,
+28/02/2021 10:32,28/02/2021 10:32,A,Mike/Giles,,bridge,11:52,9.72,1.14,4.822,,1h 20m,2.6,140.0,1038.0,,,,Mike said no bore at the weir. A tiddler at the bridge.,,
+15/11/2020 09:09,15/11/2020 09:09,A,Giles, 2020-11-15T10:43+0000 9.93 m,bridge,10:43,9.93,0.82,4.692,,1h 34m,4.6,190.0,986.0,,,,"Giles. 12.20km/h over 34m near Airbus pontoon at 09:02GMT, 1.46km from Saltney FB —> 7.18mins(7m11s) to get FB. Bore at Saltney FB: 09:09. Speed calc distance=34m",12.20,
+20/10/2020 13:18,20/10/2020 12:18,A,Jeff,,Edgars Field,13:14,9.65,1.04,4.524,,56m,6.2,170.0,995.0,,,,12.46km/h (5.4km in 26mins: Saltney FB to Edgars Field). Speed calc distance=5.4km,,12.46
+20/10/2020 12:52,20/10/2020 11:52,A,Carol,,bridge,13:14,9.65,1.04,4.524,,1h 22m,6.2,170.0,995.0,,,,12:53 it had passed by 200m. Guess 12:52 (at 10+ km/h),,
+19/10/2020 12:08,19/10/2020 11:08,A,Jeff,,bridge,12:30,9.98,0.62,4.535,,1h 22m,4.1,160.0,1011.0,,,,Jeff/Jake: Undulating bore. Almost caught it. Maxed out at 10.05km/h for 4s. Speed calc durations=4s,10.05,
+18/10/2020 11:54,18/10/2020 10:54,A,Jeff,,Greenway St,11:48,10.11,0.46,4.550,,54m,3.1,140.0,1023.0,,,,11.57km/h (5.4km in 28mins from Saltney FB to Greenway St.). Speed calc distance=5.4km,,11.57
+18/10/2020 11:26,18/10/2020 10:26,A,Giles,,bridge,11:48,10.11,0.46,4.550,,1h 22m,2.6,140.0,1023.0,,,,"Undulating bore. Giles rode it 524m at 13.12km/h. Came off at 11:18, 1.8km from FB => bore arrival 1.8*60/13.12 = 8.23 mins later, at 11:26. Speed calc distance=524m",13.12,
+17/10/2020 10:45,17/10/2020 09:45,A,A.S.S,12:06BST 10.05m,bridge,11:06,10.05,0.56,4.560,,1h 21m,2.1,320.0,1023.0,,,,Undulating bore. Time approximate as we were on the river as it happened,,
+16/10/2020 10:09,16/10/2020 09:09,A,Jeff/Carol/Owen,,bridge,10:24,9.78,0.89,4.582,,1h 15m,1.0,350.0,1027.0,,,,"Undulating bore. No white water. Kayak rider. 11.3km/h with a hint of slowing. Speed calc distance=1.46km (estimated from other log, actually Airbus to Saltney FB (6mins))",11.3,
+15/10/2020 21:42,15/10/2020 20:42,A,Tim/Tom,,bridge,21:58,9.7,1.57,4.601,,1h 16m,2.1,340.0,1027.0,,,,,,
+15/10/2020 09:20,15/10/2020 08:20,A,Carol,,bridge,09:42,9.33,1.41,4.621,,1h 22m,2.6,330.0,1028.0,,,,Carol got there 925am and it had passed the bridge. Estimated at 09:20,,
+19/09/2020 11:31,19/09/2020 10:31,A,Jeff,,blue bridge,12:12,10.00,0.42,4.428,,1h 41m,5.7,70.0,1021.0,,,,SUP,,
+19/09/2020 11:59,19/09/2020 10:59,,DMPB,Glad HT 12:12,bridge,12:12,10.00,0.42,4.428,,1h 13m,5.7,70.0,1021.0,,,,,,
+01/08/2020 21:32,01/08/2020 20:32,,Goldluna,,bridge,,,,,,,3.6,240.0,1016.0,,,,approx time,,
+17/09/2019 12:48,17/09/2019 11:48,,Soniaharry,,bridge,,,,,,,5.7,340.0,1027.0,,,,,,
+01/09/2019 12:10,01/09/2019 11:10,,coppy wanderers,,bridge,,,,,,,4.6,280.0,1017.0,,,,,,
+18/08/2019 12:49,18/08/2019 11:49,,Allyweir,,bridge,,,,,,,8.2,230.0,1000.0,,,,estimated. series of wavelets. seen at airbus,,
+05/08/2019 14:15,05/08/2019 13:15,,Kinghams,,bridge,,,,,,,4.1,250.0,1006.0,,,,estimated from near the bridge,,
+06/05/2019 11:34,06/05/2019 10:34,,Lime candy,,bridge,,,,,,,4.6,320.0,1023.0,,,,,,
+21/04/2019 12:08,21/04/2019 11:08,,TmGrandemotte,,bridge,,,,,,,5.1,150.0,1020.0,,,,,,
+20/04/2019 11:25,20/04/2019 10:25,,keenonkites,Glad HT 12:36BST 9.96m,bridge,,,,,,,3.1,150.0,1031.0,,,,undular,,
+08/04/2019 12:46,08/04/2019 11:46,,Glen Falcon Terrors,HT 8.6m,bridge,,,,,,,3.6,170.0,1012.0,,,,undular,,
+11/07/2018 21:42,11/07/2018 20:42,,fizzyvimto,,bridge,,,,,,,3.6,320.0,1022.0,,,,not sure that the date is right..,,
+29/10/2015 10:30,29/10/2015 10:30,,Cairz,,bridge,,,,,,,3.1,250.0,1007.0,,,,,,
+02/10/2015 13:03,02/10/2015 12:03,,Wasmiss,13:45GMT 9.39m,blue bridge,13:45,9.39,,,,1h 42m,3.6,160.0,1026.0,,,,,,
+29/09/2015 11:15,29/09/2015 10:15,,MrandMrsPlantsman,,bridge,,,,,,,2.1,150.0,1037.0,,,,,,
+20/06/2015 13:16,20/06/2015 12:16,,steveastapleton(sas),,bridge,13:27,8.58,1.52,,,1h 11m,1.0,340.0,1020.0,,,,anyTide,,
+18/04/2015 10:07,18/04/2015 09:07,A,RoastBeef,,bridge,10:31,9.91,0.80,4.434,,1h 24m,4.36,96.0,1031.0,,,,Bore speed 8.6km/h over 610m,8.6,
+08/04/2015 13:12,08/04/2015 12:12,A,RoastBeef,Glad HT 14:14,bridge,13:14,8.91,1.57,4.515,,1h 2m,1.87,127.0,1033.0,,,,waves not bore,,
+22/03/2015 10:49,22/03/2015 10:49,,twolittleducks,,bridge,12:22,10.33,0.30,4.485,,1h 33m,4.6,150.0,1028.0,,,,,,
+21/03/2015 10:10,21/03/2015 10:10,,Bazonka,,bridge,11:38,10.32,0.41,4.493,,1h 28m,4.6,10.0,1029.0,,,,anyTide,,
+24/02/2015 14:01,24/02/2015 14:01,,We4jessies,,bridge,14:57,9.23,1.49,,,56m,8.8,270.0,1006.0,,,,anyTide,,
+13/09/2014 13:24,13/09/2014 12:24,,Team Airborn 12,13:45GMT    9.26m,not bridge,13:45,9.26,1.02,,,1h 21m,3.1,150.0,1028.0,,,,,,
+11/09/2014 12:07,11/09/2014 11:07,,Champion Lallybop,12:24   GMT 9.90m,not bridge (400m downstream?),12:24,9.9,0.27,,,1h 17m,3.1,170.0,1023.0,,,,date was wrong,,
+13/08/2014 10:40,13/08/2014 11:40,,pete+becky,12:47 GMT    9.82m,estimated,12:47,9.82,0.21,,,1h 7m,5.1,290.0,1004.0,,,,must have been reported in GMT as it was stated to be about 10min late,,
+14/07/2014 12:01,14/07/2014 11:01,,Cwm DJ,Glad HT   13:18,bridge,12:18,9.68,0.53,,,30d 1h 17m,4.1,180.0,1012.0,,,,,,
+28/06/2014 11:40,28/06/2014 10:40,,Harold’s Hawks,,bridge,11:40,8.81,1.65,,,243d 1h,3.1,50.0,1011.0,,,,,,
+03/04/2014 13:10,03/04/2014 12:10,,Stillroaming,,bridge (I think),13:18,9.32,1.02,,,329d 1h 8m,3.6,150.0,1000.0,,,,,,
+21/03/2014 12:33,21/03/2014 12:33,,hasenfreund,,bridge,13:46,8.96,1.52,,,342d 1h 13m,8.2,230.0,1000.0,,,,,,
+03/01/2014 10:38,03/01/2014 10:38,,Wilderness-Girl,,bridge,12:14,10.13,0.84,,,1h 36m,9.3,200.0,983.0,,,,,,
+01/01/2014 09:20,01/01/2014 09:20,,smurphys,,bridge,10:36,9.67,1.26,,,1h 16m,4.1,150.0,989.0,,,,,,
+03/11/2013 09:13,03/11/2013 09:13,,StidentUK,Liverpool HT 10:30,estimated,10:31,9.49,1.30,,,1h 18m,4.1,250.0,997.0,,,,,,
+09/10/2013 13:25,09/10/2013 12:25,,andycop,,estimated,13:33,9.26,1.55,,,505d 1h 8m,6.7,280.0,1019.0,,,,,,
+05/10/2013 11:00,05/10/2013 10:00,,harriers,,bridge,10:59,9.41,1.24,,,509d 0h 59m,2.6,240.0,1020.0,,,,,,
+16/09/2013 08:10,16/09/2013 07:10,,steckerl family,,estimated,08:12,8.27,2.27,,,528d 1h 2m,4.6,270.0,999.0,,,,,,
+23/08/2013 12:20,23/08/2013 11:20,,4harrisons,,bridge,12:27,9.63,0.44,4.408,,552d 1h 7m,4.6,150.0,1013.0,,,,,,
+23/08/2013 12:20,23/08/2013 11:20,,Mr Donut WP,,bridge,12:27,9.63,0.44,4.408,,552d 1h 7m,4.6,150.0,1013.0,,,,,,
+13/08/2013 15:10,13/08/2013 14:10,,Gr & CJ Boz,,not bridge (200m downstream?),14:55,8.47,2.04,,,562d 0h 45m,5.1,320.0,1022.0,,,,,,
+11/08/2013 13:30,11/08/2013 12:30,,MotteGray,,not bridge,13:35,8.90,1.51,,,564d 1h 5m,5.1,280.0,1017.0,,,,,,
+07/08/2013 11:30,07/08/2013 10:30,,mel-ray,,estimated,11:22,8.85,1.65,,,568d 0h 52m,1.5,90.0,1016.0,,,,,,
+14/07/2013 14:43,14/07/2013 13:43,,The Searchdog,,not bridge,14:39,8.37,1.99,,,592d 0h 56m,6.2,320.0,1025.0,,,,,,
+14/07/2013 14:55,14/07/2013 13:55,,LSC!,,bridge,14:39,8.37,1.99,4.365,,592d 0h 44m,6.2,320.0,1025.0,,,,,,
+13/07/2013 13:55,13/07/2013 12:55,,SpottyZzebra,,bridge,14:00,8.54,1.8,4.371,,593d 1h 5m,5.1,310.0,1025.0,,,,,,
+13/07/2013 14:15,13/07/2013 13:15,,The Washers UK,,bridge,14:00,8.54,1.8,4.371,,593d 0h 45m,5.1,310.0,1025.0,,,,,,
+13/07/2013 14:00,13/07/2013 13:00,,Harveyjj,,not bridge,14:00,8.54,1.8,,,593d 1h,5.1,310.0,1025.0,,,,,,
+13/07/2013 13:56,13/07/2013 12:56,,linedanceres,,estimated,14:00,8.54,1.8,,,593d 1h 4m,5.1,310.0,1025.0,,,,,,
+12/01/2013 10:00,12/01/2013 10:00,A,RoastBeef,Glad 11:13; 9.81m,bridge,11:13,9.85,1.07,4.58,,1h 13m,2.1,110.0,1013.0,,,,,,
+16/12/2012 11:30,16/12/2012 11:30,,board pirates,,bridge,13:00,9.89,1.14,4.784,,1h 30m,4.6,160.0,997.0,,,,,,
+15/11/2012 10:20,15/11/2012 10:20,,ianscrim,Liv 11:34; 9.97m,bridge,11:34,10.01,0.87,4.498,,833d 1h 14m,1.5,130.0,1023.0,est height 0.6 m,est speed 3.8 m/s,est river speed: 0.4 m/s,,13.68,
+14/10/2012 09:38,14/10/2012 08:38,,ScottP55,,bridge,09:48,9.25,1.41,4.662,,865d 1h 10m,0.5,150.0,1003.0,,,,,,
+18/09/2012 11:00,18/09/2012 11:00,,leanro,,bridge,12:14,9.78,0.72,4.485,,891d 1h 13m 43s,8.2,280.0,1013.0,,,,logged as GMT,,
+07/06/2012 12:50,07/06/2012 11:50,,Busbi,,maybe,13:04,9.28,0.74,,,994d 1h 14m,7.2,130.0,992.0,,,,,,
+08/04/2012 11:30,08/04/2012 10:30,,chilealan,,bridge,11:55,10.01,0.49,4.522,,1054d 1h 25m,5.1,320.0,1011.0,,,,Kayak,,
+08/04/2012 11:05,08/04/2012 10:05,,the dirty duo,,blue bridge,11:55,10.01,0.49,,,1h 50m,5.1,320.0,1011.0,,,,,,
+08/04/2012 11:05,08/04/2012 10:05,,j4pne,,Queensferry road bridge,11:55,10.01,0.49,,,1h 50m,5.1,320.0,1011.0,est height 0.3 m,,,,,
+20/04/2011 11:28,20/04/2011 10:28,,fancysnave,,blue bridge,12:24,9.77,0.53,,,1h 56m,2.6,160.0,1016.0,,,,,,
+19/02/2011 10:05,19/02/2011 10:05,,TinkYB,,bridge,11:41,10.05,0.75,4.605,,1468d 1h 36m,4.6,170.0,1009.0,,,,,,
+08/10/2010 10:38,08/10/2010 09:38,,surfski1,,bridge,11:00,9.90,0.53,4.565,,1602d 1h 22m,4.6,140.0,1016.0,,,,,,
+11/09/2010 12:25,11/09/2010 11:25,,Hartshorns,Liverpool HT 13:46,bridge,12:47,9.81,0.37,4.436,,1629d 1h 22m,7.2,250.0,1010.0,,,,,,
+11/09/2010 12:25,11/09/2010 11:25,,bazylms,Liverpool HT 13:46 BST,bridge,12:47,9.81,0.37,4.436,,1629d 1h 22m,7.2,250.0,1010.0,,,,,,
+10/09/2010 11:40,10/09/2010 10:40,,tech17,Liverpool HT 13:05 BST,bridge,12:06,9.97,0.20,4.41,,1630d 1h 26m,5.7,220.0,1011.0,,,,,,
+16/07/2010 14:06,16/07/2010 13:06,,chesterhunter,Liv 9.15 m,bridge,14:22,9.17,0.78,4.386,,1686d 1h 16m,3.6,260.0,1005.0,,,,,,
+01/03/2010 09:49,01/03/2010 09:49,,Littleowl1,,bridge,11:27,10.09,0.68,4.495,,1823d 1h 38m,0.0,0.0,1010.0,,,,,,
+31/01/2010 10:11,31/01/2010 10:11,,Pe__,Liv HT 11:46; 9.9 m,bridge,11:46,9.99,0.92,4.571,,1852d 1h 35m,3.6,290.0,1004.0,,,,diff -1h 35,,
+22/08/2009 12:02,22/08/2009 11:02,,Grayling Hunters,,bridge,12:15,9.73,0.26,4.439,,2014d 1h 13m,2.6,230.0,1021.0,,,,,,
+23/07/2009 11:32,23/07/2009 10:32,,geowerm,,bridge,11:50,9.56,0.62,4.517,,2044d 1h 18m,5.1,230.0,999.0,,,,diff -1h 28,,
+28/03/2009 10:45,28/03/2009 10:45,,Velcro twins,Liv HT 9.5m,bridge,12:01,9.50,1.06,4.436,,2161d 1h 16m,7.7,320.0,1003.0,,,,,,
+07/04/2008 11:20,07/04/2008 10:20,,lostnwet,Liv 11:40 GMT; 9.86m,bridge,11:40,9.91,0.74,4.557,,1h 20m,5.1,320.0,1003.0,,,,,,
+23/03/2008 10:40,23/03/2008 10:40,,Fly Fifers,Liv HT 12:14; 9.48m,bridge,12:03,9.31,1.25,4.567,,1h 23m,6.2,350.0,1000.0,,,,,,
+11/03/2008 11:57,11/03/2008 11:57,,PedroTheLion,,bridge,13:24,9.70,0.97,4.657,,1h 27m,5.7,150.0,980.0,,,,,,
+29/09/2007 12:09,29/09/2007 11:09,,usnu,,bridge,12:25,9.76,0.61,4.548,,1h 16m,2.6,70.0,1016.0,,,,,,
+08/10/2006 10:37,08/10/2006 09:37,,Herts_Skip,,blue bridge,11:32,9.90,0.43,,,1h 55m,4.1,140.0,1015.0,,,,,,
+08/10/2006 11:06,08/10/2006 10:06,,The Haywood Hornet,,bridge,11:32,9.90,0.43,4.664,,1h 26m,4.1,140.0,1015.0,,,,,,
+29/04/2006 11:40,29/04/2006 10:40,,Tizzie,,bridge,11:53,9.69,0.75,4.438,,1h 13m,4.6,340.0,1023.0,,,,,,
+21/08/2005 11:58,21/08/2005 10:58,,Skippy and Pingu,,bridge,12:09,9.66,0.38,4.396,,1h 11m,1.5,120.0,1024.0,,,,,,
+21/08/2005 11:52,21/08/2005 10:52,,The Dean Team,Liv HT 12:20 GMT; 9.56m,bridge,12:09,9.66,0.38,4.396,,1h 17m,1.5,120.0,1024.0,,,,,,
+25/04/2005 11:10,25/04/2005 10:10,,bluemike286,,Airbus,11:31,9.28,1.21,,,1h 21m,0.5,300.0,1011.0,est height 0.35 m,,,,,
+23/04/2005 10:16,23/04/2005 09:16,,Sir PhilPamAndRob,9m 9s,bridge,10:23,8.90,1.72,,,1h 7m,3.6,80.0,1011.0,,,,,,
+13/04/2005 13:45,13/04/2005 12:45,,wildtrekker,13:46 GMT,bridge,13:45,8.61,1.77,,,1h,1.0,190.0,1006.0,est height 0.3 - 0.45 m,,,diff -1h 01,,
+10/04/2005 11:43,10/04/2005 10:43,,Cave TRoll and Eeyore,,bridge,11:59,9.69,0.81,,,1h 16m,7.7,290.0,1027.0,,,,,,
