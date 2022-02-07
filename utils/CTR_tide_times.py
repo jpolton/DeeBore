@@ -380,7 +380,7 @@ class Databucket():
         # with time variables time_highs and time_lows.
         self.glad_HLW = tg.find_high_and_low_water(var_str='sea_level')
 
-    def load_ctr(self):
+    def load_ctr(self, loc:str="ctr"):
         """
         load timeseries data.
         store as xr.dataArray
@@ -390,7 +390,7 @@ class Databucket():
         #ctr.dataset = xr.open_dataset("archive_shoothill/ctr_2021.nc")
         #ctr.dataset = ctr.dataset.sel( time=slice(np.datetime64('2021-03-31T06:00:00'), np.datetime64('2021-03-31T18:00:00')) )
 
-        ctr.dataset = xr.open_mfdataset("archive_shoothill/ctr_2020.nc")
+        ctr.dataset = xr.open_mfdataset("archive_shoothill/"+loc+"_2020.nc")
         #ctr.dataset = ctr.dataset.sel( time=slice(np.datetime64('2020-04-14T04:00:00'), np.datetime64('2020-04-16T18:00:00')) )
         #ctr.dataset = ctr.dataset.sel( time=slice(np.datetime64('2020-01-01T04:00:00'), np.datetime64('2020-04-16T18:00:00')) )
 
@@ -398,23 +398,39 @@ class Databucket():
         #ctr.dataset = xr.open_mfdataset("archive_shoothill/ctr2_20[12][17890].nc")
 
         #ctr_HLW = ctr.find_high_and_low_water(var_str='sea_level', method="cubic")
-        self.ctr = ctr
+
+        if loc == "ctr":
+            self.ctr = ctr
+        elif loc == "ctr2":
+            self.ctr2 = ctr
+        else:
+            print("Not expecting that station")
 
         #self.ctr_HLW = ctr_HLW
 
-    def load_liv(self):
+ 
+        
+    def load_shoothill_xr(self, loc:str="ctr"):
         """
         load timeseries data.
         store as xr.dataArray
         """
 
-        liv = GAUGE()
-        liv.dataset = xr.open_dataset("archive_shoothill/liv_2021.nc")
+        gauge = GAUGE()
+        gauge.dataset = xr.open_dataset("archive_shoothill/"+loc+"_2021.nc")
         #liv.dataset = xr.open_mfdataset("archive_shoothill/liv_20*.nc")
 
         #liv_HLW = liv.find_high_and_low_water(var_str='sea_level', method="cubic")
-        self.liv = liv
         #self.liv_HLW = liv_HLW
+        
+        if loc == "ctr":
+            self.ctr = gauge
+        elif loc == "ctr2":
+            self.ctr2 = gauge
+        elif loc =="liv":
+            self.liv = gauge
+        else:
+            print("Not expecting that station")
 
 class PickleJar():
     """ Class to handle pickle methods """
@@ -537,12 +553,17 @@ def find_similar_events():
     """
     
     liv_HT_t = np.datetime64('2021-12-19 11:09') # Time of reference Liv HT. Only used to time reference the plot time axis
-    liv_HT_h = 8.9 # Height of reference Liv HT (m)
+    liv_HT_h = 8.7 # Height of reference Liv HT (m)
     winsize = 0.1 # +/- increment on HT height (m) over which to search for similar tidal events
    
+    river = 4.55
+    winsize_riv = 0.05
+    
     data_bucket = Databucket()
     data_bucket.load_tidetable()
-    data_bucket.load_ctr()
+    data_bucket.load_shoothill_xr(loc="ctr")
+    data_bucket.load_shoothill_xr(loc="ctr2")
+    #data_bucket.load_shoothill_xr(loc="liv")
     
 
     HLW = "HW"
@@ -557,13 +578,18 @@ def find_similar_events():
     for event in time:
         if np.isfinite(event):
             ctr = data_bucket.ctr.dataset.sel(time=slice(event - np.timedelta64(1, "h"), event + np.timedelta64(2, "h")))
+            ctr2 = data_bucket.ctr2.dataset.sel(time=slice(event - np.timedelta64(1, "h"), event + np.timedelta64(2, "h")))
             #plt.plot( (ctr.time - event)/ np.timedelta64(1, 'm'), ctr.sea_level, label=time)
             #plt.xlabel('minutes after Liv HT (11:09)')
-            plt.plot( liv_HT_t + (ctr.time - event), ctr.sea_level, label=time)
-            plt.xlabel('time ')
-            plt.ylabel('Chester water level (m)')
-            plt.title('Chester water level scenarios, with 8.9m tides at Liverpool')
-            
+            if (ctr.sea_level[0].values < river + winsize_riv) \
+                    and (ctr.sea_level[0].values < river + winsize_riv) \
+                    and (ctr.sea_level[0].values > 1): # Bad values
+                plt.plot( liv_HT_t + (ctr.time - event), ctr.sea_level, label=time)
+                plt.plot( liv_HT_t + (ctr2.time - event), ctr2.sea_level, label=time)
+                plt.xlabel('time ')
+                plt.ylabel('Chester water level (m)')
+                plt.title('Chester water level (4.5-4.6m) scenarios, with 8.6-8.8m tides at Liverpool')
+                
             
             
 def main1():
