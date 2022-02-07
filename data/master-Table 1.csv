@@ -1,11 +1,29 @@
 date + logged time,date + logged time (GMT),Quality,logger,Liv HT (reported by logger),location,Liv (Gladstone Dock) HT time (GMT),Liv (Gladstone Dock) HT height (m),Liv (Gladstone Dock) prev. LT height (m),Chester Weir height: CHESTER WEIR 15 MIN SG,Dee at Ironbridge (m),Time difference: Glad-Saltney,wind_speed (m/s),wind_deg (from),pressure (hPa),,,,note,Queensferry to Saltney speed (km/h),Saltney to CTR speed (km/h)
+05/02/2022 12:33,05/02/2022 12:33,A,Jeff,Liv HT:     2022-02-05T13:58+0000 9.46 m,bridge,13:58,9.46,1.56,,4.594,1h 24m 28s,4.91638888888889,247.5,1012,,,,"{“D"":""WSW"",""G"":""23"",""H"":""82.5"",""P"":""1012"",""S"":""11"",""T"":""8.9"",""V"":""11000"",""W"":""12"",""Pt"":""F"",""Dp"":""6.1"",""$"":""780""}  3min 11s of ride (from video)
+Track segment: 561m / 2.67mins = 12.20 km/h
+An unremarkable tide, with significant surge forecast.
+",12.20,
+04/02/2022 11:55,04/02/2022 11:55,A,Jeff,Liv HT:     2022-02-04T13:19+0000 9.74 m,bridge,13:19,9.74,1.27,,4.529,1h 23m 35s,6.25722222222222,270,1009,,,,"Caught secondary waves
+
+{""D"":""W"",""G"":""29"",""H"":""66.8"",""P"":""1009"",""S"":""14"",""T"":""6.9"",""V"":""29000"",""W"":""3"",""Pt"":""R"",""Dp"":""1.2"",""$"":""720""}
+
+Speed pylons to FB: (11:55:25 - 11:46:35) 8:50 over  1.82km --> 12.36 km/h
+",12.36,
+03/02/2022 11:17,03/02/2022 11:17,,Jeff,"Liv HT:     2022-02-03T12:38+0000 9.86 m
+",bridge,12:38,9.86,1.16,,4.489,1h 21m,1.34083333333333,247.5,1011,,,,"FB time - predicted.{“D”:”WSW"",""G"":""11"",""H"":""73.0"",""P"":""1011"",""S"":""3"",""T"":""10.5"",""V"":""45000"",""W"":""8"",""Pt"":""F"",""Dp"":""5.9"",""$"":""660""} @basecamppb +1 caught it beyond the pontoon and rode past us. The hydraulic jump went straight through me, I barely registered a speed up. Tipped in. HiFly+double paddle.",,
+02/02/2022 10:29,02/02/2022 10:29,A,Jeff,Liv HT:     2022-02-02T11:54+0000 9.8 m,bridge,11:54,9.8,1.23,,4.497,1h 24m 50s,3.57555555555556,292.5,1022,,,,"{“D”:”WNW"",""G"":""18"",""P"":""1022"",""S"":""8"",""T"":""11.0"",""$"":""600""}. Kayaker rode it past.
+Small wave, lots of white water. 
+Caught it middle field, before special tree markers and some way past the culvert station. Nowhere looked particularly good as it approached, though on arrival the wave cleaned up on the Sealand rode side.
+Super tiring paddling with the double ender.
+
+Nice weather: the wind dropped; it was sunny and relatively warm (11degC)",,
+05/01/2022 11:23,05/01/2022 11:23,,Jeff,Liv HT:     2022-01-05T12:51+0000 9.75 m,bridge,12:51,9.75,1.4,,5.371,1h 27m 1s,3.57555555555556,315,1015,,,,"{“D”:”NW"",""S"":""8"",""$"":""660""} MO: pressure from camera. 6s on head, 12s on 2ndary. Speed pylons to FB: (11:23:59 - 11:16:32) 7:27 over 1.82km --> 14.56 km/h",14.56,
+04/01/2022 10:43,04/01/2022 10:43,A,Jeff,Liv HT:     2022-01-04T12:03+0000 9.78 m,bridge,12:03,9.78,1.31,,5.543,1h 20m,6.70416666666667,337.5,1003,,,,"{“D”:""NNW"",""H"":""65.1"",""P"":""1003"",""S"":""15"",""T"":""5.3"",""V"":""21000"",""W"":""1"",""Pt"":""R"",""Dp"":""-0.7"",""$"":""660""}MO: 11am: NNW, 15mph, 1003mbar",12.13,
 07/12/2021 11:50,07/12/2021 11:50,A,Nick,2021-12-07T12:59+0000 9.62 m,bridge,12:59,9.62,1.5,4.59159698138501,4.835,1h 8m 6s,11.1736111111111,135,984,,,,"MO 12pm: SE, 25mph. 10.92 km/h (Pylons to FB). 13.2 km/h past the pylons to the telegraph pole (500m)
 slow down over 300m 
 10.7 km/h  past the house towards the outlet (500m)
 11.6 km/h sped up past outlet (200m)
-10.8 km/h to FB
-
-",10.8,
+10.8 km/h to FB",10.8,
 06/12/2021 10:43,06/12/2021 10:43,A,Jeff,2021-12-06T12:10+0000 9.81 m,bridge,12:10,9.81,1.21,4.609491191771,4.894,1h 27m,6.70416666666667,180,1004,,,,"MO:10am S, 15mph. Nick, Jeff, Kester, Mike. Rode for 10s. Missed Nick, Hit Kester. Harder to estimate speed: Peak 14.05 km/h, ave to FB ~14.55 km/h
 ",14.55,
 05/12/2021 10:03,05/12/2021 10:03,A,Jeff,2021-12-05T11:23+0000 9.84 m,bridge,11:23,9.84,1.11,4.6152537340987,4.913,1h 19m 40s,6.25722222222222,315,1011,,,,"MO 10am: NW, 14mph. Ran with wave: 11.8km/h for 500m, then 12.8km/h for 500m. (0.41-0.12 km)/(2.02 - 0.62 mins)*60 = 12.43km/h. Watch Mike ride (47s) with E+E+N. Bore passed piers at 09:54:48",12.43,
@@ -57,7 +75,7 @@ Arrival detected as 'confused waters', then it deepened)",,11.17
 02/03/2021 11:51,02/03/2021 11:51,A,Jeff,2021-03-02T13:11+0000 9.89 m,bridge,13:11,9.89,0.92,4.663,,1h 20m,5.1,160.0,1031.0,,,,"Cycled with Y,E,B. Rode 500m before FB with the bore. 0.4332 km in 2.07 mins. Similar speed towards Chester but it dissipated toward the sewage works. I recorded 1.22km in 6.36 mins, before it disappeared at The Cop.",12.56,11.51
 01/03/2021 11:11,01/03/2021 11:11,A,Tim,2021-03-01T12:31+0000 9.89 m,bridge,12:31,9.89,0.94,4.755,,1h 20m,3.1,170.0,1029.0,,,,A paddle boarder and 2 kayaks failed to catch the toddler.,,
 28/02/2021 10:32,28/02/2021 10:32,A,Mike/Giles,,bridge,11:52,9.72,1.14,4.822,,1h 20m,2.6,140.0,1038.0,,,,Mike said no bore at the weir. A tiddler at the bridge.,,
-15/11/2020 09:09,15/11/2020 09:09,A,Giles, 2020-11-15T10:43+0000 9.93 m,bridge,10:43,9.93,0.82,4.692,,1h 34m,4.6,190.0,986.0,,,,"Giles. 12.20km/h over 34m near Airbus pontoon at 09:02GMT, 1.46km from Saltney FB —> 7.18mins(7m11s) to get FB. Bore at Saltney FB: 09:09. Speed calc distance=34m",12.20,
+x,15/11/2020 09:09,A,Giles, 2020-11-15T10:43+0000 9.93 m,bridge,10:43,9.93,0.82,4.692,,1h 34m,4.6,190.0,986.0,,,,"Giles. 12.20km/h over 34m near Airbus pontoon at 09:02GMT, 1.46km from Saltney FB —> 7.18mins(7m11s) to get FB. Bore at Saltney FB: 09:09. Speed calc distance=34m",12.20,
 20/10/2020 13:18,20/10/2020 12:18,A,Jeff,,Edgars Field,13:14,9.65,1.04,4.524,,56m,6.2,170.0,995.0,,,,12.46km/h (5.4km in 26mins: Saltney FB to Edgars Field). Speed calc distance=5.4km,,12.46
 20/10/2020 12:52,20/10/2020 11:52,A,Carol,,bridge,13:14,9.65,1.04,4.524,,1h 22m,6.2,170.0,995.0,,,,12:53 it had passed by 200m. Guess 12:52 (at 10+ km/h),,
 19/10/2020 12:08,19/10/2020 11:08,A,Jeff,,bridge,12:30,9.98,0.62,4.535,,1h 22m,4.1,160.0,1011.0,,,,Jeff/Jake: Undulating bore. Almost caught it. Maxed out at 10.05km/h for 4s. Speed calc durations=4s,10.05,
