@@ -117,7 +117,8 @@ def scatter_plot(ax, time, y, color, size, label=None ):
 
 #%% Save yearly data
 #for year in range(2010,2020+1):
-for year in range(2021,2021+1):
+#for year in range(2021,2021+1):
+for year in range(2022,2022+1):
 
     print(year)
     date_start = np.datetime64(str(year)+'-01-01')
