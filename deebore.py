@@ -383,7 +383,30 @@ class marine_gauge():
                     print(f"inflection points: {len(tg_HLW.dataset[time_var])}")
                 elif HLW == "HW" or HLW == "LW":
                     tg_HLW = win.find_high_and_low_water(var_str='sea_level',method='cubic')
-                    print(f"max points: {len(tg_HLW.dataset[time_var])}")
+                    if len(tg_HLW.dataset[time_var]) > 1:
+                        # should only find one extrema in window. Messy code to try and sort it. E.g. 6 Dec 2021
+                        print(f"Extrema points: {len(tg_HLW.dataset[time_var])}")
+                        if (tg_HLW.dataset[time_var].max() - tg_HLW.dataset[time_var].min()) < np.timedelta64(15,'m'):
+                            ave_sec = ((tg_HLW.dataset[time_var].max() - tg_HLW.dataset[time_var].min()) / np.timedelta64(1, 's')).values
+                            ave_time = tg_HLW.dataset[time_var].min().values + np.timedelta64(int(ave_sec*0.5), 's')
+                            tg_HLW.dataset = xr.Dataset({measure_var: (time_var, [tg_HLW.dataset[measure_var].mean().values])}, coords={time_var: [ave_time]})
+                        else:
+                            if HLW == "LW":
+                                ind = tg_HLW.dataset[measure_var].argmin().values
+                            elif HLW == "HW":
+                                ind = tg_HLW.dataset[measure_var].argmax().values
+
+                            tmp = tg_HLW
+                            tg_HLW = GAUGE()
+                            tg_HLW.dataset = xr.Dataset({measure_var: (time_var, [tmp.dataset[measure_var][ind].values])},
+                                                        coords={time_var: [tmp.dataset[time_var][ind].values]})
+                        print(f"NEW extrema points: {len(tg_HLW.dataset[time_var])}")
+                        #plt.plot(win.dataset['time'], win.dataset['sea_level'], 'k.');
+                        #plt.plot(tg_HLW.dataset['time_highs'], tg_HLW.dataset['sea_level_highs'], 'r.');
+                        #plt.plot(tg_HLW.dataset['time_lows'], tg_HLW.dataset['sea_level_lows'], 'b.');
+                        #plt.ylim([10.01, 10.04]);
+                        #plt.xlim([np.datetime64('2021-12-06 11:20'), np.datetime64('2021-12-06 12:40')]);
+                        #plt.show()
                 else:
                     print(f"This should not have happened... HLW:{HLW}")
         else:
