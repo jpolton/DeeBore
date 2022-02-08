@@ -1541,9 +1541,29 @@ class Controller():
         print('Predict bore event for date')
         filnam = '/Users/jeff/GitHub/DeeBore/data/Liverpool_2021_2022_HLW.txt'
 
-        nd = input('Make predictions for N days from hence (int):?')
-        day = np.datetime64('now', 'D') + np.timedelta64(int(nd), 'D')
-        dayp1 = day + np.timedelta64(24, 'h')
+        looper = True
+        while looper:
+            nd = input('Make predictions for N days from hence (int), or a date range (R):?')
+            print(f"type {type(nd)}")
+
+            if (nd == "R") or (nd == "r"):
+                yyyy = input('start year (yyyy)?')
+                mm = input('start mon (mm)?')
+                dd = input('start day (dd)?')
+                day = np.datetime64('{0}-{1}-{2}'.format(yyyy,mm,dd))
+                yyyy = input('end year (yyyy)?')
+                mm = input('end mon (mm)?')
+                dd = input('end day (dd)?')
+                dayp1 = np.datetime64('{0}-{1}-{2}'.format(yyyy,mm,dd))
+                looper = False
+
+            else:
+                try:
+                    day = np.datetime64('now', 'D') + np.timedelta64(int(nd), 'D')
+                    dayp1 = day + np.timedelta64(24, 'h')
+                    looper = False
+                except: pass
+
 
         if(1): # np.datetime64('now', 'Y') < np.datetime64('2021'): # year 2020
             print("predict_bore(): should check is table data is available. If not use harm reconstructed data")
@@ -1579,6 +1599,7 @@ class Controller():
             #print( "Gladstone HT", np.datetime_as_string(HT.time[i], unit='m',timezone=pytz.timezone('UTC')),"(GMT). Height: {:.2f} m".format(  HT.values[i]))
             #print(" Saltney arrival", np.datetime_as_string(Saltney_time_pred[i], unit='m', timezone=pytz.timezone('Europe/London')),"(GMT/BST). Lag: {:.0f} mins".format( lag_pred[i] ))
             print("Predictions for ", day_of_week(Saltney_time_pred[i]), Saltney_time_pred[i].astype('datetime64[s]').astype(datetime.datetime).strftime('%Y/%m/%d') )
+            print("Saltney put-in: ", np.datetime_as_string(Saltney_time_pred[i] - np.timedelta64(30, 'm'), unit='m', timezone=pytz.timezone('Europe/London')))
             print("Saltney FB:", np.datetime_as_string(Saltney_time_pred[i], unit='m', timezone=pytz.timezone('Europe/London')) )
             try:
                 Glad_HLW = tg.get_tide_table_times( Saltney_time_pred[i], method='nearest_2' )
