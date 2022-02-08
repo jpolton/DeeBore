@@ -20,6 +20,8 @@ Conda environment:
 
     ## install request for shoothill server requests
     conda install requests
+    ## ical integration
+    conda install ics
 
 Example usage:
     python deebore.py
@@ -1518,6 +1520,7 @@ class Controller():
     ############################################################################
 
     def predict_bore(self, source:str='harmonic', HLW:str="HW"):
+        from ics import Calendar, Event
         """
         Predict the bore timing at Saltney for a request input date (given in
         days relative to now).
@@ -1544,7 +1547,6 @@ class Controller():
         looper = True
         while looper:
             nd = input('Make predictions for N days from hence (int), or a date range (R):?')
-            print(f"type {type(nd)}")
 
             if (nd == "R") or (nd == "r"):
                 yyyy = input('start year (yyyy)?')
@@ -1594,22 +1596,36 @@ class Controller():
                              + np.timedelta64(int(round(lag_pred[i])), 'm')
                              for i in range(len(lag_pred))]
         # Iterate over high tide events to print useful information
+        c = Calendar()
+
         print(f"Predictions based on fit to {source} {HLW} data")
         for i in range(len(lag_pred)):
-            #print( "Gladstone HT", np.datetime_as_string(HT.time[i], unit='m',timezone=pytz.timezone('UTC')),"(GMT). Height: {:.2f} m".format(  HT.values[i]))
-            #print(" Saltney arrival", np.datetime_as_string(Saltney_time_pred[i], unit='m', timezone=pytz.timezone('Europe/London')),"(GMT/BST). Lag: {:.0f} mins".format( lag_pred[i] ))
-            print("Predictions for ", day_of_week(Saltney_time_pred[i]), Saltney_time_pred[i].astype('datetime64[s]').astype(datetime.datetime).strftime('%Y/%m/%d') )
-            print("Saltney put-in: ", np.datetime_as_string(Saltney_time_pred[i] - np.timedelta64(30, 'm'), unit='m', timezone=pytz.timezone('Europe/London')))
-            print("Saltney FB:", np.datetime_as_string(Saltney_time_pred[i], unit='m', timezone=pytz.timezone('Europe/London')) )
+            e = Event()
+            description = ""
+            description += ("Predictions for "+day_of_week(Saltney_time_pred[i])+" "+Saltney_time_pred[i].astype('datetime64[s]').astype(datetime.datetime).strftime('%Y/%m/%d')+'\n')
+            put_in = np.datetime_as_string(Saltney_time_pred[i] - np.timedelta64(30, 'm'), unit='m', timezone=pytz.timezone('Europe/London'))
+            description += "Saltney put-in: " + put_in + '\n'
+            description += ("Saltney FB:"+ np.datetime_as_string(Saltney_time_pred[i], unit='m', timezone=pytz.timezone('Europe/London')) +'\n')
             try:
                 Glad_HLW = tg.get_tide_table_times( Saltney_time_pred[i], method='nearest_2' )
                 # Extract the High Tide value
-                print('Liv HT:    ', np.datetime_as_string(Glad_HLW[ np.argmax(Glad_HLW.values) ].time.values, unit='m', timezone=pytz.timezone('Europe/London')), Glad_HLW[ np.argmax(Glad_HLW.values) ].values, 'm' )
+                liv_ht = str(Glad_HLW[ np.argmax(Glad_HLW.values) ].values)+ 'm'
+                description += 'Liv HT:    '+np.datetime_as_string(Glad_HLW[ np.argmax(Glad_HLW.values) ].time.values, unit='m', timezone=pytz.timezone('Europe/London'))+" "+ liv_ht +'\n'
                 # Extract the Low Tide value
-                print('Liv LT:    ', np.datetime_as_string(Glad_HLW[ np.argmin(Glad_HLW.values) ].time.values, unit='m', timezone=pytz.timezone('Europe/London')), Glad_HLW[ np.argmin(Glad_HLW.values) ].values, 'm' )
+                liv_lt = str(Glad_HLW[ np.argmin(Glad_HLW.values) ].values)+ 'm'
+                description += 'Liv LT:    '+np.datetime_as_string(Glad_HLW[ np.argmin(Glad_HLW.values) ].time.values, unit='m', timezone=pytz.timezone('Europe/London'))+" "+ liv_lt +'\n'
             except:
                 pass
+            print(description)
             print("")
+            e.name = liv_ht
+            e.begin = put_in
+            e.description = description
+            c.events.add(e)
+            #c.events
+
+        with open('Saltney.ics', 'w') as my_file:
+            my_file.writelines(c)
 
         #plt.scatter( Saltney_time_pred, HT ,'.');plt.show()
         # problem with time stamp
