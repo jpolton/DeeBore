@@ -31,35 +31,421 @@ To do:
 """
 
 import os
-import sys
+#import sys
 import datetime
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 import xarray as xr
-import sklearn.metrics as metrics
+#import sklearn.metrics as metrics
 import pytz
 import pickle
 
-
-if(0): # Use the COAsT files, in e.g. coast_dev
-    coastdir = os.path.dirname('/Users/jeff/GitHub/COAsT/coast')
-    sys.path.insert(0, coastdir)
-    from coast.tidegauge import Tidegauge
-    from coast.general_utils import day_of_week
-    from coast.stats_util import find_maxima
-else: # Use the COAsT package in e.g. workshop_env
-    #from coast.tidegauge import Tidegauge
-    from shoothill_api.shoothill_api import GAUGE
-    from coast.general_utils import day_of_week
-    from coast.stats_util import find_maxima
+from shoothill_api.shoothill_api import GAUGE
+from coast.general_utils import day_of_week
+#from coast.stats_util import find_maxima
 
 
-import scipy.signal # find_peaks
+#import scipy.signal # find_peaks
 
 import logging
 logging.basicConfig(filename='bore.log', filemode='w+')
 logging.getLogger().setLevel(logging.DEBUG)
+
+
+class GladstoneTideTable:
+    """
+    if source == "harmonic": # Load tidetable data from files
+    tg = GladstoneTideTable().to_tidegauge()
+    """
+    def __init__(self):
+
+        logging.info("Get Gladstone HLW data")
+        filnam1 = '/Users/jeff/GitHub/DeeBore/data/Liverpool_2005_2014_HLW.txt'
+        filnam2 = '/Users/jeff/GitHub/DeeBore/data/Liverpool_2015_2020_HLW.txt'
+        filnam3 = '/Users/jeff/GitHub/DeeBore/data/Liverpool_2021_2022_HLW.txt'
+        tg  = GAUGE()
+        tg1 = GAUGE()
+        tg2 = GAUGE()
+        tg3 = GAUGE()
+        tg1.dataset = tg1.read_hlw_to_xarray(filnam1)#, self.bore.time.min().values, self.bore.time.max().values)
+        tg2.dataset = tg2.read_hlw_to_xarray(filnam2)#, self.bore.time.min().values, self.bore.time.max().values)
+        tg3.dataset = tg3.read_hlw_to_xarray(filnam3)#, self.bore.time.min().values, self.bore.time.max().values)
+        tg.dataset = xr.concat([ tg1.dataset, tg2.dataset, tg3.dataset], dim='time')
+        self.tg = tg
+
+    def to_tidegauge(self):
+        return self.tg
+
+
+class BODC:
+    """
+    if source == "bodc": # Load gauge data from BODC files
+    tg = BODC().to_tidegauge()
+    """
+    def __init__(self):
+        dir = '/Users/jeff/GitHub/DeeBore/data/BODC_processed/'
+        filelist = ['2005LIV.txt',
+        '2006LIV.txt', '2007LIV.txt',
+        '2008LIV.txt', '2009LIV.txt',
+        '2010LIV.txt', '2011LIV.txt',
+        '2012LIV.txt', '2013LIV.txt',
+        '2014LIV.txt', '2015LIV.txt',
+        '2016LIV.txt', '2017LIV.txt',
+        '2018LIV.txt', '2019LIV.txt',
+        '2020LIV.txt', '2021LIV.txt']
+        #'LIV2201.txt', 'LIV2202.txt']
+        tg  = GAUGE()
+        for file in filelist:
+            tg0=GAUGE()
+            tg0.dataset = tg0.read_bodc_to_xarray(dir+file)
+            if tg.dataset is None:
+                tg.dataset = tg0.dataset
+            else:
+                tg.dataset = xr.concat([ tg.dataset, tg0.dataset], dim='time')
+        # Use QC to drop null values
+        #tg.dataset['sea_level'] = tg.dataset.sea_level.where( np.logical_or(tg.dataset.qc_flags=='', tg.dataset.qc_flags=='T'), drop=True)
+        tg.dataset['sea_level'] = tg.dataset.sea_level.where( tg.dataset.qc_flags!='N', drop=True)
+        # Fix some attributes (others might not be correct for all data)
+        tg.dataset['start_date'] = tg.dataset.time.min().values
+        tg.dataset['end_date'] = tg.dataset.time.max().values
+        self.tg = tg
+
+    def to_tidegauge(self):
+        return self.tg
+
+
+class GladstoneAPI:
+    """
+    if source == "api": # load full tidal signal from shoothill
+    tg = GladstoneAPI().to_tidegauge()
+    """
+    def __init__(self):
+
+
+        date_start=np.datetime64('2005-04-01')
+        date_end=np.datetime64('now','D')
+        fn_archive = "liv" # File head for netcdf archive of api call
+
+        # Load timeseries from local file if it exists
+        try:
+            tg1 = GAUGE()
+            tg2 = GAUGE()
+            tg = GAUGE()
+
+            # Load local file. Created with archive_shoothill.py
+            dir = "archive_shoothill/"
+            tg1.dataset = xr.open_mfdataset(dir + fn_archive + "_????.nc") # Tidal port Gladstone Dock, Liverpool
+            tg1.dataset = tg1.dataset.sel(time=slice(date_start, date_end))
+            print(f"{len(tg1.dataset.time)} pts loaded from netcdf")
+            if (tg1.dataset.time[-1].values < date_end):
+                tg2 = GAUGE()
+                tg2.dataset = tg2.read_shoothill_to_xarray(date_start=tg1.dataset.time[-1].values, date_end=date_end)
+                tg.dataset = xr.concat([ tg1.dataset, tg2.dataset], dim='time')
+                print(f"{len(tg2.dataset.time)} pts loaded from API")
+            else:
+                tg = tg1
+        except:
+            tg.dataset = tg.read_shoothill_to_xarray(date_start=date_start, date_end=date_end)
+
+        self.tg = tg
+
+    def to_tidegauge(self):
+        return self.tg
+
+
+class ChesterAPI:
+    """
+    if source == "ctr": # use api to load chester weir.
+    tg = ChesterAPI().to_tidegauge()
+    """
+    def __init__(self):
+
+        tg = GAUGE()
+        date_start=np.datetime64('2014-01-01')
+        date_end=np.datetime64('now','D')
+        #station_id = 7900 # below weir
+        station_id = 7899 # above weir
+        fn_archive = "ctr" # File head for netcdf archive of api call
+
+        # Load timeseries from local file if it exists
+        try:
+            tg1 = GAUGE()
+            tg2 = GAUGE()
+            tg = GAUGE()
+
+            # Load local file. Created with archive_shoothill.py
+            dir = "archive_shoothill/"
+            tg1.dataset = xr.open_mfdataset(dir + fn_archive + "_????.nc") # Tidal port Gladstone Dock, Liverpool
+            tg1.dataset = tg1.dataset.sel(time=slice(date_start, date_end))
+            print(f"{len(tg1.dataset.time)} pts loaded from netcdf")
+            if (tg1.dataset.time[-1].values < date_end):
+                tg2 = GAUGE()
+                tg2.dataset = tg2.read_shoothill_to_xarray(station_id=station_id, date_start=tg1.dataset.time[-1].values, date_end=date_end)
+                tg.dataset = xr.concat([ tg1.dataset, tg2.dataset], dim='time')
+                print(f"{len(tg2.dataset.time)} pts loaded from API")
+            else:
+                tg = tg1
+        except:
+            tg.dataset = tg.read_shoothill_to_xarray(station_id=station_id ,date_start=date_start, date_end=date_end)
+
+        self.tg = tg
+
+    def to_tidegauge(self):
+        return self.tg
+
+
+class IronbridgeAPI:
+    """
+    if source == "ctr": # use api to load chester weir
+    tg = IronbridgeAPI().to_tidegauge()
+    """
+    def __init__(self):
+
+        tg = GAUGE()
+        date_start=np.datetime64('2014-01-01')
+        date_end=np.datetime64('now','D')
+
+        station_id = 968
+        fn_archive = "iron"
+
+        # Load timeseries from local file if it exists
+        try:
+            tg1 = GAUGE()
+            tg2 = GAUGE()
+            tg = GAUGE()
+
+            # Load local file. Created with archive_shoothill.py
+            dir = "archive_shoothill/"
+            tg1.dataset = xr.open_mfdataset(dir + fn_archive + "_????.nc") # Tidal port Gladstone Dock, Liverpool
+            tg1.dataset = tg1.dataset.sel(time=slice(date_start, date_end))
+            print(f"{len(tg1.dataset.time)} pts loaded from netcdf")
+            if (tg1.dataset.time[-1].values < date_end):
+                tg2 = GAUGE()
+                tg2.dataset = tg2.read_shoothill_to_xarray(station_id=station_id, date_start=tg1.dataset.time[-1].values, date_end=date_end)
+                tg.dataset = xr.concat([ tg1.dataset, tg2.dataset], dim='time')
+                print(f"{len(tg2.dataset.time)} pts loaded from API")
+            else:
+                tg = tg1
+        except:
+            tg.dataset = tg.read_shoothill_to_xarray(station_id=station_id ,date_start=date_start, date_end=date_end)
+
+        self.tg = tg
+
+    def to_tidegauge(self):
+        return self.tg
+
+
+
+class GladstoneHarmonicReconstruction:
+    """
+    if source == 'harmonic_rec': # load full tidal signal using anyTide code
+    tg = GladstoneHarmonicReconstruction().to_tidegauge()
+    """
+    def __init__(self):
+        tg = GAUGE()
+        #date_start=np.datetime64('now')
+        #ndays = 5
+        #tg.dataset = tg.anyTide_to_xarray(date_start=date_start, ndays=5)
+        date_start=np.datetime64('2005-04-01')
+        date_end=np.datetime64('now','D')
+        tg.dataset = tg.anyTide_to_xarray(date_start=date_start, date_end=date_end)
+        self.tg = tg
+
+    def to_tidegauge(self):
+        return self.tg
+
+
+
+class Stats():
+    """
+    Class to handle RMS and best line fits.
+
+    mask = self.bore['Quality'].values=="A"
+    """
+    def __init__(cls, X, Y, mask):
+        cls.X = X
+        cls.Y = Y
+        cls.mask = mask
+
+    def linearfit(cls, X , Y):
+        """
+        Linear regression. Calculates linear fit weights and RMSE
+
+        Is used after computing the lag between Gladstone and Saltney events,
+            during load_and_process(), to find a fit between Liverpool heights
+            and Saltney arrival lag.
+
+        Returns polynomal function for linear fit that can be used in reconstruction:
+        E.g.
+        X=range(10)
+        np.poly1d(weights)( range(10) )
+
+        Also returns RMSE
+        """
+        idx = np.isfinite(X).values & np.isfinite(Y).values
+        weights = np.polyfit( X[idx], Y[idx], 1)
+        logging.debug("weights: {weights}")
+        #self.linfit = np.poly1d(weights)
+        #self.bore['linfit_lag'] =  self.linfit(X)
+        #self.bore.attrs['weights'] = np.poly1d(weights)
+        #self.bore.attrs['weights'](range(10))
+        Y_fit = np.poly1d(weights)(X)
+        rmse = '{:4.1f} mins'.format( np.sqrt(np.nanmean((Y.values - Y_fit)**2)) )
+        return np.poly1d(weights), rmse
+
+    def linear_fit_classA(cls):
+        """ Only fit to values where mask==1 """
+        weights,rmse = cls.linearfit( cls.X.where( cls.mask ),
+                    cls.Y.where( cls.mask ) )
+        #print(f"{cls.source} class A| {cls.args['label']}: {rmse}")
+        return weights, rmse
+
+    def linear_fit_all(cls):
+        """ Fit to all values """
+
+        weights,rmse = cls.linearfit( cls.X, cls.Y )
+        #print(f"{cls.source} all | {cls.args['label']}: {rmse}")
+
+        return weights, rmse
+
+
+
+class marine_gauge():
+    """
+    Process event for a 'deep water' tide. I.e. harmonic
+
+    ref_time [np.datetime64] - time about which to search. Also called guess_time, or time of observation
+    HLW [str] HW/LW/FW/EW - switch controlling parameters related to the tidal state of interest
+    source [str] bodc/harmonic/api/ctr/harmonic_rec - data source
+    winsize [int] +/- hrs to search around ref_time
+    """
+    def __init__(self, tg:GAUGE=None, ref_time:np.datetime64=None,
+                HLW:str="HW", source:str="bodc", winsize:int=6):
+        self.winsize = winsize
+        self.ref_time = ref_time
+        self.HLW = HLW
+        self.source   = source
+        self.tg = tg
+        if ref_time == None:
+            print("Expected an input time: ref_time")
+            return
+        if tg == None:
+            print("Expected an input gauge dataset: tg")
+            return
+
+    def get_event(cls):
+        """ Get HW, LW, FW, EW event. Return single height and time."""
+
+        HW = None
+        LW = None
+        tg = cls.tg
+        obs_time = cls.ref_time
+        HLW = cls.HLW
+        source = cls.source
+        winsize = cls.winsize
+
+        if HLW == 'HW':
+            time_var = 'time_highs'
+            measure_var = 'sea_level_highs'
+        elif HLW == 'LW':
+            time_var = 'time_lows'
+            measure_var = 'sea_level_lows'
+        elif HLW == 'FW':
+            time_var = 'time_flood'
+            measure_var = 'sea_level_flood'
+        elif HLW == 'EW':
+            time_var = 'time_ebb'
+            measure_var = 'sea_level_ebb'
+        else:
+            print('This should not have happened...')
+
+        # Extracting the highest and lowest value with a cubic spline is
+        # very memory costly. Only need to use the cubic method for the
+        # bodc and api sources, so compute the high and low waters in a
+        # piecewise approach around observations times.
+        if source == "bodc" or source == "api":
+            # This produces an xr.dataset with sea_level_highs and sea_level_lows
+            # with time variables time_highs and time_lows.
+            win = GAUGE()
+            win.dataset = tg.dataset.sel( time=slice(obs_time - np.timedelta64(winsize, "h"), obs_time + np.timedelta64(winsize, "h"))  )
+            #if HLW == "LW":
+            #    print(f"win.dataset {win.dataset}")
+            #print(i," win.dataset.time.size", win.dataset.time.size)
+            if win.dataset.time.size == 0:
+                tg_HLW = GAUGE()
+                tg_HLW.dataset = xr.Dataset({measure_var: (time_var, [np.NaN])}, coords={time_var: [obs_time]})
+            else:
+                if HLW == "FW" or HLW == "EW":
+                    tg_HLW = win.find_flood_and_ebb_water(var_str='sea_level',method='cubic')
+                    #print(f"inflection point time: {tg_HLW.dataset[time_var]}")
+                    print(f"inflection points: {len(tg_HLW.dataset[time_var])}")
+                elif HLW == "HW" or HLW == "LW":
+                    tg_HLW = win.find_high_and_low_water(var_str='sea_level',method='cubic')
+                    if len(tg_HLW.dataset[time_var]) > 1:
+                        # should only find one extrema in window. Messy code to try and sort it. E.g. 6 Dec 2021
+                        print(f"Extrema points: {len(tg_HLW.dataset[time_var])}")
+                        if (tg_HLW.dataset[time_var].max() - tg_HLW.dataset[time_var].min()) < np.timedelta64(15,'m'):
+                            ave_sec = ((tg_HLW.dataset[time_var].max() - tg_HLW.dataset[time_var].min()) / np.timedelta64(1, 's')).values
+                            ave_time = tg_HLW.dataset[time_var].min().values + np.timedelta64(int(ave_sec*0.5), 's')
+                            tg_HLW.dataset = xr.Dataset({measure_var: (time_var, [tg_HLW.dataset[measure_var].mean().values])}, coords={time_var: [ave_time]})
+                        else:
+                            if HLW == "LW":
+                                ind = tg_HLW.dataset[measure_var].argmin().values
+                            elif HLW == "HW":
+                                ind = tg_HLW.dataset[measure_var].argmax().values
+
+                            tmp = tg_HLW
+                            tg_HLW = GAUGE()
+                            tg_HLW.dataset = xr.Dataset({measure_var: (time_var, [tmp.dataset[measure_var][ind].values])},
+                                                        coords={time_var: [tmp.dataset[time_var][ind].values]})
+                        print(f"NEW extrema points: {len(tg_HLW.dataset[time_var])}")
+                        #plt.plot(win.dataset['time'], win.dataset['sea_level'], 'k.');
+                        #plt.plot(tg_HLW.dataset['time_highs'], tg_HLW.dataset['sea_level_highs'], 'r.');
+                        #plt.plot(tg_HLW.dataset['time_lows'], tg_HLW.dataset['sea_level_lows'], 'b.');
+                        #plt.ylim([10.01, 10.04]);
+                        #plt.xlim([np.datetime64('2021-12-06 11:20'), np.datetime64('2021-12-06 12:40')]);
+                        #plt.show()
+                else:
+                    print(f"This should not have happened... HLW:{HLW}")
+        else:
+            tg_HLW = tg.find_high_and_low_water(var_str='sea_level')
+
+        HW = tg_HLW.get_tide_table_times(
+                                time_guess=obs_time,
+                                time_var=time_var,
+                                measure_var=measure_var,
+                                method='nearest_1',
+                                winsize=winsize ) #4h for HW, 6h for LW
+
+        #print("time,HW:",obs_time, HW.values)
+        #if type(HW) is xr.DataArray: ## Actually I think they are alway xr.DataArray with time, but the height can be nan.
+            #print(f"HW: {HW}")
+            #HT_h.append( HW.values )
+            #print('len(HT_h)', len(HT_h))
+            #HT_t.append( HW[time_var].values )
+            #print('len(HT_t)', len(HT_t))
+            #self.bore['LT_h'][i] = HLW.dataset.sea_level[HLW.dataset['sea_level'].argmin()]
+            #self.bore['LT_t'][i] = HLW.dataset.time[HLW.dataset['sea_level'].argmin()]
+            #ind.append(i)
+            #print(f"i:{i}, {HT_t[-1].astype('M8[ns]').astype('M8[ms]').item()}" )
+            #print(HT_t[-1].astype('M8[ns]').astype('M8[ms]').item().strftime('%Y-%m-%d'))
+
+            ### PLOTTING, plot_event(), WENT HERE
+
+        #else:
+        #    logging.info(f"Did not find a high water near this guess")
+        #    print(f"Did not find a high water near this guess")
+
+        if len(HW.coords) != 1:
+            print(f"Only one event was expected. {len(HW.coords)} events found!")
+
+        return HW
+
+
+
+
 
 ################################################################################
 class OpenWeather:
@@ -100,6 +486,7 @@ class OpenWeather:
         Coordinates:
           * time        (time) datetime64[ns] 2005-01-01 ... 2021-11-08T23:00:00
         Data variables:
+            pressure    (time) int64 1024 1023 1022 1022 1021 ... 1019 1017 1018 1017
             wind_speed  (time) float64 1.5 2.6 4.6 4.1 5.1 ... 3.6 4.12 0.89 4.02 2.68
             wind_deg    (time) int64 150 170 200 220 210 200 ... 180 190 210 117 239 226
             longitude   float64 53.18
@@ -131,7 +518,7 @@ class OpenWeather:
 
         Returns
         -------
-        xarray.Dataset containing times, wind_speed, wind_deg, lat, lon, city_name
+        xarray.Dataset containing times, wind_speed, wind_deg, pressure, lat, lon, city_name
         """
         import datetime
 
@@ -143,7 +530,7 @@ class OpenWeather:
         data.rename(columns={'dt_iso':'time'}, inplace=True)
         data.set_index('time', inplace=True)
         data.drop(columns=['dt', 'timezone', 'temp',
-           'feels_like', 'temp_min', 'temp_max', 'pressure', 'sea_level',
+           'feels_like', 'temp_min', 'temp_max', 'sea_level',
            'grnd_level', 'humidity', 'rain_1h',
            'rain_3h', 'snow_1h', 'snow_3h', 'clouds_all', 'weather_id',
            'weather_main', 'weather_description', 'weather_icon'], inplace=True)
@@ -248,20 +635,21 @@ class Controller():
                 self.load_csv()
                 print('load and process measured (bodc) data')
                 self.load_and_process(source="bodc", HLW_list=["FW", "HW", "LW"])
-                #self.load_and_process(source="bodc", HLW="LW")
-                #self.load_and_process(source="bodc", HLW="FW")
+                #self.load_and_process(source="bodc", HLW_list=["LW"])
                 print('load and process measured (API) data')
                 self.load_and_process(source="api", HLW_list=["HW", "LW", "FW"])
-                #self.load_and_process(source="api", HLW="LW")
-                #self.load_and_process(source="api", HLW="FW")
+                #self.load_and_process(source="api", HLW_list=["FW"])
                 print('load and process CTR data. Obs + API')
                 self.get_river_data(HLW_list=["LW"])
                 print('load and process harmonic data')
                 self.load_and_process(source="harmonic", HLW_list=["HW", "LW"])
-                #self.load_and_process(source="harmonic", HLW="LW")
+                #self.load_and_process(source="harmonic", HLW_list=["LW"])
                 print('load and process harmonic reconstructed data')
                 self.load_and_process(source="harmonic_rec", HLW_list=["HW", "LW"])
-                #self.load_and_process(source="harmonic_rec", HLW="LW")
+                #self.load_and_process(source="harmonic_rec", HLW_list=["LW"])
+                print('Explore combinations of HLW times and heights for best fit')
+                self.fits_to_data(qc_flag=True)
+                self.fits_to_data(qc_flag=False)
 
             elif command == "0":
                 print('load bore observations')
@@ -316,6 +704,11 @@ class Controller():
                 plt.close('all');self.plot_surge_effect('api')
                 plt.close('all');self.plot_surge_effect('bodc')
 
+            elif command == "5":
+                print('Explore combinations of HLW times and heights for best fit')
+                self.fits_to_data(qc_flag=True)
+                self.fits_to_data(qc_flag=False)
+
             elif command == "d1":
                 print('load and plot HLW data')
                 self.load_and_plot_hlw_data()
@@ -323,11 +716,6 @@ class Controller():
             elif command == "d2":
                 print("shoothill dev")
                 self.shoothill()
-
-            elif command == "d3":
-                print('Explore combinations of HLW times and heights for best fit')
-                self.fits_to_data(qc_flag=True)
-                self.fits_to_data(qc_flag=False)
 
             elif command == "d4":
                 print('Plot combinations of HLW times, heights and rivers')
@@ -375,7 +763,8 @@ class Controller():
         HLW: [LW/HW] - the data is either processed for High or Low water events
         """
         print('loading '+source+' tide data')
-        self.get_Glad_data(source=source, HLW_list=HLW_list)
+        self.load_gauge_timeseries(source=source, HLW_list=HLW_list)
+        self.process_gauge_timeseries(source=source, HLW_list=HLW_list)
         #self.compare_Glad_HLW()
         print('Calculating the Gladstone to Saltney time difference')
         self.calc_Glad_Saltney_time_lag(source=source, HLW_list=HLW_list)
@@ -383,15 +772,24 @@ class Controller():
         self.process_fit(source=source, HLW_list=HLW_list)
 
 
-    def process_fit(self, source:str="harmonic", HLW_list=["HW"]):
+    def process_fit(self, source:str="harmonic", HLW_list=["HW"], X:xr.DataArray=None, Y:xr.DataArray=None):
         for HLW in HLW_list:
             # Get linear fit with rmse
-            self.bore.attrs['weights_'+HLW+'_'+source], self.bore.attrs['rmse_'+HLW+'_'+source] = self.linearfit(
-                    self.bore['liv_height_'+HLW+'_'+source],
-                    self.bore['Saltney_lag_'+HLW+'_'+source]
-                    )
+            if (X is None) or (Y is None):
+                Y = self.bore['liv_height_'+HLW+'_'+source]
+                X = self.bore['Saltney_lag_'+HLW+'_'+source]
+                stats = Stats(Y, X, self.bore['Quality'].values=="A")
+                #stats = Stats(self.bore['liv_height_'+HLW+'_'+source],
+                #            self.bore['Saltney_lag_'+HLW+'_'+source],
+                #            self.bore['Quality'].values=="A")
+            else:
+                stats = Stats(Y, X,
+                            self.bore['Quality'].values=="A")
+            self.bore.attrs['weights_A_'+HLW+'_'+source], self.bore.attrs['rmse_A_'+HLW+'_'+source] = stats.linear_fit_classA()
+            self.bore.attrs['weights_'+HLW+'_'+source], self.bore.attrs['rmse_'+HLW+'_'+source] = stats.linear_fit_all()
             # Apply linear model
-            self.bore['linfit_lag_'+HLW+'_'+source] = self.bore.attrs['weights_'+HLW+'_'+source](self.bore['liv_height_'+HLW+'_'+source])
+            self.bore['linfit_A_lag_'+HLW+'_'+source] = self.bore.attrs['weights_A_'+HLW+'_'+source](Y)
+            self.bore['linfit_lag_'+HLW+'_'+source] = self.bore.attrs['weights_'+HLW+'_'+source](Y)
             #self.bore['rmse_'+HLW+'_'+source] = '{:4.1f} mins'.format(self.stats(source=source, HLW=HLW))
 
     def load_csv(self):
@@ -402,12 +800,13 @@ class Controller():
         logging.info('Load bore data from csv file')
         self.load_bore_flag = True
         df =  pd.read_csv('data/master-Table 1.csv')
-        df.drop(columns=['date + logged time','Unnamed: 14', \
-                                'Unnamed: 15','Unnamed: 16'], \
+        df.drop(columns=['date + logged time','Unnamed: 15', \
+                                'Unnamed: 16','Unnamed: 17'], \
                                  inplace=True)
         df.rename(columns={"date + logged time (GMT)":"time"}, inplace=True)
         df.rename(columns={"wind_deg (from)":"wind_deg"}, inplace=True)
         df.rename(columns={"wind_speed (m/s)":"wind_speed"}, inplace=True)
+        df.rename(columns={"pressure (hPa)":"pressure"}, inplace=True)
         df['time'] = pd.to_datetime(df['time'], format="%d/%m/%Y %H:%M")
         #df['time'] = pd.to_datetime(df['time'], utc=True, format="%d/%m/%Y %H:%M")
         #df.set_index(['time'], inplace=True)
@@ -434,7 +833,8 @@ class Controller():
             print('Not expecting that possibility here')
         else:
             # Obtain CTR data for LW for the observations times.
-            self.get_Glad_data(source='ctr',HLW_list=["LW"])
+            self.load_gauge_timeseries(source='ctr',HLW_list=["LW"])
+            self.process_gauge_timeseries(source='ctr',HLW_list=["LW"])
             alph = self.bore['Chester Weir height: CHESTER WEIR 15 MIN SG'] *np.NaN
             beta = self.bore['ctr_height_LW_ctr']
             #print( self.bore['ctr_height_LW_ctr'][0:10] )
@@ -462,7 +862,7 @@ class Controller():
         winsize = 6 #4h for HW, 6h for LW. +/- search distance for nearest extreme value
         self.met = xr.Dataset()
 
-        for measure_var in ['wind_speed', 'wind_deg']:
+        for measure_var in ['wind_speed', 'wind_deg', 'pressure']:
 
             met_var = []
             met_time = []
@@ -546,8 +946,8 @@ class Controller():
                 plt.savefig('figs/check_get_'+measure_var+'_times_'+str(i//12).zfill(2)+'.png')
                 plt.close('all')
             except:
-                logging.info(f"Did not have any extra panels to plot")
-                print(f"Did not have any extra panels to plot")
+                logging.info("Did not have any extra panels to plot")
+                print("Did not have any extra panels to plot")
 
 
             # Save a xarray objects
@@ -560,11 +960,87 @@ class Controller():
 
 
 
+    def check_event_plot(self, HW:xr.Dataset=None, windowsize:int=5,
+            source:str="bodc", HLW:str="HW"):
+        """
+        Plot of event as a time series with key bore points identified
+        Uses:
+            self.counter / i [int] - event counter
+            self.fig, self.axes - carries the plot information
+            self.tg.dataset
+            self.bore.time
+            self.bore.location
+
+        Inputs:
+            HW [xr.dataset] - Pass h,t as xr w/o specifying variables names
+            #height [float] - processed tidal event height
+            #time [np.datetime64] - processed tidal event time
+
+            windowsize [int] - xlim:+/- windowsize
+            source [str] -  datasource [ctr/bodc/api/harm/harm_rec]
+            HLW [str]  - parameter describing tidal state: "FW", "EW"
+
+        Output:
+            creates file:
+            figs/check_get_tidetabletimes_'+str(i//12).zfill(2)+'_'+HLW+'_'+source+'.png'
+        """
+
+        ins_winsize = 40 # window size (mins) for inset window
+        i = self.counter
+        # Extract height and time from xr.Dataset
+        try:
+            time = HW[np.array(HW.coords)[0]].values
+            height = HW.values
+        except:
+            print(f"Problem extracting tide event (h,t) from xr.Dataset: {HW}")
+
+        ## Make timeseries plot around the highwater maxima to check
+        # values are being extracted as expected.
+        if (i % 12) == 0:
+            self.fig, self.axes = plt.subplots(3,4)
+        ax = self.axes.flat[i%12]
+        #plt.subplot(3,4,(i%12)+1)
+        ax.plot(self.tg.dataset.time, self.tg.dataset.sea_level)
+        ax.plot( time, height, 'r+' )
+        ax.plot( [self.bore.time[i].values,self.bore.time[i].values],[0,11],'k')
+        ax.set_xlim([time - np.timedelta64(windowsize,'h'),
+                  time + np.timedelta64(windowsize,'h')])
+        ax.set_ylim([0,11])
+        ax.text( time-np.timedelta64(windowsize,'h'),10, self.bore.location[i].values)
+        ax.text( time-np.timedelta64(windowsize,'h'),1,  time.astype('M8[ns]').astype('M8[ms]').item().strftime('%Y-%m-%d'))
+        # Turn off tick labels
+        ax.axes.get_xaxis().set_visible(False)
+
+        ## Add inset zoom at extrema
+        if source == "ctr":
+            ins = inset_axes(ax,width="30%", height="30%", loc="upper right")
+        else:
+            if HLW == "EW":
+                ins = inset_axes(ax,width="30%", height="30%", loc="center right")
+            elif HLW == "FW":
+                ins = inset_axes(ax,width="30%", height="30%", loc="center left")
+            else:
+                ins = inset_axes(ax,width="30%", height="30%", loc="center")
+
+
+        ins_dataset = self.tg.dataset.sel( time=slice(time - np.timedelta64(ins_winsize,'m'), time + np.timedelta64(ins_winsize,'m'))  )
+        ins.plot(ins_dataset.time, ins_dataset.sea_level,'b+')
+        ins.plot( time, height, 'r+' )
+        ins.set_xticks([])
+        ins.set_yticks([])
+        ins.set_xticklabels([])
+        ins.set_yticklabels([])
+        ins.patch.set_alpha(0.5)
+
+        if (i%12) == 12-1:
+            plt.savefig('figs/check_get_tidetabletimes_'+str(i//12).zfill(2)+'_'+HLW+'_'+source+'.png')
+            plt.close('all')
 
 
 
 
-    def get_Glad_data(self, source:str='harmonic', HLW_list=["HW"]):
+
+    def load_gauge_timeseries(self, source:str='harmonic', HLW_list=["HW"]):
         #def get_Glad_data(self, source:str='harmonic', HLW:str="HW"):
         """
         Get Gladstone HLW data from external source
@@ -577,146 +1053,55 @@ class Controller():
                 'harmonic_rec' - reconstruct time series from harmonic constants
                 'bodc' - measured and processed data
                 'api' - load recent, un processed data from shoothill API
+        """
+
+        if source == "harmonic":
+            tg = GladstoneTideTable().to_tidegauge()
+
+
+
+        elif source == "bodc": # Load gauge data from BODC files
+            tg = BODC().to_tidegauge()
+
+
+        elif source == "api": # load full tidal signal from shoothill
+            tg = GladstoneAPI().to_tidegauge()
+
+
+        elif source == "ctr": # use api to load river data.
+            tg = IronbridgeAPI().to_tidegauge()
+            #tg = ChesterAPI().to_tidegauge()
+
+
+        elif source == 'harmonic_rec': # load full tidal signal using anyTide code
+            tg = GladstoneHarmonicReconstruction().to_tidegauge()
+
+
+        else:
+            logging.debug("Did not expect this eventuality...")
+
+        self.tg = tg
+
+
+    def process_gauge_timeseries(self, source:str='harmonic', HLW_list=["HW"]):
+        #def get_Glad_data(self, source:str='harmonic', HLW:str="HW"):
+        """
+        Extract the HW, LW, etc tide events, for each observation, from the gauge timeseries.
+        Save to bore object
+
+        inputs:
+        source: 'harmonic' [default] - load HLW from harmonic prediction
+                'harmonic_rec' - reconstruct time series from harmonic constants
+                'bodc' - measured and processed data
+                'api' - load recent, un processed data from shoothill API
         HLW_list: ["LW","HW","FW","EW"] - the data is either processed for High or Low water
                 events, or Flood or Ebb (inflection) events
         """
-        loc = "liv" # default location - Liverpool
 
-        logging.info("Get Gladstone HLW data")
-        if source == "harmonic": # Load tidetable data from files
-            filnam1 = '/Users/jeff/GitHub/DeeBore/data/Liverpool_2005_2014_HLW.txt'
-            filnam2 = '/Users/jeff/GitHub/DeeBore/data/Liverpool_2015_2020_HLW.txt'
-            filnam3 = '/Users/jeff/GitHub/DeeBore/data/Liverpool_2021_2022_HLW.txt'
-            tg  = GAUGE()
-            tg1 = GAUGE()
-            tg2 = GAUGE()
-            tg3 = GAUGE()
-            tg1.dataset = tg1.read_hlw_to_xarray(filnam1)#, self.bore.time.min().values, self.bore.time.max().values)
-            tg2.dataset = tg2.read_hlw_to_xarray(filnam2)#, self.bore.time.min().values, self.bore.time.max().values)
-            tg3.dataset = tg3.read_hlw_to_xarray(filnam3)#, self.bore.time.min().values, self.bore.time.max().values)
-            tg.dataset = xr.concat([ tg1.dataset, tg2.dataset, tg3.dataset], dim='time')
-
-            # This produces an xr.dataset with sea_level_highs and sea_level_lows
-            # with time variables time_highs and time_lows.
-            tg_HLW = tg.find_high_and_low_water(var_str='sea_level')
-
-        elif source == "bodc": # load full 15min data from BODC files, extract HLW
-            dir = '/Users/jeff/GitHub/DeeBore/data/BODC_processed/'
-            filelist = ['2005LIV.txt',
-            '2006LIV.txt', '2007LIV.txt',
-            '2008LIV.txt', '2009LIV.txt',
-            '2010LIV.txt', '2011LIV.txt',
-            '2012LIV.txt', '2013LIV.txt',
-            '2014LIV.txt', '2015LIV.txt',
-            '2016LIV.txt', '2017LIV.txt',
-            '2018LIV.txt', '2019LIV.txt',
-            '2020LIV.txt',
-            'LIV2101.txt', 'LIV2102.txt',
-            'LIV2103.txt', 'LIV2104.txt',
-            'LIV2105.txt', 'LIV2106.txt',
-            'LIV2107.txt', 'LIV2108.txt',
-            'LIV2109.txt', 'LIV2110.txt']
-            tg  = GAUGE()
-            for file in filelist:
-                tg0=GAUGE()
-                tg0.dataset = tg0.read_bodc_to_xarray(dir+file)
-                if tg.dataset is None:
-                    tg.dataset = tg0.dataset
-                else:
-                    tg.dataset = xr.concat([ tg.dataset, tg0.dataset], dim='time')
-            # Use QC to drop null values
-            #tg.dataset['sea_level'] = tg.dataset.sea_level.where( np.logical_or(tg.dataset.qc_flags=='', tg.dataset.qc_flags=='T'), drop=True)
-            tg.dataset['sea_level'] = tg.dataset.sea_level.where( tg.dataset.qc_flags!='N', drop=True)
-            # Fix some attributes (others might not be correct for all data)
-            tg.dataset['start_date'] = tg.dataset.time.min().values
-            tg.dataset['end_date'] = tg.dataset.time.max().values
-            # This produces an xr.dataset with sea_level_highs and sea_level_lows
-            # with time variables time_highs and time_lows.
-            #tg_HLW = tg.find_high_and_low_water(var_str='sea_level',method='cubic') #'cubic')
-
-        elif source == "api": # load full tidal signal from shoothill, extract HLW
-            date_start=np.datetime64('2005-04-01')
-            date_end=np.datetime64('now','D')
-            fn_archive = "liv" # File head for netcdf archive of api call
-
-            # Load timeseries from local file if it exists
-            try:
-                tg1 = GAUGE()
-                tg2 = GAUGE()
-                tg = GAUGE()
-
-                # Load local file. Created with archive_shoothill.py
-                dir = "archive_shoothill/"
-                tg1.dataset = xr.open_mfdataset(dir + fn_archive + "_????.nc") # Tidal port Gladstone Dock, Liverpool
-                tg1.dataset = tg1.dataset.sel(time=slice(date_start, date_end))
-                print(f"{len(tg1.dataset.time)} pts loaded from netcdf")
-                if (tg1.dataset.time[-1].values < date_end):
-                    tg2 = GAUGE()
-                    tg2.dataset = tg2.read_shoothill_to_xarray(date_start=tg1.dataset.time[-1].values, date_end=date_end)
-                    tg.dataset = xr.concat([ tg1.dataset, tg2.dataset], dim='time')
-                    print(f"{len(tg2.dataset.time)} pts loaded from API")
-                else:
-                    tg = tg1
-            except:
-                tg.dataset = tg.read_shoothill_to_xarray(date_start=date_start, date_end=date_end)
-
-            # This produces an xr.dataset with sea_level_highs and sea_level_lows
-            # with time variables time_highs and time_lows.
-            #tg_HLW = tg.find_high_and_low_water(var_str='sea_level',method='cubic') #'cubic')
-
-
-        elif source == "ctr": # use api to load chester weir. Reset loc variable
+        if source == "ctr": # used in event variables names
             loc = "ctr"
-            tg = GAUGE()
-            date_start=np.datetime64('2014-01-01')
-            date_end=np.datetime64('now','D')
-            #station_id = 7900 # below weir
-            station_id = 7899 # above weir
-            fn_archive = "ctr" # File head for netcdf archive of api call
-
-            station_id = 968
-            fn_archive = "iron"
-
-            # Load timeseries from local file if it exists
-            try:
-                tg1 = GAUGE()
-                tg2 = GAUGE()
-                tg = GAUGE()
-
-                # Load local file. Created with archive_shoothill.py
-                dir = "archive_shoothill/"
-                tg1.dataset = xr.open_mfdataset(dir + fn_archive + "_????.nc") # Tidal port Gladstone Dock, Liverpool
-                tg1.dataset = tg1.dataset.sel(time=slice(date_start, date_end))
-                print(f"{len(tg1.dataset.time)} pts loaded from netcdf")
-                if (tg1.dataset.time[-1].values < date_end):
-                    tg2 = GAUGE()
-                    tg2.dataset = tg2.read_shoothill_to_xarray(station_id=station_id, date_start=tg1.dataset.time[-1].values, date_end=date_end)
-                    tg.dataset = xr.concat([ tg1.dataset, tg2.dataset], dim='time')
-                    print(f"{len(tg2.dataset.time)} pts loaded from API")
-                else:
-                    tg = tg1
-            except:
-                tg.dataset = tg.read_shoothill_to_xarray(station_id=station_id ,date_start=date_start, date_end=date_end)
-
-            # This produces an xr.dataset with sea_level_highs and sea_level_lows
-            # with time variables time_highs and time_lows.
-            tg_HLW = tg.find_high_and_low_water(var_str='sea_level')
-
-        elif source == 'harmonic_rec': # load full tidal signal using anyTide code, extract HLW
-            tg = GAUGE()
-            #date_start=np.datetime64('now')
-            #ndays = 5
-            #tg.dataset = tg.anyTide_to_xarray(date_start=date_start, ndays=5)
-            date_start=np.datetime64('2005-04-01')
-            date_end=np.datetime64('now','D')
-            tg.dataset = tg.anyTide_to_xarray(date_start=date_start, date_end=date_end)
-            # This produces an xr.dataset with sea_level_highs and sea_level_lows
-            # with time variables time_highs and time_lows.
-            tg_HLW = tg.find_high_and_low_water(var_str='sea_level')
         else:
-            logging.debug(f"Did not expect this eventuality...")
-
-        self.tg = tg
+            loc = "liv"
 
         ## Process the *_highs or *_lows
         for HLW in HLW_list:
@@ -744,96 +1129,20 @@ class Controller():
 
             winsize = 6 #4h for HW, 6h for LW. +/- search distance for nearest extreme value
 
+            ## Process events individually
             for i in range(len(self.bore.time)):
-                if(1): #try:
-                    HW = None
-                    LW = None
-                    obs_time = self.bore.time[i].values
+                mg = marine_gauge(tg=self.tg, ref_time=self.bore.time[i].values,
+                    HLW=HLW, source=source, winsize=winsize)
+                HW = mg.get_event()
+                HT_h.append( HW.values )
+                #print('len(HT_h)', len(HT_h))
+                HT_t.append( HW[time_var].values )
+                self.counter = i
+                #self.check_event_plot(height=HW.values, time=HW[time_var].values,
+                #                windowsize=5, source=source, HLW=HLW )
+                self.check_event_plot(HW=HW,
+                                windowsize=5, source=source, HLW=HLW )
 
-                    # Extracting the highest and lowest value with a cubic spline is
-                    # very memory costly. Only need to use the cubic method for the
-                    # bodc and api sources, so compute the high and low waters in a
-                    # piecewise approach around observations times.
-                    if source == "bodc" or source == "api":
-                        # This produces an xr.dataset with sea_level_highs and sea_level_lows
-                        # with time variables time_highs and time_lows.
-                        win = GAUGE()
-                        win.dataset = tg.dataset.sel( time=slice(obs_time - np.timedelta64(winsize, "h"), obs_time + np.timedelta64(winsize, "h"))  )
-                        #if HLW == "LW":
-                        #    print(f"win.dataset {win.dataset}")
-                        #print(i," win.dataset.time.size", win.dataset.time.size)
-                        if win.dataset.time.size == 0:
-                            tg_HLW = GAUGE()
-                            tg_HLW.dataset = xr.Dataset({measure_var: (time_var, [np.NaN])}, coords={time_var: [obs_time]})
-                        else:
-                            if HLW == "FW" or HLW == "EW":
-                                tg_HLW = win.find_flood_and_ebb_water(var_str='sea_level',method='cubic')
-                                #print(f"inflection point time: {tg_HLW.dataset[time_var]}")
-                                print(f"inflection points: {len(tg_HLW.dataset[time_var])}")
-                            elif HLW == "HW" or HLW == "LW":
-                                tg_HLW = win.find_high_and_low_water(var_str='sea_level',method='cubic')
-                                print(f"max points: {len(tg_HLW.dataset[time_var])}")
-                            else:
-                                print(f"This should not have happened... HLW:{HLW}")
-
-                    HW = tg_HLW.get_tide_table_times(
-                                            time_guess=obs_time,
-                                            time_var=time_var,
-                                            measure_var=measure_var,
-                                            method='nearest_1',
-                                            winsize=winsize ) #4h for HW, 6h for LW
-
-                    #print("time,HW:",obs_time, HW.values)
-                    if type(HW) is xr.DataArray: ## Actually I think they are alway xr.DataArray with time, but the height can be nan.
-                        #print(f"HW: {HW}")
-                        HT_h.append( HW.values )
-                        #print('len(HT_h)', len(HT_h))
-                        HT_t.append( HW[time_var].values )
-                        #print('len(HT_t)', len(HT_t))
-                        #self.bore['LT_h'][i] = HLW.dataset.sea_level[HLW.dataset['sea_level'].argmin()]
-                        #self.bore['LT_t'][i] = HLW.dataset.time[HLW.dataset['sea_level'].argmin()]
-                        #ind.append(i)
-                        #print(f"i:{i}, {HT_t[-1].astype('M8[ns]').astype('M8[ms]').item()}" )
-                        #print(HT_t[-1].astype('M8[ns]').astype('M8[ms]').item().strftime('%Y-%m-%d'))
-
-                        ## Make timeseries plot around the highwater maxima to check
-                        # values are being extracted as expected.
-                        if (i % 12) == 0:
-                            fig = plt.figure()
-
-                        plt.subplot(3,4,(i%12)+1)
-                        plt.plot(self.tg.dataset.time, self.tg.dataset.sea_level)
-                        plt.plot( HT_t[-1], HT_h[-1], 'r+' )
-                        plt.plot( [self.bore.time[i].values,self.bore.time[i].values],[0,11],'k')
-                        plt.xlim([HT_t[-1] - np.timedelta64(5,'h'),
-                                  HT_t[-1] + np.timedelta64(5,'h')])
-                        plt.ylim([0,11])
-                        plt.text( HT_t[-1]-np.timedelta64(5,'h'),10, self.bore.location[i].values)
-                        plt.text( HT_t[-1]-np.timedelta64(5,'h'),1,  HT_t[-1].astype('M8[ns]').astype('M8[ms]').item().strftime('%Y-%m-%d'))
-                        # Turn off tick labels
-                        plt.gca().axes.get_xaxis().set_visible(False)
-                        #plt.xaxis_date()
-                        #plt.autoscale_view()
-                        if (i%12) == 12-1:
-                            plt.savefig('figs/check_get_tidetabletimes_'+str(i//12).zfill(2)+'_'+HLW+'_'+source+'.png')
-                            plt.close('all')
-
-
-                    else:
-                        logging.info(f"Did not find a high water near this guess")
-                        print(f"Did not find a high water near this guess")
-
-
-                if(0):#except:
-                    logging.warning('Issue with appending HLW data')
-                    print('Issue with appending HLW data')
-
-            try: # Try and print the last observation timeseries
-                plt.savefig('figs/check_get_tidetabletimes_'+str(i//12).zfill(2)+'_'+HLW+'_'+source+'.png')
-                plt.close('all')
-            except:
-                logging.info(f"Did not have any extra panels to plot")
-                print(f"Did not have any extra panels to plot")
 
 
             # Save a xarray objects
@@ -844,23 +1153,19 @@ class Controller():
             self.bore[loc+'_height_'+HLW+'_'+source] = xr.DataArray( np.array(HT_h), coords=coords, dims=['time'])
             self.bore[loc+'_time_'+HLW+'_'+source] = xr.DataArray( np.array(HT_t), coords=coords, dims=['time'])
 
-            print('There is a supressed plot.scatter here')
-            #self.bore.plot.scatter(x='liv_time', y='liv_height'); plt.show()
-
+            ## Some logging
             logging.debug(f"len(self.bore[loc+'_time_'{HLW}'_'{source}]): {len(self.bore[loc+'_time_'+HLW+'_'+source])}")
             #logging.info(f'len(self.bore.liv_time)', len(self.bore.liv_time))
             logging.debug(f"type(HT_t): {type(HT_t)}")
             logging.debug(f"type(HT_h): {type(HT_h)}")
 
-            if loc=='liv':
-                logging.debug('log time, orig tide table, new tide table lookup')
-                for i in range(len(self.bore.time)):
-                    logging.debug( f"{self.bore.time[i].values}, {self.bore['Liv (Gladstone Dock) HT time (GMT)'][i].values}, {self.bore['liv_time_'+HLW+'_'+source][i].values}")
+            #if loc=='liv':
+            #    logging.debug('log time, orig tide table, new tide table lookup')
+            #    for i in range(len(self.bore.time)):
+            #        logging.debug( f"{self.bore.time[i].values}, {self.bore['Liv (Gladstone Dock) HT time (GMT)'][i].values}, {self.bore['liv_time_'+HLW+'_'+source][i].values}")
 
 
-            #print('log time, orig tide table, new tide table lookup')
-            #for i in range(len(self.bore.time)):
-            #    print( self.bore.time[i].values, self.bore['Liv (Gladstone Dock) HT time (GMT)'][i].values, self.bore['liv_time'][i].values)
+
 
 
     def calc_Glad_Saltney_time_lag(self, source:str="harmonic", HLW_list=["HW"]):
@@ -894,7 +1199,7 @@ class Controller():
             self.bore['bluebridge_lag_'+HLW+'_'+source] = xr.DataArray( bluebridge_lag, coords=coords, dims=['time'])
 
 
-    def linearfit(self, X, Y):
+    def linearfit_X(self, X, Y):
         """
         Linear regression. Calculates linear fit weights and RMSE
 
@@ -953,28 +1258,34 @@ class Controller():
             Xsalt_api = self.bore['Saltney_lag_'+HLW+'_api'].where( np.isnan(self.bore['liv_height_'+HLW+'_bodc']))
             Xblue_api = self.bore['bluebridge_lag_'+HLW+'_api'].where( np.isnan(self.bore['liv_height_'+HLW+'_bodc']))
             Xfit = self.bore['linfit_lag_'+HLW+'_bodc']
-            Xsalt_api_latest = Xsalt_api.where( xr.ufuncs.isfinite(Xsalt_api), drop=True)[0]
-            Yliv_api_latest  = Yliv_api.where( xr.ufuncs.isfinite(Xsalt_api), drop=True)[0]
+            Xsalt_api_latest = Xsalt_api.where( xr.ufuncs.isfinite(Xsalt_api), drop=True)[0] # NB obs are in reverse time order
+            Yliv_api_latest  = Yliv_api.where( xr.ufuncs.isfinite(Xsalt_api), drop=True)[0] # NB obs are in reverse time order
+            lab = self.bore.time.where( xr.ufuncs.isfinite(Xsalt_api), drop=True)[0].values.astype('datetime64[D]').astype(object).strftime('%d%b%y')
 
-            plt.plot( Xsalt,Yliv, 'r.', label='Saltney: rmse '+'{:4.1f}'.format(self.stats('bodc'))+'mins')
-            plt.plot( Xsalt[I],Yliv[I], 'k+', label='1st hand')
+            plt.plot( Xsalt,Yliv, 'r.', label='Saltney')
+            plt.plot( Xsalt[I],Yliv[I], 'k+', label='Class A')
             plt.plot( Xblue,Yliv, 'b.', label='Bluebridge')
-            plt.plot( Xfit,Yliv, 'k-')
+            plt.plot( Xfit,Yliv, 'k-', label='bodc: rmse '+'{:4.1f}'.format(self.stats('bodc'))+'mins')
             plt.plot( Xsalt_api,Yliv_api, 'ro', label='Saltney API')
             plt.plot( Xblue_api,Yliv_api, 'bo', label='Bluebridge API')
-            plt.plot( Xsalt_api_latest,Yliv_api_latest, 'go', label='Saltney latest')
+            plt.plot( Xsalt_api_latest,Yliv_api_latest, 'go', label='Saltney latest: '+lab)
             plt.plot( Xsalt_api[I],Yliv_api[I], 'k+')
+
+
+
         else:
             Yliv = self.bore['liv_height_'+HLW+'_'+source]
             Xsalt = self.bore['Saltney_lag_'+HLW+'_'+source]
             Xblue = self.bore['bluebridge_lag_'+HLW+'_'+source]
             Xfit = self.bore['linfit_lag_'+HLW+'_'+source]
-            plt.plot( Xsalt,Yliv, 'r.', label='Saltney: rmse '+'{:4.1f}'.format(self.stats(source,HLW))+'mins')
-            plt.plot( Xsalt[I],Yliv[I], 'k+', label='1st hand')
+            plt.plot( Xsalt,Yliv, 'r.', label='Saltney')
+            plt.plot( Xsalt[I],Yliv[I], 'k+', label='Class A')
             plt.plot( Xblue,Yliv, 'b.', label='Bluebridge')
-            plt.plot( Xfit,Yliv, 'k-')
+            plt.plot( Xfit,Yliv, 'k-', label=source+': rmse '+'{:4.1f}'.format(self.stats(source,HLW))+'mins')
             Xsalt_latest = Xsalt.where( xr.ufuncs.isfinite(Xsalt), drop=True)[0]
             Yliv_latest  = Yliv.where( xr.ufuncs.isfinite(Xsalt), drop=True)[0]
+            lab = self.bore.time.where( xr.ufuncs.isfinite(Xsalt), drop=True)[0].values.astype('datetime64[D]').astype(object).strftime('%d%b%y')
+
             # Highlight recent data
             Yliv = self.bore['liv_height_'+HLW+'_'+source].where( self.bore.time > np.datetime64('2021-01-01') )
             Xsalt = self.bore['Saltney_lag_'+HLW+'_'+source].where( self.bore.time > np.datetime64('2021-01-01') )
@@ -982,11 +1293,13 @@ class Controller():
             #Yliv = self.bore['liv_height_'+HLW+'_'+source].where( np.isnan(self.bore['liv_height_'+HLW+'_bodc']))
             #Xsalt = self.bore['Saltney_lag_'+HLW+'_'+source].where( np.isnan(self.bore['liv_height_'+HLW+'_bodc']))
             #Xblue = self.bore['bluebridge_lag_'+HLW+'_'+source].where( np.isnan(self.bore['liv_height_'+HLW+'_bodc']))
-            plt.plot( Xsalt,Yliv, 'ro', label='Saltney 2021')
-            plt.plot( Xblue,Yliv, 'bo', label='Bluebridge 2021')
-            plt.plot( Xsalt_latest,Yliv_latest, 'go', label='Saltney latest')
+            plt.plot( Xsalt,Yliv, 'ro', label='Saltney 2021+')
+            plt.plot( Xblue,Yliv, 'bo', label='Bluebridge 2021+')
+            plt.plot( Xsalt_latest,Yliv_latest, 'go', label='Saltney latest: '+lab)
             plt.plot( Xsalt[I],Yliv[I], 'k+')
             #plt.plot( Xblue[0],Yliv[0], 'b+', label='Bluebridge recent')
+
+
 
         plt.ylabel('Liv (Gladstone Dock) '+HLW+' (m)')
         plt.xlabel('Arrival time (mins) relative to Liv '+HLW)
@@ -996,8 +1309,9 @@ class Controller():
         if source =='bodc': str='measured only QCd'
         if source == 'api': str='measured w/o QC'
         plt.title(f"Bore arrival time at Saltney Ferry ({str} data)")
-        #plt.xlim([-125, -40])   # minutes
-        #plt.ylim([8.2, 10.9]) # metres
+        if HLW == "HW":
+            plt.xlim([-125, -45])   # minutes
+            plt.ylim([8.2, 10.9]) # metres
         plt.legend()
         #plt.show()
         plt.savefig('figs/SaltneyArrivalLag_vs_LivHeight_'+HLW+'_'+source+'.png')
@@ -1019,8 +1333,8 @@ class Controller():
         """
         # Example plot
         from matplotlib.collections import LineCollection
-        from matplotlib import colors as mcolors
-        import matplotlib.dates as mdates
+        #from matplotlib import colors as mcolors
+        #import matplotlib.dates as mdates
         if source=='api':
             last_bodc_time = self.bore['liv_time_'+HLW+'_bodc']\
                 .where(np.isfinite(self.bore['liv_height_'+HLW+'_bodc'].values))\
@@ -1071,9 +1385,39 @@ class Controller():
         plt.close('all')
 
 
-    def plot_scatter_river(self, source:str='bodc', HLW:str="HW"):
+    def plot_scatter(self, source:str='bodc', HLW:str="HW", colour_var_str:str="river"):
         """
+        scatter plot the h vs lag observations. Colour by 3rd variable.
+        Add linear regression lines to both class A and all data points.
         """
+
+        if colour_var_str  == "river": # LW on river
+            col_var =  self.bore["ctr_height_LW"]
+            clabel = "River height (m)"
+            vmin=4.4
+            vmax=5.5 # 4.6
+            cmap = "jet"
+        elif colour_var_str == "date":
+            col_var = self.bore["time"] #     c=self.bore.time, #self.bore['ctr_height_LW'],
+            clabel = "date"
+            vmin = None
+            vmax = None
+            cmap = "jet"
+        elif colour_var_str == "wind_along":
+            col_var = self.bore.wind_speed * np.cos((315 - self.bore.wind_deg)*np.pi/180.)
+            clabel = "along estuary wind (m/s), from Hawarden/Connahs Quay"
+            vmin = -7
+            vmax = 7
+            cmap = "Spectral"
+        elif colour_var_str == "wind_across":
+            col_var = self.bore.wind_speed * np.sin((315 - self.bore.wind_deg)*np.pi/180.)
+            clabel = "across estuary wind (m/s), from Hawarden/Connahs Quay"
+            vmin = -7
+            vmax = 7
+            cmap = "Spectral"
+        else:
+            print(f"Was not expecting that value of colour_var_str: {colour_var_str}")
+
         plt.close('all')
         fig = plt.figure(figsize=(8, 6), dpi=120)
         if HLW=="dLW":
@@ -1089,23 +1433,69 @@ class Controller():
             X = self.bore['Saltney_lag_'+HLW+'_'+source]
             Y = self.bore['liv_height_'+HLW+'_'+source]
 
-        S = [40 if self.bore['Quality'][i] == "A" else 5 for i in range(len(self.bore['Quality']))]
-        lab = [ self.bore.time[i].values.astype('datetime64[D]').astype(object).strftime('%d%b%y') if self.bore['Quality'][i] == "A" else "" for i in range(len(self.bore['Quality']))]
+        # Get the rmse scores and linear fits
+        self.process_fit(source=source, HLW_list=[HLW], X=X,Y=Y)
 
-        ss= plt.scatter( X, Y, \
-            c=self.bore['ctr_height_LW'],
-            s=S,
+        ## Plot all data
+        try:
+            lab_fit = "RMSE:"+self.bore.attrs['rmse_'+HLW+'_'+source]
+            lab_dot = "all"
+        except:
+            lab_fit = ""
+            lab_dot = "all"
+
+        JJ = np.isfinite(X.values)
+        ss= plt.scatter( X[JJ], Y[JJ], \
+            c=col_var[JJ],
+            s=5,
             #cmap='magma',
-            cmap='jet',
-            vmin=4.4,
-            vmax=5.5, # 4.6
-            label="RMSE:"+self.bore.attrs['rmse_'+HLW+'_'+source]
+            cmap=cmap,
+            vmin=vmin,
+            vmax=vmin, # 4.6
+            label=lab_dot
+            )
+
+        # Regression for all data
+        try:
+            Xfit = self.bore['linfit_lag_'+HLW+'_'+source]
+            plt.plot(Xfit, Y, linewidth=1.0, color='k', label=lab_fit)
+        except:
+            pass
+
+
+        ## Plot class A data
+        try:
+            lab_fit = "(A)RMSE:"+self.bore.attrs['rmse_A_'+HLW+'_'+source]
+            lab_dot = "class A"
+        except:
+            lab_fit = ""
+            lab_dot = "class A"
+
+
+        JJ = (self.bore['Quality'] == "A") & (np.isfinite(X.values))
+        ss= plt.scatter( X[JJ], Y[JJ], \
+            c=col_var[JJ],
+            s=40,
+            #cmap='magma',
+            cmap=cmap,
+            vmin=vmin,
+            vmax=vmax, # 4.6
+            label=lab_dot
             )
         cbar = plt.colorbar(ss)
 
+        # Regression for Class A
+        try:
+            Xfit = self.bore['linfit_A_lag_'+HLW+'_'+source]
+            plt.plot(Xfit, Y, linewidth=2.0, color='k', label=lab_fit)
+        except:
+            pass
+
+
+        # Add dates to class A only
+        lab = [ self.bore.time[i].values.astype('datetime64[D]').astype(object).strftime('%d%b%y') if self.bore['Quality'][i] == "A" else "" for i in range(len(self.bore['Quality']))]
         for ind in range(len(self.bore['Quality'])):
         # zip joins x and y coordinates in pairs
-
 
             plt.annotate(lab[ind], # this is the text
                          (X[ind],Y[ind]), # this is the point to label
@@ -1117,11 +1507,11 @@ class Controller():
         # Linear fit
         #x = self.df['Liv (Gladstone Dock) HT height (m)']
         #plt.plot( x, self.df['linfit_lag'], '-' )
-        cbar.set_label('River height (m)')
+        cbar.set_label(clabel)
         plt.title('Bore arrival time at Saltney Ferry')
         plt.xlabel('Arrival time (mins) relative to Liv '+HLW)
         plt.ylabel('Liv (Gladstone Dock) '+HLW+' height (m)')
-        plt.savefig('figs/SaltneyArrivalLag_vs_LivHeight_river_'+HLW+'_'+source+'.png')
+        plt.savefig('figs/SaltneyArrivalLag_vs_LivHeight_'+colour_var_str+'_'+HLW+'_'+source+'.png')
 
     ############################################################################
     #%% DIAGNOSTICS
@@ -1283,7 +1673,7 @@ class Controller():
 
         # Example plot
         from matplotlib.collections import LineCollection
-        from matplotlib import colors as mcolors
+        #from matplotlib import colors as mcolors
         import matplotlib.dates as mdates
 
         nval = min( len(sg_HLW.dataset.time_highs), len(tg_HLW.dataset.time_highs) )
@@ -1414,14 +1804,16 @@ class Controller():
         for args in args_list:
             self.bore.attrs[args['wvar']] = []
             self.bore.attrs[args['rvar']] = []
+
+            stats = Stats(args['xvar'], args['yvar'],
+                        self.bore['Quality'].values=="A")
             if qc_flag:
-                weights,rmse = self.linearfit( args['xvar'].where( self.bore['Quality'].values=="A"),
-                            args['yvar'].where( self.bore['Quality'].values=="A" ) )
+                weights,rmse = stats.linear_fit_classA()
                 print(f"{source} class A| {args['label']}: {rmse}")
-                self.bore.attrs[args['wvar']] = weights
-                self.bore.attrs[args['rvar']] = rmse
+                self.bore.attrs[args['wvar'].replace('weights_','weights_A_')] = weights
+                self.bore.attrs[args['rvar'].replace('rmse_','rmse_A_')] = rmse
             else:
-                weights,rmse = self.linearfit( args['xvar'], args['yvar'] )
+                weights,rmse = stats.linear_fit_all()
                 print(f"{source}| {args['label']}: {rmse}")
                 self.bore.attrs[args['wvar']] = weights
                 self.bore.attrs[args['rvar']] = rmse
@@ -1432,24 +1824,41 @@ class Controller():
     def combinations_lag_hlw_river(self):
         """
         Plot different combinations of Lag,HLW w/ rivers
+        plot_scatter(self, source:str='bodc', HLW:str="HW", colour_var_str:str="river")
         """
-        self.plot_scatter_river(source='harmonic', HLW="HW")
-        self.plot_scatter_river(source='bodc', HLW="HW")
-        self.plot_scatter_river(source='bodc', HLW="LW")
-        self.plot_scatter_river(source='bodc', HLW="dLW")
-        self.plot_scatter_river(source='bodc', HLW="dHW")
-        self.plot_scatter_river(source='bodc', HLW="XX")
-        self.plot_scatter_river(source='bodc', HLW="FW")
-        self.plot_scatter_river(source='api', HLW="HW")
-        self.plot_scatter_river(source='api', HLW="FW")
-        self.plot_scatter_date(source='api', HLW="HW")
-        self.plot_scatter_date(source='bodc', HLW="HW")
-        self.plot_scatter_date(source='bodc', HLW="FW")
-        self.plot_scatter_date(source='harmonic', HLW="HW")
-        self.plot_scatter_wind(source='api', HLW="HW")
-        self.plot_scatter_wind(source='bodc', HLW="HW")
-        self.plot_scatter_wind(source='bodc', HLW="FW")
-        self.plot_scatter_wind(source='harmonic', HLW="HW")
+        if(0):
+            self.plot_scatter(source='harmonic', HLW="HW", colour_var_str="river")
+            self.plot_scatter(source='bodc', HLW="HW", colour_var_str="river")
+            self.plot_scatter(source='bodc', HLW="LW", colour_var_str="river")
+            self.plot_scatter(source='bodc', HLW="dLW", colour_var_str="river")
+            self.plot_scatter(source='bodc', HLW="dHW", colour_var_str="river")
+            self.plot_scatter(source='bodc', HLW="XX", colour_var_str="river")
+            self.plot_scatter(source='bodc', HLW="FW", colour_var_str="river")
+            self.plot_scatter(source='api', HLW="HW", colour_var_str="river")
+            self.plot_scatter(source='api', HLW="FW", colour_var_str="river")
+
+            self.plot_scatter(source='api', HLW="HW", colour_var_str="date")
+            self.plot_scatter(source='bodc', HLW="HW", colour_var_str="date")
+            self.plot_scatter(source='bodc', HLW="FW", colour_var_str="date")
+            self.plot_scatter(source='harmonic', HLW="HW", colour_var_str="date")
+
+            self.plot_scatter(source='api', HLW="HW", colour_var_str="wind_along")
+            self.plot_scatter(source='bodc', HLW="HW", colour_var_str="wind_along")
+            self.plot_scatter(source='bodc', HLW="FW", colour_var_str="wind_along")
+            self.plot_scatter(source='harmonic', HLW="HW", colour_var_str="wind_along")
+
+            self.plot_scatter(source='api', HLW="HW", colour_var_str="wind_across")
+            self.plot_scatter(source='bodc', HLW="HW", colour_var_str="wind_across")
+            self.plot_scatter(source='bodc', HLW="FW", colour_var_str="wind_across")
+            self.plot_scatter(source='harmonic', HLW="HW", colour_var_str="wind_across")
+
+        for src in ["harmonic", "bodc", "api"]:
+            for state in ["HW", "LW", "dLW", "dHW", "XX", "FW", "EW"]:
+                for col in ["river", "date", "wind_along", "wind_across"]:
+                    try:
+                        self.plot_scatter(source=src, HLW=state, colour_var_str=col)
+                    except:
+                        pass
 
     def river_lag_timing(self, HLW="HW", source="api"):
         """
@@ -1506,118 +1915,6 @@ class Controller():
         plt.savefig('figs/SaltneyArrivalLag_vs_river_LivHeight'+HLW+'_'+source+'.png')
 
 
-    def plot_scatter_date(self, source:str='bodc', HLW:str="HW"):
-        """
-        """
-        plt.close('all')
-        fig = plt.figure(figsize=(8, 6), dpi=120)
-        if HLW=="dLW":
-            X = self.bore['Saltney_lag_LW_'+source]
-            Y = self.bore['liv_height_HW_'+source] - self.bore['liv_height_LW_'+source]
-        elif HLW=="dHW":
-            X = self.bore['Saltney_lag_HW_'+source]
-            Y = self.bore['liv_height_HW_'+source] - self.bore['liv_height_LW_'+source]
-        elif HLW=="XX":
-            X = self.bore['Saltney_lag_HW_'+source]
-            Y = self.bore['liv_height_LW_'+source]
-        else:
-            X = self.bore['Saltney_lag_'+HLW+'_'+source]
-            Y = self.bore['liv_height_'+HLW+'_'+source]
-
-        S = [40 if self.bore['Quality'][i] == "A" else 10 for i in range(len(self.bore['Quality']))]
-        lab = [ self.bore.time[i].values.astype('datetime64[D]').astype(object).strftime('%b%y') for i in range(len(self.bore['Quality']))]
-
-        ss= plt.scatter( X, Y, \
-            c=self.bore.time, #self.bore['ctr_height_LW'],
-            s=S,
-            #cmap='magma',
-            cmap='jet',
-            #vmin=4.4,
-            #vmax=5.5, # 4.6
-            label="RMSE:"+self.bore.attrs['rmse_'+HLW+'_'+source]
-            )
-        cbar = plt.colorbar(ss)
-
-        for ind in range(len(self.bore['Quality'])):
-        # zip joins x and y coordinates in pairs
-
-
-            plt.annotate(lab[ind], # this is the text
-                         (X[ind],Y[ind]), # this is the point to label
-                         textcoords="offset points", # how to position the text
-                         xytext=(0,6), # distance from text to points (x,y)
-                         ha='center', # horizontal alignment can be left, right or center
-                         fontsize=4)
-        plt.legend()
-        # Linear fit
-        #x = self.df['Liv (Gladstone Dock) HT height (m)']
-        #plt.plot( x, self.df['linfit_lag'], '-' )
-        cbar.set_label('Date')
-        plt.title('Bore arrival time at Saltney Ferry')
-        plt.xlabel('Arrival time (mins) relative to Liv '+HLW)
-        plt.ylabel('Liv (Gladstone Dock) '+HLW+' height (m)')
-        plt.savefig('figs/SaltneyArrivalLag_vs_LivHeight_date_'+HLW+'_'+source+'.png')
-
-
-    def plot_scatter_wind(self, source:str='bodc', HLW:str="HW"):
-        """
-        dir: str [along/across]. PLot either the along or across estuary wind speed
-        """
-        for dirn in ["along", "across"]:
-
-            plt.close('all')
-            fig = plt.figure(figsize=(8, 6), dpi=120)
-            if HLW=="dLW":
-                X = self.bore['Saltney_lag_LW_'+source]
-                Y = self.bore['liv_height_HW_'+source] - self.bore['liv_height_LW_'+source]
-            elif HLW=="dHW":
-                X = self.bore['Saltney_lag_HW_'+source]
-                Y = self.bore['liv_height_HW_'+source] - self.bore['liv_height_LW_'+source]
-            elif HLW=="XX":
-                X = self.bore['Saltney_lag_HW_'+source]
-                Y = self.bore['liv_height_LW_'+source]
-            else:
-                X = self.bore['Saltney_lag_'+HLW+'_'+source]
-                Y = self.bore['liv_height_'+HLW+'_'+source]
-
-            S = [40 if self.bore['Quality'][i] == "A" else 10 for i in range(len(self.bore['Quality']))]
-            lab = [ self.bore.time[i].values.astype('datetime64[D]').astype(object).strftime('%b%y') for i in range(len(self.bore['Quality']))]
-            if dirn == "along":
-                spd = self.bore.wind_speed * np.cos((315 - self.bore.wind_deg)*np.pi/180.)
-            elif dirn == "across":
-                spd = self.bore.wind_speed * np.sin((315 - self.bore.wind_deg)*np.pi/180.)
-            else:
-                print(f"{dirn}: did not expect that direction option")
-
-            ss= plt.scatter( X, Y, \
-                c=spd, #self.bore['ctr_height_LW'],
-                s=S,
-                cmap='Spectral',
-                vmin=-7,
-                vmax=7, # 4.6
-                label="RMSE:"+self.bore.attrs['rmse_'+HLW+'_'+source]
-                )
-            cbar = plt.colorbar(ss)
-
-            for ind in range(len(self.bore['Quality'])):
-            # zip joins x and y coordinates in pairs
-
-
-                plt.annotate(lab[ind], # this is the text
-                             (X[ind],Y[ind]), # this is the point to label
-                             textcoords="offset points", # how to position the text
-                             xytext=(0,6), # distance from text to points (x,y)
-                             ha='center', # horizontal alignment can be left, right or center
-                             fontsize=4)
-            plt.legend()
-            # Linear fit
-            #x = self.df['Liv (Gladstone Dock) HT height (m)']
-            #plt.plot( x, self.df['linfit_lag'], '-' )
-            cbar.set_label(dirn+' estuary wind (m/s), from Hawarden/Connahs Quay')
-            plt.title('Bore arrival time at Saltney Ferry')
-            plt.xlabel('Arrival time (mins) relative to Liv '+HLW)
-            plt.ylabel('Liv (Gladstone Dock) '+HLW+' height (m)')
-            plt.savefig('figs/SaltneyArrivalLag_vs_LivHeight_'+dirn+'_wind_'+HLW+'_'+source+'.png')
 ################################################################################
 ################################################################################
 #%% Main Routine
@@ -1647,6 +1944,7 @@ if __name__ == "__main__":
     2       show bore dataset
     3       plot bore data (lag vs tidal height)
     4       plot difference between predicted and measured (lag vs tidal height)
+    5       Explore different RMSE fits to the data
 
     6       Predict bore event for date
 
@@ -1660,7 +1958,7 @@ if __name__ == "__main__":
     DEV:
     d1     load and plot HLW data
     d2     shoothill dev
-    d3     Explore different RMSE fits to the data
+    d3     <empty>
     d4     Plot different combinations of Lag,HLW w/ rivers
     d5     Explore how rivers affect bore timing
     """

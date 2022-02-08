@@ -71,20 +71,29 @@ def mlr_fit(X,y):
     return fit_rmse, test_set_rmse, test_set_r2, lin_reg_mod.coef_, lin_reg_mod.intercept_
 
 
-if(0):
+if(1):
     x4 = bore['ctr_height_LW'].where(bore['Quality']=="A")
     x3 = (bore['Saltney_lag_HW_bodc']-bore['Saltney_lag_LW_bodc']).where(bore['Quality']=="A")
-    x2 = (bore['liv_height_HW_bodc'] - bore['liv_height_LW_bodc']).where(bore['Quality']=="A")
+    x2 = (bore.wind_speed * np.sin((300 - bore.wind_deg)*np.pi/180.)).where(bore['Quality']=="A")
+    #x2 = (bore['liv_height_HW_bodc'] - bore['liv_height_LW_bodc']).where(bore['Quality']=="A")
     x1 = bore['liv_height_LW_bodc'].where(bore['Quality']=="A")
     x0 = bore['liv_height_HW_bodc'].where(bore['Quality']=="A")
     y = bore['Saltney_lag_HW_bodc'].where(bore['Quality']=="A")
 else:
     x4 = bore['ctr_height_LW']
     x3 = (bore['Saltney_lag_HW_bodc']-bore['Saltney_lag_LW_bodc'])
-    x2 = (bore['liv_height_HW_bodc'] - bore['liv_height_LW_bodc'])
+    x2 = bore.wind_speed * np.sin((300 - bore.wind_deg)*np.pi/180.)
+    #x2 = (bore['liv_height_HW_bodc'] - bore['liv_height_LW_bodc'])
     x1 = bore['liv_height_LW_bodc']
     x0 = bore['liv_height_HW_bodc']
     y = bore['Saltney_lag_HW_bodc']
+
+    x4 = x4 - x4.mean()
+    x3 = x3 - x3.mean()
+    x2 = x2 - x2.mean()
+    x1 = x1 - x1.mean()
+    x0 = x0 - x0.mean()
+    y  = y  - y.mean()
 
 #xx1 = x1[ (np.isfinite(x1)) & (np.isfinite(x4)) & (np.isfinite(y))]
 #xx2 = x2[ (np.isfinite(x1)) & (np.isfinite(x4)) & (np.isfinite(y))]
@@ -139,6 +148,10 @@ print('coefs: {}, intercept:{:.1f}'.format(coefs, interc))
 
 #%% Multivariate linear regression to >10m
 
+#x5 = bore['wind_deg']
+#x4 = bore['wind_speed']
+x5 = (bore.wind_speed * np.sin((300 - bore.wind_deg)*np.pi/180.))
+x4 = (bore.wind_speed * np.cos((300 - bore.wind_deg)*np.pi/180.))
 
 x3 = bore['ctr_height_LW']
 #x2 = (bore['liv_time_LW_bodc']-bore['liv_time_LW_harmonic'])/np.timedelta64(60,'s')
@@ -149,6 +162,13 @@ x0 = bore['liv_height_HW_bodc']
 y = bore['Saltney_lag_HW_bodc'].where(bore['liv_height_HW_bodc']>=9.)
 print('Multivariate linear regression to >9m')
 
+x5 = x5 - x5.mean()
+x4 = x4 - x4.mean()
+x3 = x3 - x3.mean()
+x2 = x2 - x2.mean()
+x1 = x1 - x1.mean()
+x0 = x0 - x0.mean()
+y  = y  - y.mean()
 
 flag = [1,0]
 # result contains all possible combinations.
@@ -178,11 +198,18 @@ Dropping Height(LW) doesn't matter!
 Suggesting the bore does not have an origin with LW being caught up.
 """
 
+y = bore['Saltney_lag_HW_bodc']
+y = y - y.mean()
 
+#%% Fit to HT without rivers with winds
+XX = np.c_[x0, x2, x4]
+fit_rmse, rmse, r2, coefs, interc = mlr_fit(XX,y)
+print('Fit to HT,dT WITHOUT rivers')
+print('full fit rmse: {:.1f}, test rmse: {:.1f}, r2: {:.1f}'.format(fit_rmse, rmse, r2))
+print('coefs: {}, intercept:{:.1f}'.format(coefs, interc))
 
 #%% Fit to HT, dtiming without rivers
 XX = np.c_[x0, x2]
-y = bore['Saltney_lag_HW_bodc']
 fit_rmse, rmse, r2, coefs, interc = mlr_fit(XX,y)
 print('Fit to HT,dT WITHOUT rivers')
 print('full fit rmse: {:.1f}, test rmse: {:.1f}, r2: {:.1f}'.format(fit_rmse, rmse, r2))
@@ -190,7 +217,6 @@ print('coefs: {}, intercept:{:.1f}'.format(coefs, interc))
 
 #%% Fit to HT  without rivers
 XX = np.c_[x0]
-y = bore['Saltney_lag_HW_bodc']
 fit_rmse, rmse, r2, coefs, interc = mlr_fit(XX,y)
 print('Fit to HT WITHOUT rivers')
 print('full fit rmse: {:.1f}, test rmse: {:.1f}, r2: {:.1f}'.format(fit_rmse, rmse, r2))
@@ -198,7 +224,6 @@ print('coefs: {}, intercept:{:.1f}'.format(coefs, interc))
 
 #%% Fit to timing  without rivers
 XX = np.c_[x2]
-y = bore['Saltney_lag_HW_bodc']
 fit_rmse, rmse, r2, coefs, interc = mlr_fit(XX,y)
 print('Fit to timing WITHOUT rivers')
 print('full fit rmse: {:.1f}, test rmse: {:.1f}, r2: {:.1f}'.format(fit_rmse, rmse, r2))
@@ -206,7 +231,6 @@ print('coefs: {}, intercept:{:.1f}'.format(coefs, interc))
 
 #%% Fit to HT, dtiming with rivers
 XX = np.c_[x0, x2, x3]
-y = bore['Saltney_lag_HW_bodc']
 fit_rmse, rmse, r2, coefs, interc = mlr_fit(XX,y)
 print('Fit to HT,dT WITH rivers')
 print('full fit rmse: {:.1f}, test rmse: {:.1f}, r2: {:.1f}'.format(fit_rmse, rmse, r2))
@@ -214,17 +238,75 @@ print('coefs: {}, intercept:{:.1f}'.format(coefs, interc))
 
 #%% Fit to HT with rivers
 XX = np.c_[x0, x3]
-y = bore['Saltney_lag_HW_bodc']
 fit_rmse, rmse, r2, coefs, interc = mlr_fit(XX,y)
 print('Fit to HT WITH rivers')
 print('full fit rmse: {:.1f}, test rmse: {:.1f}, r2: {:.1f}'.format(fit_rmse, rmse, r2))
 print('coefs: {}, intercept:{:.1f}'.format(coefs, interc))
 
+
+#%% Add met forcing
+#%% Fit to HT, dT, NorthWind
+XX = np.c_[x0, x2, x5]
+fit_rmse, rmse, r2, coefs, interc = mlr_fit(XX,y)
+print('full fit rmse: {:.1f}, test rmse: {:.1f}, r2: {:.1f}'.format(fit_rmse, rmse, r2))
+print('coefs: {}, intercept:{:.1f}'.format(coefs, interc))
+#full fit rmse: 5.2, test rmse: 6.0, r2: 0.7
+#coefs: [-15.95061415   0.19102741   0.18558336], intercept:139.8
+# lag = 140 -16*HT + 0.2*dT + 0.2*Nwind
+# obs_t - HT_t = 140 -16*HT + 0.2*(HT_t - LT_t) + 0.2*Nwind
+
 if(0):
     #Attempt to condense multivariate regression onto a line plot. Not sure this is it yet...
     plt.figure()
-    plt.scatter(y, x0 + coefs[1]/coefs[0]*x2 + interc/coefs[0], c=x4)
+    plt.scatter(y, (coefs[0]*x0 + coefs[1]*x2 + coefs[2]*x5 + interc), c=x3)
     plt.xlabel('Time before HT (mins)')
-    plt.ylabel('Transformed input data {Height(HT), dT}')
+    plt.ylabel('Transformed input data {Height(HT), dT, N.wind}')
     plt.colorbar()
     plt.show()
+
+
+#%% NW.Met, LT_t, HW
+x2 = bore['Saltney_lag_LW_bodc'] - bore['Saltney_lag_LW_bodc'].mean()
+XX = np.c_[x0, x2, x5]
+fit_rmse, rmse, r2, coefs, interc = mlr_fit(XX,y)
+print('full fit rmse: {:.1f}, test rmse: {:.1f}, r2: {:.1f}'.format(fit_rmse, rmse, r2))
+print('coefs: {}, intercept:{:.1f}'.format(coefs, interc))
+#full fit rmse: 4.4, test rmse: 5.0, r2: 0.8
+#coefs: [ 0.67576256  0.43188016 -0.29080028], intercept:-19.8
+
+# obs_t - HT_t = -190 +0.7*HT + 0.4*(obs_t - LT_t) - 0.3*NWwind
+
+
+
+#%%%% Try new fits
+"""
+dH, H_LT
+dT, wind, rivers
+"""
+JJ = bore['Quality'] == "A"
+
+x4 = bore.wind_speed * np.sin((300 - bore.wind_deg)*np.pi/180.)
+x3 = bore.wind_speed * np.cos((300 - bore.wind_deg)*np.pi/180.)
+#x3 = bore['ctr_height_LW']
+x2 = bore['Saltney_lag_LW_bodc'] - bore['Saltney_lag_HW_bodc']
+#x0 = 0.5*(bore['liv_height_HW_bodc'] + bore['liv_height_LW_bodc'])# /bore['liv_height_HW_bodc']
+x1 = bore['liv_height_LW_bodc']# + bore['liv_height_LW_bodc'])# /bore['liv_height_HW_bodc']
+x0 = bore['liv_height_HW_bodc']# + bore['liv_height_LW_bodc'])# /bore['liv_height_HW_bodc']
+y = bore['Saltney_lag_LW_bodc']
+
+x4 = (x4 - x4.mean())[JJ]/x4.std()
+x3 = (x3 - x3.mean())[JJ]/x3.std()
+x2 = (x2 - x2.mean())[JJ]/x2.std()
+x1 = (x1 - x1.mean())[JJ]/x1.std()
+x0 = (x0 - x0.mean())[JJ]/x0.std()
+y  = (y  - y.mean())[JJ]/y.std()
+
+flag = [1,0]
+# result contains all possible combinations.
+combinations = (list(itertools.product(flag,flag,flag,flag,flag)))
+
+for com in combinations:
+    XX = np.c_[x0*com[0], x1*com[1], x2*com[2], x3*com[3], x4*com[4]]
+    fit_rmse, rmse, r2, coefs, interc = mlr_fit(XX,y)
+    #if r2 > 0.7:
+    print('inputs:{}, full fit rmse: {:.1f}, test rmse: {:.1f}, r2: {:.1f}'.format(com, fit_rmse, rmse, r2))

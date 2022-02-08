@@ -39,7 +39,7 @@ yes | conda install -c conda-forge cartopy=0.20.1
 conda install requests
 
 Usage:
-python CTR_check.py
+python CTR_check_now.py
 '''
 
 # Begin by importing coast and other packages
@@ -98,7 +98,7 @@ if __name__ == "__main__":
 
     ## 24 hrs
     date_end = np.datetime64('now')
-    date_start = np.datetime64('now') - np.timedelta64(72,'h')
+    date_start = np.datetime64('now') - np.timedelta64(24,'h')
 
 
 

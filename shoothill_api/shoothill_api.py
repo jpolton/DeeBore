@@ -218,7 +218,14 @@ class GAUGE(coast.Tidegauge):
         plt.plot( win.dataset.time, win.dataset.sea_level); plt.plot(interp.time, interp,'+'); plt.show()
         """
         y = self.dataset[var_str].rolling(time=3, center=True).mean() # Rolling smoothing. Note we are only interested in the steep bit when it is near linear.
-        f = y.differentiate("time")
+        try:
+            f = y.differentiate("time")
+        except ValueError: # There is a problem if there are chunk sizes of 1. Rechunk
+            if np.array(y.chunks[0]).min() == 1:   # assuming y.chunks[0] == (47,1) or similar
+                y = y.chunk(chunks={"time":len(y)})
+                f = y.differentiate("time")
+            else:
+                print(f"Problem with differentiate over time")
         x = self.dataset.time
 
         if(0):

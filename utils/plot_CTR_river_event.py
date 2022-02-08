@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
+plot_CTR_river_event.py
+
 Created on 29 Mar 2021
 
 @author: jeff
