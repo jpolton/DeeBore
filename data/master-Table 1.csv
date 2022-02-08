@@ -9,8 +9,11 @@ An unremarkable tide, with significant surge forecast.
 
 Speed pylons to FB: (11:55:25 - 11:46:35) 8:50 over  1.82km --> 12.36 km/h
 ",12.36,
-03/02/2022 11:17,03/02/2022 11:17,,Jeff,"Liv HT:     2022-02-03T12:38+0000 9.86 m
-",bridge,12:38,9.86,1.16,,4.489,1h 21m,1.34083333333333,247.5,1011,,,,"FB time - predicted.{“D”:”WSW"",""G"":""11"",""H"":""73.0"",""P"":""1011"",""S"":""3"",""T"":""10.5"",""V"":""45000"",""W"":""8"",""Pt"":""F"",""Dp"":""5.9"",""$"":""660""} @basecamppb +1 caught it beyond the pontoon and rode past us. The hydraulic jump went straight through me, I barely registered a speed up. Tipped in. HiFly+double paddle.",,
+03/02/2022 11:11,03/02/2022 11:11,,Jeff,"Liv HT:     2022-02-03T12:38+0000 9.86 m
+",bridge,12:38,9.86,1.16,,4.489,1h 27m,1.34083333333333,247.5,1011,,,,"FB time - fitted using speed ratio between QF and GrosvenorBridge.{“D”:”WSW”,""G"":""11"",""H"":""73.0"",""P"":""1011"",""S"":""3"",""T"":""10.5"",""V"":""45000"",""W"":""8"",""Pt"":""F"",""Dp"":""5.9"",""$"":""660""} @basecamppb +1 caught it beyond the pontoon and rode past us. The hydraulic jump went straight through me, I barely registered a speed up. Tipped in. HiFly+double paddle.",,
+03/02/2022 10:46,03/02/2022 10:46,A,rob bridges,Liv HT:     2022-02-03T12:38+0000 9.86 m,blue bridge,12:38,9.86,1.16,,4.489,1h 52m,1.34083333333333,247.5,1011,,,,"https://www.youtube.com/watch?v=c9vRaSq9Fio  The Queensferry at 10:46
+The bore passed under Grosvenor Bridge at 11:36
+All times GMT. Speeds from estimated/optimised FB times.",12.768,12
 02/02/2022 10:29,02/02/2022 10:29,A,Jeff,Liv HT:     2022-02-02T11:54+0000 9.8 m,bridge,11:54,9.8,1.23,,4.497,1h 24m 50s,3.57555555555556,292.5,1022,,,,"{“D”:”WNW"",""G"":""18"",""P"":""1022"",""S"":""8"",""T"":""11.0"",""$"":""600""}. Kayaker rode it past.
 Small wave, lots of white water. 
 Caught it middle field, before special tree markers and some way past the culvert station. Nowhere looked particularly good as it approached, though on arrival the wave cleaned up on the Sealand rode side.
@@ -85,7 +88,7 @@ x,15/11/2020 09:09,A,Giles, 2020-11-15T10:43+0000 9.93 m,bridge,10:43,9.93,0.82
 16/10/2020 10:09,16/10/2020 09:09,A,Jeff/Carol/Owen,,bridge,10:24,9.78,0.89,4.582,,1h 15m,1.0,350.0,1027.0,,,,"Undulating bore. No white water. Kayak rider. 11.3km/h with a hint of slowing. Speed calc distance=1.46km (estimated from other log, actually Airbus to Saltney FB (6mins))",11.3,
 15/10/2020 21:42,15/10/2020 20:42,A,Tim/Tom,,bridge,21:58,9.7,1.57,4.601,,1h 16m,2.1,340.0,1027.0,,,,,,
 15/10/2020 09:20,15/10/2020 08:20,A,Carol,,bridge,09:42,9.33,1.41,4.621,,1h 22m,2.6,330.0,1028.0,,,,Carol got there 925am and it had passed the bridge. Estimated at 09:20,,
-19/09/2020 11:31,19/09/2020 10:31,A,Jeff,,blue bridge,12:12,10.00,0.42,4.428,,1h 41m,5.7,70.0,1021.0,,,,SUP,,
+19/09/2020 11:31,19/09/2020 10:31,A,Jeff,,blue bridge,12:12,10.00,0.42,4.428,,1h 41m,5.7,70.0,1021.0,,,,SUP,11.4,
 19/09/2020 11:59,19/09/2020 10:59,,DMPB,Glad HT 12:12,bridge,12:12,10.00,0.42,4.428,,1h 13m,5.7,70.0,1021.0,,,,,,
 01/08/2020 21:32,01/08/2020 20:32,,Goldluna,,bridge,,,,,,,3.6,240.0,1016.0,,,,approx time,,
 17/09/2019 12:48,17/09/2019 11:48,,Soniaharry,,bridge,,,,,,,5.7,340.0,1027.0,,,,,,
@@ -97,9 +100,18 @@ x,15/11/2020 09:09,A,Giles, 2020-11-15T10:43+0000 9.93 m,bridge,10:43,9.93,0.82
 20/04/2019 11:25,20/04/2019 10:25,,keenonkites,Glad HT 12:36BST 9.96m,bridge,,,,,,,3.1,150.0,1031.0,,,,undular,,
 08/04/2019 12:46,08/04/2019 11:46,,Glen Falcon Terrors,HT 8.6m,bridge,,,,,,,3.6,170.0,1012.0,,,,undular,,
 11/07/2018 21:42,11/07/2018 20:42,,fizzyvimto,,bridge,,,,,,,3.6,320.0,1022.0,,,,not sure that the date is right..,,
+18/10/2016 12:17,18/10/2016 11:17,A,rob bridges, Glad 10.0m @ 13:15BST,Grosvenor,12:15,10.0,,,,58m,,,,,,,"https://www.youtube.com/watch?v=ToZlqkOcYFk  Expected high tide at Liverpool Gladstone Dock :  10.0m @ 13:15
+The bore passed under the blue bridge at 11:18 and under Grosvenor Bridge at 12:17
+All times BST (GMT + 1)",,
+18/10/2016 11:48,18/10/2016 10:48,,rob bridges (Jeff inferred), Glad 10.0m @ 13:15BST,bridge,12:15,10.0,,,,1h 27m,,,,,,,"inferred from Rob Bridges obs at Blue bridge and Grosvenor Bridges, with a speed ratio of 1.0 to 1.1",10.64,10.34
+18/10/2016 11:18,18/10/2016 10:18,A,rob bridges, Glad 10.0m @ 13:15BST,blue bridge,12:15,10.0,,,,1h 57m,,,,,,,,,
 29/10/2015 10:30,29/10/2015 10:30,,Cairz,,bridge,,,,,,,3.1,250.0,1007.0,,,,,,
-02/10/2015 13:03,02/10/2015 12:03,,Wasmiss,13:45GMT 9.39m,blue bridge,13:45,9.39,,,,1h 42m,3.6,160.0,1026.0,,,,,,
-29/09/2015 11:15,29/09/2015 10:15,,MrandMrsPlantsman,,bridge,,,,,,,2.1,150.0,1037.0,,,,,,
+02/10/2015 13:03,02/10/2015 12:03,,Wasmiss,13:45GMT 9.39m,blue bridge,13:45,9.43,1.13,,,1h 42m,3.6,160.0,1026.0,,,,,,
+29/09/2015 11:15,29/09/2015 10:15,,MrandMrsPlantsman,,bridge,11:36,10.12,0.38,,,1h 21m,2.1,150.0,1037.0,,,,,,
+29/09/2015 10:47,29/09/2015 09:47,A,rob bridges,10:00m at 12:37,blue bridge,11:36,10.12,0.38,,,1h 49m,,,,,,,"https://www.youtube.com/watch?v=gDzGZooK6qE  The bore passed under the blue bridge at 10:47 (1hr 50mins before HT)   (next log: FB@10:15)
+The bore was visible from the The Cop at 11:37 (1hr before HT)
+The bore passed under Grosvenor Bridge at 11:51 (48mins before HT)
+All times BST  (GMT +1)",9.975,8.33
 20/06/2015 13:16,20/06/2015 12:16,,steveastapleton(sas),,bridge,13:27,8.58,1.52,,,1h 11m,1.0,340.0,1020.0,,,,anyTide,,
 18/04/2015 10:07,18/04/2015 09:07,A,RoastBeef,,bridge,10:31,9.91,0.80,4.434,,1h 24m,4.36,96.0,1031.0,,,,Bore speed 8.6km/h over 610m,8.6,
 08/04/2015 13:12,08/04/2015 12:12,A,RoastBeef,Glad HT 14:14,bridge,13:14,8.91,1.57,4.515,,1h 2m,1.87,127.0,1033.0,,,,waves not bore,,
@@ -114,6 +126,14 @@ x,15/11/2020 09:09,A,Giles, 2020-11-15T10:43+0000 9.93 m,bridge,10:43,9.93,0.82
 03/04/2014 13:10,03/04/2014 12:10,,Stillroaming,,bridge (I think),13:18,9.32,1.02,,,329d 1h 8m,3.6,150.0,1000.0,,,,,,
 21/03/2014 12:33,21/03/2014 12:33,,hasenfreund,,bridge,13:46,8.96,1.52,,,342d 1h 13m,8.2,230.0,1000.0,,,,,,
 03/01/2014 10:38,03/01/2014 10:38,,Wilderness-Girl,,bridge,12:14,10.13,0.84,,,1h 36m,9.3,200.0,983.0,,,,,,
+01/02/2014 10:40,01/02/2014 10:40,A,rob bridges,Glad 10.21m at 12:00,bridge,12:00,10.21,,,,1h 20m,,,,,,,"https://www.youtube.com/watch?v=wWNfsIQRAwI Date: 1st February 2014
+Expected high tide at Liverpool (Gladstone Dock) was 10.21m at 12:00
+The bore passed under the blue Queensferry Bridge at 10:09, then under the Saltney Ferry footbridge at 10:40.
+I estimate the wave height approaching Queensferry Bridge at around 3ft (92cm), to 4ft (1.22m), as it first appeared in the video further down river.",10.30,
+01/02/2014 10:09,01/02/2014 10:09,A,rob bridges,Glad 10.21m at 12:00,blue bridge,12:00,10.21,,,,1h 51m,,,,,,,"https://www.youtube.com/watch?v=wWNfsIQRAwI Date: 1st February 2014
+Expected high tide at Liverpool (Gladstone Dock) was 10.21m at 12:00
+The bore passed under the blue Queensferry Bridge at 10:09, then under the Saltney Ferry footbridge at 10:40.
+I estimate the wave height approaching Queensferry Bridge at around 3ft (92cm), to 4ft (1.22m), as it first appeared in the video further down river.",,
 01/01/2014 09:20,01/01/2014 09:20,,smurphys,,bridge,10:36,9.67,1.26,,,1h 16m,4.1,150.0,989.0,,,,,,
 03/11/2013 09:13,03/11/2013 09:13,,StidentUK,Liverpool HT 10:30,estimated,10:31,9.49,1.30,,,1h 18m,4.1,250.0,997.0,,,,,,
 09/10/2013 13:25,09/10/2013 12:25,,andycop,,estimated,13:33,9.26,1.55,,,505d 1h 8m,6.7,280.0,1019.0,,,,,,
@@ -137,7 +157,7 @@ x,15/11/2020 09:09,A,Giles, 2020-11-15T10:43+0000 9.93 m,bridge,10:43,9.93,0.82
 18/09/2012 11:00,18/09/2012 11:00,,leanro,,bridge,12:14,9.78,0.72,4.485,,891d 1h 13m 43s,8.2,280.0,1013.0,,,,logged as GMT,,
 07/06/2012 12:50,07/06/2012 11:50,,Busbi,,maybe,13:04,9.28,0.74,,,994d 1h 14m,7.2,130.0,992.0,,,,,,
 08/04/2012 11:30,08/04/2012 10:30,,chilealan,,bridge,11:55,10.01,0.49,4.522,,1054d 1h 25m,5.1,320.0,1011.0,,,,Kayak,,
-08/04/2012 11:05,08/04/2012 10:05,,the dirty duo,,blue bridge,11:55,10.01,0.49,,,1h 50m,5.1,320.0,1011.0,,,,,,
+08/04/2012 11:05,08/04/2012 10:05,,the dirty duo,,blue bridge,11:55,10.01,0.49,,,1h 50m,5.1,320.0,1011.0,,,,estimated speed for day’s obs.,12.77,
 08/04/2012 11:05,08/04/2012 10:05,,j4pne,,Queensferry road bridge,11:55,10.01,0.49,,,1h 50m,5.1,320.0,1011.0,est height 0.3 m,,,,,
 20/04/2011 11:28,20/04/2011 10:28,,fancysnave,,blue bridge,12:24,9.77,0.53,,,1h 56m,2.6,160.0,1016.0,,,,,,
 19/02/2011 10:05,19/02/2011 10:05,,TinkYB,,bridge,11:41,10.05,0.75,4.605,,1468d 1h 36m,4.6,170.0,1009.0,,,,,,
@@ -155,7 +175,7 @@ x,15/11/2020 09:09,A,Giles, 2020-11-15T10:43+0000 9.93 m,bridge,10:43,9.93,0.82
 23/03/2008 10:40,23/03/2008 10:40,,Fly Fifers,Liv HT 12:14; 9.48m,bridge,12:03,9.31,1.25,4.567,,1h 23m,6.2,350.0,1000.0,,,,,,
 11/03/2008 11:57,11/03/2008 11:57,,PedroTheLion,,bridge,13:24,9.70,0.97,4.657,,1h 27m,5.7,150.0,980.0,,,,,,
 29/09/2007 12:09,29/09/2007 11:09,,usnu,,bridge,12:25,9.76,0.61,4.548,,1h 16m,2.6,70.0,1016.0,,,,,,
-08/10/2006 10:37,08/10/2006 09:37,,Herts_Skip,,blue bridge,11:32,9.90,0.43,,,1h 55m,4.1,140.0,1015.0,,,,,,
+08/10/2006 10:37,08/10/2006 09:37,,Herts_Skip,,blue bridge,11:32,9.90,0.43,,,1h 55m,4.1,140.0,1015.0,,,,,11.01,
 08/10/2006 11:06,08/10/2006 10:06,,The Haywood Hornet,,bridge,11:32,9.90,0.43,4.664,,1h 26m,4.1,140.0,1015.0,,,,,,
 29/04/2006 11:40,29/04/2006 10:40,,Tizzie,,bridge,11:53,9.69,0.75,4.438,,1h 13m,4.6,340.0,1023.0,,,,,,
 21/08/2005 11:58,21/08/2005 10:58,,Skippy and Pingu,,bridge,12:09,9.66,0.38,4.396,,1h 11m,1.5,120.0,1024.0,,,,,,
