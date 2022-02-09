@@ -1546,23 +1546,23 @@ class Controller():
 
         looper = True
         while looper:
-            nd = input('Make predictions for N days from hence (int), or a date range (R):?')
+            nd = input('Make predictions date range (R), or for N days from hence (int):?')
 
             if (nd == "R") or (nd == "r"):
                 yyyy = input('start year (yyyy)?')
                 mm = input('start mon (mm)?')
                 dd = input('start day (dd)?')
-                day = np.datetime64('{0}-{1}-{2}'.format(yyyy,mm,dd))
+                day_start = np.datetime64('{0}-{1}-{2}'.format(yyyy,mm,dd))
                 yyyy = input('end year (yyyy)?')
                 mm = input('end mon (mm)?')
                 dd = input('end day (dd)?')
-                dayp1 = np.datetime64('{0}-{1}-{2}'.format(yyyy,mm,dd))
+                day_end = np.datetime64('{0}-{1}-{2}'.format(yyyy,mm,dd)) + np.timedelta64(24, 'h')
                 looper = False
 
             else:
                 try:
-                    day = np.datetime64('now', 'D') + np.timedelta64(int(nd), 'D')
-                    dayp1 = day + np.timedelta64(24, 'h')
+                    day_start = np.datetime64('now', 'D')
+                    day_end = day_start + np.timedelta64(24, 'h') + np.timedelta64(int(nd), 'D')
                     looper = False
                 except: pass
 
@@ -1570,7 +1570,7 @@ class Controller():
         if(1): # np.datetime64('now', 'Y') < np.datetime64('2021'): # year 2020
             print("predict_bore(): should check is table data is available. If not use harm reconstructed data")
             tg = GAUGE()
-            tg.dataset = tg.read_hlw_to_xarray(filnam, day, dayp1)
+            tg.dataset = tg.read_hlw_to_xarray(filnam, day_start, day_end)
 
             HT = tg.dataset['sea_level'].where(tg.dataset['sea_level']\
                                     .values > 7).dropna('time') #, drop=True)
@@ -1579,7 +1579,7 @@ class Controller():
             print('source=',source)
             tg = GAUGE()
             tg_tmp = GAUGE()
-            tg_tmp.dataset = tg_tmp.anyTide_to_xarray(date_start=day, date_end=dayp1)
+            tg_tmp.dataset = tg_tmp.anyTide_to_xarray(date_start=day_start, date_end=day_end)
             tg = tg_tmp.find_high_and_low_water(var_str='sea_level')
             #tg.dataset = tg.get_Glad_data(source='harmonic_rec',date_start=day, date_end=dayp1)
 
