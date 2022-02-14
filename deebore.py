@@ -719,6 +719,11 @@ class Controller():
                 print("shoothill dev")
                 self.shoothill()
 
+            elif command == "d3":
+                print('plot bore data (lag vs tidal height) highlight observer')
+                plt.close('all'); self.plot_lag_vs_height('all',HLW="HW", logger="JohnTurner")
+                plt.close('all'); self.plot_lag_vs_height('harmonic',HLW="HW", logger="JohnTurner")
+
             elif command == "d4":
                 print('Plot combinations of HLW times, heights and rivers')
                 self.combinations_lag_hlw_river()
@@ -1237,7 +1242,7 @@ class Controller():
         print( self.bore )
 
 
-    def plot_lag_vs_height(self, source:str="harmonic", HLW:str="HW"):
+    def plot_lag_vs_height(self, source:str="harmonic", HLW:str="HW", logger:str=None):
         """
         Plot bore lag (obs time - Gladstone tide time) against
         Gladstone extreme water water (m).
@@ -1250,7 +1255,10 @@ class Controller():
                 'api' - load recent, un processed data from shoothill API
                 'all' - Use bodc + api data
         HLW: [LW/HW] - the data is either processed for High or Low water events
+        logger: None/"Jeff" - the name of an observer to highlight
         """
+        if logger is not None: L = self.bore['logger'] == logger
+
         I = self.bore['Quality'] == "A"
         if source == "all":
             Yliv = self.bore['liv_height_'+HLW+'_bodc']
@@ -1272,6 +1280,9 @@ class Controller():
             plt.plot( Xblue_api,Yliv_api, 'bo', label='Bluebridge API')
             plt.plot( Xsalt_api_latest,Yliv_api_latest, 'go', label='Saltney latest: '+lab)
             plt.plot( Xsalt_api[I],Yliv_api[I], 'k+')
+            # Add logger, if requested
+            if logger is not None:
+                plt.plot(Xsalt[L], Yliv[L], 'mo', label=logger)
 
 
 
@@ -1289,17 +1300,22 @@ class Controller():
             lab = self.bore.time.where( xr.ufuncs.isfinite(Xsalt), drop=True)[0].values.astype('datetime64[D]').astype(object).strftime('%d%b%y')
 
             # Highlight recent data
-            Yliv = self.bore['liv_height_'+HLW+'_'+source].where( self.bore.time > np.datetime64('2021-01-01') )
-            Xsalt = self.bore['Saltney_lag_'+HLW+'_'+source].where( self.bore.time > np.datetime64('2021-01-01') )
-            Xblue = self.bore['bluebridge_lag_'+HLW+'_'+source].where( self.bore.time > np.datetime64('2021-01-01') )
+            Yliv_new = self.bore['liv_height_'+HLW+'_'+source].where( self.bore.time > np.datetime64('2021-01-01') )
+            Xsalt_new = self.bore['Saltney_lag_'+HLW+'_'+source].where( self.bore.time > np.datetime64('2021-01-01') )
+            Xblue_new = self.bore['bluebridge_lag_'+HLW+'_'+source].where( self.bore.time > np.datetime64('2021-01-01') )
             #Yliv = self.bore['liv_height_'+HLW+'_'+source].where( np.isnan(self.bore['liv_height_'+HLW+'_bodc']))
             #Xsalt = self.bore['Saltney_lag_'+HLW+'_'+source].where( np.isnan(self.bore['liv_height_'+HLW+'_bodc']))
             #Xblue = self.bore['bluebridge_lag_'+HLW+'_'+source].where( np.isnan(self.bore['liv_height_'+HLW+'_bodc']))
-            plt.plot( Xsalt,Yliv, 'ro', label='Saltney 2021+')
-            plt.plot( Xblue,Yliv, 'bo', label='Bluebridge 2021+')
+            plt.plot( Xsalt_new,Yliv_new, 'ro', label='Saltney 2021+')
+            plt.plot( Xblue_new,Yliv_new, 'bo', label='Bluebridge 2021+')
             plt.plot( Xsalt_latest,Yliv_latest, 'go', label='Saltney latest: '+lab)
-            plt.plot( Xsalt[I],Yliv[I], 'k+')
+            plt.plot( Xsalt_new[I],Yliv_new[I], 'k+')
             #plt.plot( Xblue[0],Yliv[0], 'b+', label='Bluebridge recent')
+
+            # Add logger, if requested
+            if logger is not None:
+                plt.plot(Xsalt[L], Yliv[L], 'mo', label=logger)
+                print( L, Xsalt[L], Yliv[L], logger )
 
 
 
@@ -1995,7 +2011,7 @@ if __name__ == "__main__":
     DEV:
     d1     load and plot HLW data
     d2     shoothill dev
-    d3     <empty>
+    d3     plot bore data (lag vs tidal height) highlight observer
     d4     Plot different combinations of Lag,HLW w/ rivers
     d5     Explore how rivers affect bore timing
     """
