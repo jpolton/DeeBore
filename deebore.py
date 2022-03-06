@@ -96,7 +96,8 @@ class BODC:
         '2014LIV.txt', '2015LIV.txt',
         '2016LIV.txt', '2017LIV.txt',
         '2018LIV.txt', '2019LIV.txt',
-        '2020LIV.txt', '2021LIV.txt']
+        '2020LIV.txt', '2021LIV.txt',
+        'LIV2201.txt']
         #'LIV2201.txt', 'LIV2202.txt']
         tg  = GAUGE()
         for file in filelist:

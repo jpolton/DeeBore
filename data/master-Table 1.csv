@@ -1,4 +1,9 @@
 date + logged time,date + logged time (GMT),Quality,logger,Liv HT (reported by logger),location,Liv (Gladstone Dock) HT time (GMT),Liv (Gladstone Dock) HT height (m),Liv (Gladstone Dock) prev. LT height (m),Chester Weir height: CHESTER WEIR 15 MIN SG,Dee at Ironbridge (m),Time difference: Glad-Saltney,wind_speed (m/s),wind_deg (from),pressure (hPa),,,,note,Queensferry to Saltney speed (km/h),Saltney to CTR speed (km/h)
+05/03/2022 11:38,05/03/2022 11:38,A,Jeff,Liv HT:    2022-03-05T12:53+0000 9.72m,bridge,12:53,9.72,1.06,,5.07,1h 14m 33s,4.91638888888889,0,1029,,,,"{""D"":""N"",""G"":""19"",""H"":""56.6"",""P"":""1029"",""S"":""11"",""T"":""7.5"",""V"":""35000"",""W"":""1"",""Pt"":""R"",""Dp"":""-0.4"",""$"":""660""}Blue sky, cumulus cloads, bit of a breeze
+Negative surge taking the height below 9.5m. Didn't look promising, but the weather was nice. 
+ride time: 1min27s (video)
+330m 1m25s (gpx) = 13.98km/h.  pylon to fb 1.82km / (11:38:27 - 11:30:42) = 14.09 km/h
+",13.98,
 05/02/2022 12:33,05/02/2022 12:33,A,Jeff,Liv HT:     2022-02-05T13:58+0000 9.46 m,bridge,13:58,9.46,1.56,,4.594,1h 24m 28s,4.91638888888889,247.5,1012,,,,"{“D"":""WSW"",""G"":""23"",""H"":""82.5"",""P"":""1012"",""S"":""11"",""T"":""8.9"",""V"":""11000"",""W"":""12"",""Pt"":""F"",""Dp"":""6.1"",""$"":""780""}  3min 11s of ride (from video)
 Track segment: 561m / 2.67mins = 12.20 km/h
 An unremarkable tide, with significant surge forecast.
@@ -100,7 +105,7 @@ x,15/11/2020 09:09,A,Giles, 2020-11-15T10:43+0000 9.93 m,bridge,10:43,9.93,0.82
 20/04/2019 11:25,20/04/2019 10:25,,keenonkites,Glad HT 12:36BST 9.96m,bridge,,,,,,,3.1,150.0,1031.0,,,,undular,,
 08/04/2019 12:46,08/04/2019 11:46,,Glen Falcon Terrors,HT 8.6m,bridge,,,,,,,3.6,170.0,1012.0,,,,undular,,
 22/03/2019 10:14,22/03/2019 10:14,,@jeremyFlint50,,blue bridge,,,,,,,,,,,,,twitter: #River #Dee bore at #Queensferry #Deeside 1014hrs today. #Flintshire,,
-25/12/2018 11:35,25/12/2018 11:35,,JohnTurner,12:45 9/78,bridge,12:45,9.78,1.28,,,1h 10m,,,,,,,https://www.geograph.org.uk/photo/6007606,,
+25/12/2018 11:35,25/12/2018 11:35,,JohnTurner,12:45 9/78,bridge,12:45,9.78,1.28,,,1h 9m 1s,,,,,,,https://www.geograph.org.uk/photo/6007606,,
 11/07/2018 21:42,11/07/2018 20:42,,fizzyvimto,,bridge,,,,,,,3.6,320.0,1022.0,,,,not sure that the date is right..,,
 18/10/2016 12:17,18/10/2016 11:17,A,rob bridges, Glad 10.0m @ 13:15BST,Grosvenor,12:15,10.0,,,,58m,,,,,,,"https://www.youtube.com/watch?v=ToZlqkOcYFk  Expected high tide at Liverpool Gladstone Dock :  10.0m @ 13:15
 The bore passed under the blue bridge at 11:18 and under Grosvenor Bridge at 12:17
