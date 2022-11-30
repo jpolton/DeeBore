@@ -1,32 +1,52 @@
 date + logged time,date + logged time (GMT),Quality,logger,Liv HT (reported by logger),location,Liv (Gladstone Dock) HT time (GMT),Liv (Gladstone Dock) HT height (m),Liv (Gladstone Dock) prev. LT height (m),Chester Weir height: CHESTER WEIR 15 MIN SG,Dee at Ironbridge (m),Time difference: Glad-Saltney,wind_speed (m/s),wind_deg (from),pressure (hPa),,,,note,Queensferry to Saltney speed (km/h),Saltney to CTR speed (km/h)
-05/03/2022 11:38,05/03/2022 11:38,A,Jeff,Liv HT:    2022-03-05T12:53+0000 9.72m,bridge,12:53,9.72,1.06,,5.07,1h 14m 33s,4.91638888888889,0,1029,,,,"{""D"":""N"",""G"":""19"",""H"":""56.6"",""P"":""1029"",""S"":""11"",""T"":""7.5"",""V"":""35000"",""W"":""1"",""Pt"":""R"",""Dp"":""-0.4"",""$"":""660""}Blue sky, cumulus cloads, bit of a breeze
+25/11/2022 10:18,25/11/2022 10:18,A,Jeff,Liv HT:    2022-11-25T11:36+0000 9.64m,bridge,11:36,9.64,1.35,4.88730639030617,5.81,1h 17m 34s,3.57555555555556,202.5,1011,,,,"{“D”:""SSW"",""G"":""15"",""H"":""70.4"",""P"":""1011"",""S"":""8"",""T"":""10.1"",""V"":""35000"",""W"":""1"",""Pt"":""R"",""Dp"":""5.0"",""$"":""600""}. Fast river (~12km/h). I ran to photograph Jake. He was carried out past the pylons but caught it standing and rode it beyond possible limits (510m, 3mins 14s). Bore speed: 11.3 - 9.8km/h",10.57,
+14/07/2022 23:28,14/07/2022 23:28,A,Giles,Liv HT:    2022-07-15T00:39+0100 9.65m,bridge,00:39,9.65,1.32,4.45390254892325,4.381,1h 10m 24s,1.34083333333333,202.5,1026,,,,"{“D”:”SSW"",""G"":""6"",""H"":""80.5"",""P"":""1026"",""S"":""3"",""T"":""11.4"",""V"":""45000"",""W"":""0"",""Pt"":""R"",""Dp"":""8.2"",""$"":""1380""}. Night riders. Caught it standing w/ Giles. Rode it for 3mins 30s, 637m",,
+18/04/2022 11:44,18/04/2022 10:44,A,jeff,"Liv HT: 2022-04-18T13:00+0100 9.73m
+",bridge,12:00,9.73,0.93,4.46603421698156,4.421,1h 15m 53s,3.57555555555556,247.5,1017,,,,"{“D"":""WSW"",""G"":""15"",""H"":""55.9"",""P"":""1017"",""S"":""8"",""T"":""11.3"",""V"":""45000"",""W"":""1"",""Pt"":""R"",""Dp"":""2.9"",""$"":""600""} Tandem with standing catch. 15s before a kayak went under us. Chased it. Gained on it but didn’t get to the front again.",13.5,
+02/04/2022 11:39,02/04/2022 10:39,A,jeff,"Liv HT:    2022-04-02T12:51+0100 9.63m
+
+",bridge,11:51,9.63,1.07,4.46451775847427,4.416,1h 11m 13s,2.23472222222222,180,1024,,,,"On the way to the airport. 50cm undulating bore. 3 kayakers struggled to keep on the front, rode 2ndary waves. {""D"":""S"",""G"":""10"",""H"":""61.0"",""P"":""1024"",""S"":""5"",""T"":""7.1"",""V"":""40000"",""W"":""8"",""Pt"":""R"",""Dp"":""0.2"",""$"":""660""}",,
+01/04/2022 11:03,01/04/2022 10:03,A,jeff,"Liv HT: 2022-04-01T12:15+0100 9.6m
+",bridge,11:15,9.6,1.17,4.46694409208593,4.424,1h 11m 27s,4.46944444444444,0,1022,,,,"26s ride w/ Kester, mike.",12.2,
+21/03/2022 11:48,21/03/2022 11:48,A,jeff,"Liv HT:    2022-03-21T13:01+0000 9.61m
+",bridge,13:01,9.61,1.08,4.48756792778505,4.492,1h 12m 15s,4.91638888888889,157.5,1027,,,,"{“D”:""SSE"",""G"":""16"",""H"":""71.7"",""P"":""1027"",""S"":""11"",""T"":""7.3"",""V"":""11000"",""W"":""8"",""Pt"":""R"",""Dp"":""2.6"",""$"":""660""}. Caught it at the edge of the breaking point
+Caught it standing. Feet behind the line.
+Quitely had to move forward and then back. Wobbled quite a bit and but kept it.
+Sped along at a 30deg angle to the bank but not obviously traversing the wave...
+Tried to recify with Power strokes and eventually fell in.
+23s on the wave.
+",,
+20/03/2022 00:00,20/03/2022 00:00,,Giles,"Liv HT:    2022-03-20T12:25+0000 9.65m
+",bridge,12:25,9.65,1.05,4.49120742820254,4.504,12h 25m,6.25722222222222,135,1029,,,,"Giles under the bridge from the pontoon! {“D"":""SE"",""G"":""21"",""H"":""54.4"",""P"":""1029"",""S"":""14"",""T"":""10.2"",""V"":""35000"",""W"":""1"",""Pt"":""F"",""Dp"":""1.6"",""$"":""660""}",,
+19/03/2022 10:45,19/03/2022 10:45,A,Jeff,Liv HT:    2022-03-19T11:51+0000 9.54m,bridge,11:51,9.54,1.19,4.4957568037244,4.519,1h 5m 58s,5.81027777777778,135,1039,,,,"{""D"":""SE"",""G"":""21"",""H"":""63.6"",""P"":""1039"",""S"":""13"",""T"":""11.4"",""V"":""19000"",""W"":""1"",""Pt"":""F"",""Dp"":""4.9"",""$"":""600""}",12.409,
+05/03/2022 11:38,05/03/2022 11:38,A,Jeff,Liv HT:    2022-03-05T12:53+0000 9.72m,bridge,12:53,9.72,1.06,4.66287053122754,5.07,1h 14m 33s,4.91638888888889,0,1029,,,,"{""D"":""N"",""G"":""19"",""H"":""56.6"",""P"":""1029"",""S"":""11"",""T"":""7.5"",""V"":""35000"",""W"":""1"",""Pt"":""R"",""Dp"":""-0.4"",""$"":""660""}Blue sky, cumulus cloads, bit of a breeze
 Negative surge taking the height below 9.5m. Didn't look promising, but the weather was nice. 
 ride time: 1min27s (video)
 330m 1m25s (gpx) = 13.98km/h.  pylon to fb 1.82km / (11:38:27 - 11:30:42) = 14.09 km/h
 ",13.98,
-05/02/2022 12:33,05/02/2022 12:33,A,Jeff,Liv HT:     2022-02-05T13:58+0000 9.46 m,bridge,13:58,9.46,1.56,,4.594,1h 24m 28s,4.91638888888889,247.5,1012,,,,"{“D"":""WSW"",""G"":""23"",""H"":""82.5"",""P"":""1012"",""S"":""11"",""T"":""8.9"",""V"":""11000"",""W"":""12"",""Pt"":""F"",""Dp"":""6.1"",""$"":""780""}  3min 11s of ride (from video)
+05/02/2022 12:33,05/02/2022 12:33,A,Jeff,Liv HT:     2022-02-05T13:58+0000 9.46 m,bridge,13:58,9.46,1.56,4.51850368133372,4.594,1h 24m 28s,4.91638888888889,247.5,1012,,,,"{“D"":""WSW"",""G"":""23"",""H"":""82.5"",""P"":""1012"",""S"":""11"",""T"":""8.9"",""V"":""11000"",""W"":""12"",""Pt"":""F"",""Dp"":""6.1"",""$"":""780""}  3min 11s of ride (from video)
 Track segment: 561m / 2.67mins = 12.20 km/h
 An unremarkable tide, with significant surge forecast.
 ",12.20,
-04/02/2022 11:55,04/02/2022 11:55,A,Jeff,Liv HT:     2022-02-04T13:19+0000 9.74 m,bridge,13:19,9.74,1.27,,4.529,1h 23m 35s,6.25722222222222,270,1009,,,,"Caught secondary waves
+04/02/2022 11:55,04/02/2022 11:55,A,Jeff,Liv HT:     2022-02-04T13:19+0000 9.74 m,bridge,13:19,9.74,1.27,4.49878972073898,4.529,1h 23m 35s,6.25722222222222,270,1009,,,,"Caught secondary waves
 
 {""D"":""W"",""G"":""29"",""H"":""66.8"",""P"":""1009"",""S"":""14"",""T"":""6.9"",""V"":""29000"",""W"":""3"",""Pt"":""R"",""Dp"":""1.2"",""$"":""720""}
 
 Speed pylons to FB: (11:55:25 - 11:46:35) 8:50 over  1.82km --> 12.36 km/h
 ",12.36,
 03/02/2022 11:11,03/02/2022 11:11,,Jeff,"Liv HT:     2022-02-03T12:38+0000 9.86 m
-",bridge,12:38,9.86,1.16,,4.489,1h 27m,1.34083333333333,247.5,1011,,,,"FB time - fitted using speed ratio between QF and GrosvenorBridge.{“D”:”WSW”,""G"":""11"",""H"":""73.0"",""P"":""1011"",""S"":""3"",""T"":""10.5"",""V"":""45000"",""W"":""8"",""Pt"":""F"",""Dp"":""5.9"",""$"":""660""} @basecamppb +1 caught it beyond the pontoon and rode past us. The hydraulic jump went straight through me, I barely registered a speed up. Tipped in. HiFly+double paddle.",,
-03/02/2022 10:46,03/02/2022 10:46,A,rob bridges,Liv HT:     2022-02-03T12:38+0000 9.86 m,blue bridge,12:38,9.86,1.16,,4.489,1h 52m,1.34083333333333,247.5,1011,,,,"https://www.youtube.com/watch?v=c9vRaSq9Fio  The Queensferry at 10:46
+",bridge,12:38,9.86,1.16,4.48665805268068,4.489,1h 27m,1.34083333333333,247.5,1011,,,,"FB time - fitted using speed ratio between QF and GrosvenorBridge.{“D”:”WSW”,""G"":""11"",""H"":""73.0"",""P"":""1011"",""S"":""3"",""T"":""10.5"",""V"":""45000"",""W"":""8"",""Pt"":""F"",""Dp"":""5.9"",""$"":""660""} @basecamppb +1 caught it beyond the pontoon and rode past us. The hydraulic jump went straight through me, I barely registered a speed up. Tipped in. HiFly+double paddle.",,
+03/02/2022 10:46,03/02/2022 10:46,A,rob bridges,Liv HT:     2022-02-03T12:38+0000 9.86 m,blue bridge,12:38,9.86,1.16,4.48665805268068,4.489,1h 52m,1.34083333333333,247.5,1011,,,,"https://www.youtube.com/watch?v=c9vRaSq9Fio  The Queensferry at 10:46
 The bore passed under Grosvenor Bridge at 11:36
 All times GMT. Speeds from estimated/optimised FB times.",12.768,12
-02/02/2022 10:29,02/02/2022 10:29,A,Jeff,Liv HT:     2022-02-02T11:54+0000 9.8 m,bridge,11:54,9.8,1.23,,4.497,1h 24m 50s,3.57555555555556,292.5,1022,,,,"{“D”:”WNW"",""G"":""18"",""P"":""1022"",""S"":""8"",""T"":""11.0"",""$"":""600""}. Kayaker rode it past.
+02/02/2022 10:29,02/02/2022 10:29,A,Jeff,Liv HT:     2022-02-02T11:54+0000 9.8 m,bridge,11:54,9.8,1.23,4.48908438629234,4.497,1h 24m 50s,3.57555555555556,292.5,1022,,,,"{“D”:”WNW"",""G"":""18"",""P"":""1022"",""S"":""8"",""T"":""11.0"",""$"":""600""}. Kayaker rode it past.
 Small wave, lots of white water. 
 Caught it middle field, before special tree markers and some way past the culvert station. Nowhere looked particularly good as it approached, though on arrival the wave cleaned up on the Sealand rode side.
 Super tiring paddling with the double ender.
 
 Nice weather: the wind dropped; it was sunny and relatively warm (11degC)",,
-05/01/2022 11:23,05/01/2022 11:23,,Jeff,Liv HT:     2022-01-05T12:51+0000 9.75 m,bridge,12:51,9.75,1.4,,5.371,1h 27m 1s,3.57555555555556,315,1015,,,,"{“D”:”NW"",""S"":""8"",""$"":""660""} MO: pressure from camera. 6s on head, 12s on 2ndary. Speed pylons to FB: (11:23:59 - 11:16:32) 7:27 over 1.82km --> 14.56 km/h",14.56,
-04/01/2022 10:43,04/01/2022 10:43,A,Jeff,Liv HT:     2022-01-04T12:03+0000 9.78 m,bridge,12:03,9.78,1.31,,5.543,1h 20m,6.70416666666667,337.5,1003,,,,"{“D”:""NNW"",""H"":""65.1"",""P"":""1003"",""S"":""15"",""T"":""5.3"",""V"":""21000"",""W"":""1"",""Pt"":""R"",""Dp"":""-0.7"",""$"":""660""}MO: 11am: NNW, 15mph, 1003mbar",12.13,
+05/01/2022 11:23,05/01/2022 11:23,,Jeff,Liv HT:     2022-01-05T12:51+0000 9.75 m,bridge,12:51,9.75,1.4,4.75416133336628,5.371,1h 27m 1s,3.57555555555556,315,1015,,,,"{“D”:”NW"",""S"":""8"",""$"":""660""} MO: pressure from camera. 6s on head, 12s on 2ndary. Speed pylons to FB: (11:23:59 - 11:16:32) 7:27 over 1.82km --> 14.56 km/h",14.56,
+04/01/2022 10:43,04/01/2022 10:43,A,Jeff,Liv HT:     2022-01-04T12:03+0000 9.78 m,bridge,12:03,9.78,1.31,4.80632750601699,5.543,1h 20m,6.70416666666667,337.5,1003,,,,"{“D”:""NNW"",""H"":""65.1"",""P"":""1003"",""S"":""15"",""T"":""5.3"",""V"":""21000"",""W"":""1"",""Pt"":""R"",""Dp"":""-0.7"",""$"":""660""}MO: 11am: NNW, 15mph, 1003mbar",12.13,
 07/12/2021 11:50,07/12/2021 11:50,A,Nick,2021-12-07T12:59+0000 9.62 m,bridge,12:59,9.62,1.5,4.59159698138501,4.835,1h 8m 6s,11.1736111111111,135,984,,,,"MO 12pm: SE, 25mph. 10.92 km/h (Pylons to FB). 13.2 km/h past the pylons to the telegraph pole (500m)
 slow down over 300m 
 10.7 km/h  past the house towards the outlet (500m)

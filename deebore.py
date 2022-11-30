@@ -97,7 +97,9 @@ class BODC:
         '2016LIV.txt', '2017LIV.txt',
         '2018LIV.txt', '2019LIV.txt',
         '2020LIV.txt', '2021LIV.txt',
-        'LIV2201.txt']
+        'LIV2201.txt', 'LIV2202.txt',
+        'LIV2203.txt', 'LIV2204.txt',
+        ]
         #'LIV2201.txt', 'LIV2202.txt']
         tg  = GAUGE()
         for file in filelist:
@@ -722,8 +724,8 @@ class Controller():
 
             elif command == "d3":
                 print('plot bore data (lag vs tidal height) highlight observer')
-                plt.close('all'); self.plot_lag_vs_height('all',HLW="HW", logger="JohnTurner")
-                plt.close('all'); self.plot_lag_vs_height('harmonic',HLW="HW", logger="JohnTurner")
+                plt.close('all'); self.plot_lag_vs_height('all',HLW="HW", logger="Jeff")
+                plt.close('all'); self.plot_lag_vs_height('harmonic',HLW="HW", logger="Jeff")
 
             elif command == "d4":
                 print('Plot combinations of HLW times, heights and rivers')
@@ -732,6 +734,10 @@ class Controller():
             elif command == "d5":
                 print('Explore how rivers affect bore timing')
                 self.river_lag_timing()
+
+            elif command == "d6":
+                print('Bore speed')
+                self.bore_speed()
 
             elif command == "6":
                 self.predict_bore()
@@ -1641,7 +1647,7 @@ class Controller():
             c.events.add(e)
             #c.events
 
-        with open('Saltney.ics', 'w') as my_file:
+        with open('SurfSaltney.ics', 'w') as my_file:
             my_file.writelines(c)
 
         #plt.scatter( Saltney_time_pred, HT ,'.');plt.show()
@@ -1969,6 +1975,29 @@ class Controller():
         plt.savefig('figs/SaltneyArrivalLag_vs_river_LivHeight'+HLW+'_'+source+'.png')
 
 
+    def bore_speed(self, HLW="HW", source="api"):
+        """
+        Investigate controls on bore speed
+        """
+        self.load_csv()
+        self.get_river_data()
+        plt.close('all')
+        fig = plt.figure(figsize=(8, 6), dpi=120)
+
+        X = self.bore['Queensferry to Saltney speed (km/h)']
+        Y = self.bore['Liv (Gladstone Dock) HT height (m)']
+        C = self.bore['ctr_height_LW']
+        S = [40 if self.bore['Quality'][i] == "A" else 5 for i in range(len(self.bore['Quality']))]
+
+        ss = plt.scatter(X, Y, s=S, c=C)
+        plt.xlabel('speed (km/h)')
+        plt.ylabel('Glad HT (m)')
+        cbar = plt.colorbar(ss)
+        cbar.set_label('CTR river height (m)')
+
+        plt.savefig('figs/bore_speed.png')
+
+
 ################################################################################
 ################################################################################
 #%% Main Routine
@@ -2015,6 +2044,7 @@ if __name__ == "__main__":
     d3     plot bore data (lag vs tidal height) highlight observer
     d4     Plot different combinations of Lag,HLW w/ rivers
     d5     Explore how rivers affect bore timing
+    d6     Bore speed investigation
     """
 
 
