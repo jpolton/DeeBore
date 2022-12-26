@@ -479,7 +479,7 @@ class GAUGE(coast.Tidegauge):
         """
         import os, sys
 
-        anytidedir = os.path.dirname('/Users/jeff/GitHub/anyTide/')
+        anytidedir = os.path.dirname('/Users/jelt/GitHub/anyTide/')
         sys.path.insert(0, anytidedir)
 
         from NOCtidepred import get_port

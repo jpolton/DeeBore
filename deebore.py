@@ -64,9 +64,9 @@ class GladstoneTideTable:
     def __init__(self):
 
         logging.info("Get Gladstone HLW data")
-        filnam1 = '/Users/jeff/GitHub/DeeBore/data/Liverpool_2005_2014_HLW.txt'
-        filnam2 = '/Users/jeff/GitHub/DeeBore/data/Liverpool_2015_2020_HLW.txt'
-        filnam3 = '/Users/jeff/GitHub/DeeBore/data/Liverpool_2021_2022_HLW.txt'
+        filnam1 = '/Users/jelt/GitHub/DeeBore/data/Liverpool_2005_2014_HLW.txt'
+        filnam2 = '/Users/jelt/GitHub/DeeBore/data/Liverpool_2015_2020_HLW.txt'
+        filnam3 = '/Users/jelt/GitHub/DeeBore/data/Liverpool_2021_2022_HLW.txt'
         tg  = GAUGE()
         tg1 = GAUGE()
         tg2 = GAUGE()
@@ -87,7 +87,7 @@ class BODC:
     tg = BODC().to_tidegauge()
     """
     def __init__(self):
-        dir = '/Users/jeff/GitHub/DeeBore/data/BODC_processed/'
+        dir = '/Users/jelt/GitHub/DeeBore/data/BODC_processed/'
         filelist = ['2005LIV.txt',
         '2006LIV.txt', '2007LIV.txt',
         '2008LIV.txt', '2009LIV.txt',
@@ -1565,7 +1565,7 @@ class Controller():
 
         """
         print('Predict bore event for date')
-        filnam = '/Users/jeff/GitHub/DeeBore/data/Liverpool_2021_2022_HLW.txt'
+        filnam = '/Users/jelt/GitHub/DeeBore/data/Liverpool_2021_2022_HLW.txt'
 
         looper = True
         while looper:
