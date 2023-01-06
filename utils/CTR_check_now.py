@@ -39,7 +39,7 @@ yes | conda install -c conda-forge cartopy=0.20.1
 conda install requests
 
 Usage:
-python CTR_check_now.py
+DeeBore% python utils/CTR_check_now.py
 '''
 
 # Begin by importing coast and other packages
@@ -49,9 +49,34 @@ import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 import xarray as xr
 
-from shoothill_api.shoothill_api import GAUGE
+import sys, os
+sys.path.append(os.path.dirname(os.path.abspath("shoothill_api/shoothill_api.py")))
+from shoothill_api import GAUGE
+#from shoothill_dir.shoothill_api import GAUGE
 
 
+class GladstoneHarmonicReconstruction:
+    """         
+    if source == 'harmonic_rec': # load full tidal signal using anyTide code
+    tg = GladstoneHarmonicReconstruction().to_tidegauge()
+    """         
+    def __init__(self, date_start=None, date_end=None): 
+        tg = GAUGE()
+        #date_start=np.datetime64('now')
+        #ndays = 5
+        #tg.dataset = tg.anyTide_to_xarray(date_start=date_start, ndays=5)
+        #date_start=np.datetime64('2005-04-01')
+        #date_end=np.datetime64('now','D') 
+        if (date_start==None) and (date_end==None):
+            date_start = np.datetime64('now','D') 
+            date_end = np.datetime64('now','D') + np.timedelta64(4,'D')
+        tg.dataset = tg.anyTide_to_xarray(date_start=date_start, date_end=date_end)
+        tg.dataset['site_name'] = "Liverpool (Gladstone)"
+        self.tg = tg
+
+    def to_tidegauge(self):
+        return self.tg
+            
 
 
 
@@ -99,6 +124,7 @@ if __name__ == "__main__":
     ## 24 hrs
     date_end = np.datetime64('now')
     date_start = np.datetime64('now') - np.timedelta64(24,'h')
+    date_start = np.datetime64('2022-12-21')
 
 
 
@@ -109,6 +135,8 @@ if __name__ == "__main__":
     liv = GAUGE()
     liv.dataset = liv.read_shoothill_to_xarray(date_start=date_start, date_end=date_end)
     #liv.plot_timeseries()
+    liv = GladstoneHarmonicReconstruction(date_start=date_start, date_end=date_end+np.timedelta64(12,'h')).to_tidegauge()
+
 
     ctrf = GAUGE()
     ctrf.dataset = ctrf.read_shoothill_to_xarray(station_id="7899" ,date_start=date_start, date_end=date_end, dataType=15)
@@ -147,7 +175,7 @@ if __name__ == "__main__":
     ## Only get tides over the weir with 8.75m at Liverpool
     fig.suptitle('Dee River heights and flow')
     #ax1.scatter(liv.dataset.time, liv.dataset.sea_level, color='k', s=1, label=liv.dataset.site_name)
-    ax1 = scatter_plot(ax1, liv.dataset.time, liv.dataset.sea_level, 'k', 1, liv.dataset.site_name)
+    ax1 = scatter_plot(ax1, liv.dataset.time, liv.dataset.sea_level, 'k', 1, liv.dataset.site_name.values)
     if line_flag:
         ax1 = line_plot(ax1, liv.dataset.time, liv.dataset.sea_level, 'k', 1)
 
@@ -159,6 +187,7 @@ if __name__ == "__main__":
 
     ax1.set_ylabel('water level (m)', color='k')
     ax1b.set_ylabel('water level (m)', color='b')
+    ax1b.set_ylim([4.8,8.2])
     for tl in ax1b.get_yticklabels():
         tl.set_color('b')
 
@@ -181,12 +210,17 @@ if __name__ == "__main__":
         tl.set_color('g')
     ax2.set_ylabel('water level (m)')
 
-    #myFmt = mdates.DateFormatter('%H:%M') #('%d-%a')
-    #ax2.xaxis.set_major_formatter(myFmt)
+    # format the ticks
+    #myFmt = mdates.DateFormatter('%H:%M') 
+    myFmt = mdates.DateFormatter('%d-%a')
+    days = mdates.DayLocator()
+    ax2.xaxis.set_major_locator(days)
+    ax2.xaxis.set_minor_locator(mdates.HourLocator([00,6,12,18]))
+    ax2.xaxis.set_major_formatter(myFmt)
 
-    #ax2.set_xlabel( date_start.astype(datetime.datetime).strftime('%d%b%y') + \
-    #               '-' + date_end.astype(datetime.datetime).strftime('%d%b%y') )
-    ax2.set_xlabel(date_end.astype(datetime.datetime).strftime('%d%b%y'))
+    ax2.set_xlabel( date_start.astype(datetime.datetime).strftime('%d%b%y') + \
+                   '-' + date_end.astype(datetime.datetime).strftime('%d%b%y') )
+    #ax2.set_xlabel(date_end.astype(datetime.datetime).strftime('%d%b%y'))
     # Add empty data to ax1 to get "green flow data" in the legend
     ax2 = scatter_plot(ax2, [], [], 'g', 1, "Flow, above weir")
 
