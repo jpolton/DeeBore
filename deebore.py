@@ -67,14 +67,17 @@ class GladstoneTideTable:
         filnam1 = '/Users/jelt/GitHub/DeeBore/data/Liverpool_2005_2014_HLW.txt'
         filnam2 = '/Users/jelt/GitHub/DeeBore/data/Liverpool_2015_2020_HLW.txt'
         filnam3 = '/Users/jelt/GitHub/DeeBore/data/Liverpool_2021_2022_HLW.txt'
+        filnam4 = '/Users/jelt/GitHub/DeeBore/data/Liverpool_2023_2025_HLW.txt'
         tg  = GAUGE()
         tg1 = GAUGE()
         tg2 = GAUGE()
         tg3 = GAUGE()
+        tg4 = GAUGE()
         tg1.dataset = tg1.read_hlw_to_xarray(filnam1)#, self.bore.time.min().values, self.bore.time.max().values)
         tg2.dataset = tg2.read_hlw_to_xarray(filnam2)#, self.bore.time.min().values, self.bore.time.max().values)
         tg3.dataset = tg3.read_hlw_to_xarray(filnam3)#, self.bore.time.min().values, self.bore.time.max().values)
-        tg.dataset = xr.concat([ tg1.dataset, tg2.dataset, tg3.dataset], dim='time')
+        tg4.dataset = tg4.read_hlw_to_xarray(filnam4)#, self.bore.time.min().values, self.bore.time.max().values)
+        tg.dataset = xr.concat([ tg1.dataset, tg2.dataset, tg3.dataset, tg4.dataset], dim='time')
         self.tg = tg
 
     def to_tidegauge(self):
@@ -1565,7 +1568,7 @@ class Controller():
 
         """
         print('Predict bore event for date')
-        filnam = '/Users/jelt/GitHub/DeeBore/data/Liverpool_2021_2022_HLW.txt'
+        filnam = '/Users/jelt/GitHub/DeeBore/data/Liverpool_2023_2025_HLW.txt'
 
         looper = True
         while looper:
