@@ -58,45 +58,18 @@ sys.path.append(os.path.dirname(os.path.abspath("shoothill_api/shoothill_api.py"
 #from shoothill_api import GAUGE   ## WORKS WITH COMMAND LINE
 from shoothill_api.shoothill_api import GAUGE  ## WORKS WITH PYCHARM
 
-
-class GladstoneHarmonicReconstruction:
-    """         
-    if source == 'harmonic_rec': # load full tidal signal using anyTide code
-    tg = GladstoneHarmonicReconstruction().to_tidegauge()
-    """         
-    def __init__(self, date_start=None, date_end=None): 
-        tg = GAUGE()
-        #date_start=np.datetime64('now')
-        #ndays = 5
-        #tg.dataset = tg.anyTide_to_xarray(date_start=date_start, ndays=5)
-        #date_start=np.datetime64('2005-04-01')
-        #date_end=np.datetime64('now','D') 
-        if (date_start==None) and (date_end==None):
-            date_start = np.datetime64('now','D') 
-            date_end = np.datetime64('now','D') + np.timedelta64(4,'D')
-        tg.dataset = tg.anyTide_to_xarray(date_start=date_start, date_end=date_end)
-        tg.dataset['site_name'] = "Liverpool (Gladstone)"
-        self.tg = tg
-
-    def to_tidegauge(self):
-        return self.tg
-            
-
-
-
-
-################################################################################
-#%%  plot functions
-def line_plot(ax, time, y, color, size, label=None ):
-    #ax1.scatter(liv.dataset.time, liv.dataset.sea_level, color='k', s=1, label=liv.dataset.site_name)
-    ax.plot(time, y, color=color, linewidth=size, label=label)
-    return ax
-
-def scatter_plot(ax, time, y, color, size, label=None ):
-    #ax1.scatter(liv.dataset.time, liv.dataset.sea_level, color='k', s=1, label=liv.dataset.site_name)
-    ax.scatter(time, y, color=color, s=size, label=label)
-    return ax
-#%%
+def addtext(ax, props, deg):
+    ax.text(0.5, 0.5, 'text 0', props, rotation=deg)
+    ax.text(1.5, 0.5, 'text 45', props, rotation=45)
+    ax.text(2.5, 0.5, 'text 135', props, rotation=135)
+    ax.text(3.5, 0.5, 'text 225', props, rotation=225)
+    ax.text(4.5, 0.5, 'text -45', props, rotation=-45)
+    for x in range(0, 5):
+        ax.scatter(x + 0.5, 0.5, color='r', alpha=0.5)
+    ax.set_yticks([0, .5, 1])
+    ax.set_xticks(np.arange(0, 5.1, 0.5))
+    ax.set_xlim(0, 5)
+    ax.grid(True)
 
 
 ################################################################################
@@ -111,17 +84,22 @@ if __name__ == "__main__":
     tg = GAUGE()
 
 
-    ndays = 7
+    ndays = 14
+
+    # the text bounding box
+    bbox = {}#'fc': '0.8', 'pad': 0}
 
     date_end = np.datetime64('now') + np.timedelta64(ndays, 'D')
-    date_start = np.datetime64('now') - np.timedelta64(ndays, 'D')
+    date_start = np.datetime64('now') - np.timedelta64(1, 'D')
 
     tg.dataset = tg.read_hlw_to_xarray(filnam, date_start=date_start, date_end=date_end)
     nt = tg.dataset.sizes['time']
 
     # %% Load data
-    #iron = GAUGE()
-    #iron.dataset = ctr.read_shoothill_to_xarray(station_id="968", date_start=date_start, date_end=date_end)
+    iron = GAUGE()
+    iron.dataset = iron.read_shoothill_to_xarray(station_id="968",
+                                                date_start=np.datetime64('now') - np.timedelta64(1, 'D'),
+                                                date_end=np.datetime64('now'))
 
 
     HW = []
@@ -138,39 +116,77 @@ if __name__ == "__main__":
     day = [date[i].day for i in range(nt)]
     hour = [date[i].hour for i in range(nt)]
     mins = [date[i].minute for i in range(nt)]
-    day_str = [date[i].day_name()[0:2] for i in range(nt)]
+    day_str = [date[i].day_name()[0:1] for i in range(nt)]
 
     theta = [float(hour[i] + mins[i]/60.)/12.*2*np.pi for i in range(nt)]
+    rot_deg = [90 - (theta[i]*180/np.pi) if (hour[i]%12 >= 0 and hour[i]%12 <= 6) else
+               270 - (theta[i]*180/np.pi) for i in range(nt)]
 
-    col = [ 'b' if theta[i] > 2*np.pi else 'r' for i in range(nt)]
-    sym = [ '+' if theta[i] > 2*np.pi else 'o' for i in range(nt)]
+    col = [ 'k' if theta[i] > 2*np.pi else 'k' for i in range(nt)]  # am / pm
+    #sym = [ '+' if theta[i] > 2*np.pi else 'o' for i in range(nt)]
+    sym = [ 'o' if theta[i] > 2*np.pi else 'o' for i in range(nt)]
+    siz = [ 20 if (hour[i] >= 6 and hour[i] <= 18) else 5 for i in range(nt)]
 
 
     r = [tg.dataset.sea_level[i].values for i in range(nt)]
     x = [ r[i]*np.sin(theta[i]) for i in range(nt)]
     y = [ r[i]*np.cos(theta[i]) for i in range(nt)]
 
-    # Circle
-    R = 9.5
-    plt.plot( R*np.sin(np.arange(0,360)*np.pi/180.), R*np.cos(np.arange(0,360)*np.pi/180.),'g'  )
-    plt.text( 0, R*1.1, "12")
-    plt.text( R*1.1, 0, "3")
-    plt.text( 0, -R*1.1, "6")
-    plt.text( -R*1.1, 0, "9")
 
-    #plt.text( 0, R*1.1, "00")
-    #plt.text( R*1.1, 0, "06")
-    #plt.text( 0, -R*1.1, "12")
-    #plt.text( -R*1.1, 0, "18")
+    # Start figure
+
+    fig, ax = plt.subplots()
+    # draw circle
+    #R_bound = 12.
+    R_thresh = 9.5
+    R_num = 6
+    #ax.plot( R_bound*np.sin(np.arange(0,360)*np.pi/180.), R_bound*np.cos(np.arange(0,360)*np.pi/180.),'g'  )
+    ax.plot( R_thresh*np.sin(np.arange(0,360)*np.pi/180.), R_thresh*np.cos(np.arange(0,360)*np.pi/180.),'g'  )
+    ax.text( 0, R_num, "12",  {'ha': 'center', 'va': 'center'}, fontsize=36)
+    ax.text( R_num, 0, "3",   {'ha': 'center', 'va': 'center'}, fontsize=36)
+    ax.text( 0, -R_num, "6",  {'ha': 'center', 'va': 'center'}, fontsize=36)
+    ax.text( -R_num, 0, "9",  {'ha': 'center', 'va': 'center'}, fontsize=36)
+
 
     # Plot points
     # plot dates
+
+
+
+
+    #addtext(axs[1], {'ha': 'left', 'va': 'bottom', 'bbox': bbox})
+    #axs[1].set_ylabel('left / bottom')
+    scale = 1.2  # radius scale for text
     for i in range(nt):
-        plt.scatter(x[i], y[i], c=col[i], s=10, marker=sym[i])
-        plt.text(x[i], y[i], day_str[i]+str(day[i]))
-    plt.text(0, +0.5, 'a.m', c='r')
-    plt.text(0, -0.5, 'p.m', c='b')
+        plt.scatter(x[i], y[i], c=col[i], s=siz[i], marker=sym[i])
+        ax.text(x[i]*scale, y[i]*scale,
+                day_str[i]+str(day[i]),
+                {'ha': 'center', 'va': 'center'},
+                rotation=rot_deg[i])
+    ax.axis('equal')
+
+    # Plot river
+    ww = 0.3
+    hh = 0.15
+    ax2 = ax.inset_axes([0.5 - 0.5*ww, 0.5 - 0.5*hh, ww, hh])
+    ax2.plot(iron.dataset.time, iron.dataset.sea_level, 'g')
+    ax2.spines['top'].set_visible(False)
+    ax2.spines['right'].set_visible(True)
+    ax2.spines['bottom'].set_visible(True)
+    ax2.spines['left'].set_visible(True)
+    ax2.set_title('Ironbridge')
+    # format the ticks
+    # myFmt = mdates.DateFormatter('%H:%M')
+    # myFmt = mdates.DateFormatter('%d-%a')
+    myFmt = mdates.DateFormatter('%a')
+    days = mdates.DayLocator()
+    ax2.xaxis.set_major_locator(days)
+    ax2.xaxis.set_minor_locator(mdates.HourLocator([00, 6, 12, 18]))
+    ax2.xaxis.set_major_formatter(myFmt)
+    ax2.tick_params(axis="y", direction="in", pad=-28)
+    plt.axis('off')
     plt.show()
+
 
     if(0):
 
