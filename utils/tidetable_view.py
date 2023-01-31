@@ -71,6 +71,26 @@ def addtext(ax, props, deg):
     ax.set_xlim(0, 5)
     ax.grid(True)
 
+class thing():
+    def __init__(self, tg):
+        nt = tg.dataset.sizes['time']
+
+        date = [pd.to_datetime(tg.dataset.time[i].values) for i in range(nt)]
+        day = [date[i].day for i in range(nt)]
+        hour = [date[i].hour for i in range(nt)]
+        mins = [date[i].minute for i in range(nt)]
+        day_str = [date[i].day_name()[0:1] for i in range(nt)]
+
+        theta = [float(hour[i] + mins[i]/60.)/12.*2*np.pi for i in range(nt)]
+
+        r = [tg.dataset.sea_level[i].values for i in range(nt)]
+        x = [ r[i]*np.sin(theta[i]) for i in range(nt)]
+        y = [ r[i]*np.cos(theta[i]) for i in range(nt)]
+
+        self.theta = theta
+        self.r = r
+        self.x = x
+        self.y = y
 
 ################################################################################
 ################################################################################
@@ -96,10 +116,21 @@ if __name__ == "__main__":
     nt = tg.dataset.sizes['time']
 
     # %% Load data
-    iron = GAUGE()
-    iron.dataset = iron.read_shoothill_to_xarray(station_id="968",
-                                                date_start=np.datetime64('now') - np.timedelta64(1, 'D'),
-                                                date_end=np.datetime64('now'))
+    try:
+        iron = GAUGE()
+        iron.dataset = iron.read_shoothill_to_xarray(station_id="968",
+                                                    date_start=np.datetime64('now') - np.timedelta64(1, 'D'),
+                                                    date_end=np.datetime64('now'))
+        plot_river_flag = True
+    except:
+        plot_river_flag = False
+
+    # Liverpool reconstruction
+    liv = GAUGE()
+    liv.dataset = liv.anyTide_to_xarray(date_start=np.datetime64('now') - np.timedelta64(1, 'D'),
+                                        date_end=np.datetime64('now'))
+    liv.dataset['site_name'] = "Liverpool (Gladstone)"
+    d = thing(liv)
 
 
     HW = []
@@ -116,21 +147,23 @@ if __name__ == "__main__":
     day = [date[i].day for i in range(nt)]
     hour = [date[i].hour for i in range(nt)]
     mins = [date[i].minute for i in range(nt)]
-    day_str = [date[i].day_name()[0:1] for i in range(nt)]
+    day_str = [date[i].day_name()[0:2] for i in range(nt)]
 
     theta = [float(hour[i] + mins[i]/60.)/12.*2*np.pi for i in range(nt)]
-    rot_deg = [90 - (theta[i]*180/np.pi) if (hour[i]%12 >= 0 and hour[i]%12 <= 6) else
-               270 - (theta[i]*180/np.pi) for i in range(nt)]
+
+    r = [tg.dataset.sea_level[i].values for i in range(nt)]
+    x = [ r[i]*np.sin(theta[i]) for i in range(nt)]
+    y = [ r[i]*np.cos(theta[i]) for i in range(nt)]
+
 
     col = [ 'k' if theta[i] > 2*np.pi else 'k' for i in range(nt)]  # am / pm
     #sym = [ '+' if theta[i] > 2*np.pi else 'o' for i in range(nt)]
     sym = [ 'o' if theta[i] > 2*np.pi else 'o' for i in range(nt)]
     siz = [ 20 if (hour[i] >= 6 and hour[i] <= 18) else 5 for i in range(nt)]
+    rot_deg = [90 - (theta[i]*180/np.pi) if (hour[i]%12 >= 0 and hour[i]%12 < 6) else
+               270 - (theta[i]*180/np.pi) for i in range(nt)]
 
 
-    r = [tg.dataset.sea_level[i].values for i in range(nt)]
-    x = [ r[i]*np.sin(theta[i]) for i in range(nt)]
-    y = [ r[i]*np.cos(theta[i]) for i in range(nt)]
 
 
     # Start figure
@@ -148,9 +181,10 @@ if __name__ == "__main__":
     ax.text( -R_num, 0, "9",  {'ha': 'center', 'va': 'center'}, fontsize=36)
 
 
-    # Plot points
-    # plot dates
-
+    # Plot 2hr tide
+    ax.plot( d.x, d.y)
+    # Plot clock hour hand
+    ax.plot( [0, d.x[0]], [0, d.y[0]], 'k')
 
 
 
@@ -166,24 +200,25 @@ if __name__ == "__main__":
     ax.axis('equal')
 
     # Plot river
-    ww = 0.3
-    hh = 0.15
-    ax2 = ax.inset_axes([0.5 - 0.5*ww, 0.5 - 0.5*hh, ww, hh])
-    ax2.plot(iron.dataset.time, iron.dataset.sea_level, 'g')
-    ax2.spines['top'].set_visible(False)
-    ax2.spines['right'].set_visible(True)
-    ax2.spines['bottom'].set_visible(True)
-    ax2.spines['left'].set_visible(True)
-    ax2.set_title('Ironbridge')
-    # format the ticks
-    # myFmt = mdates.DateFormatter('%H:%M')
-    # myFmt = mdates.DateFormatter('%d-%a')
-    myFmt = mdates.DateFormatter('%a')
-    days = mdates.DayLocator()
-    ax2.xaxis.set_major_locator(days)
-    ax2.xaxis.set_minor_locator(mdates.HourLocator([00, 6, 12, 18]))
-    ax2.xaxis.set_major_formatter(myFmt)
-    ax2.tick_params(axis="y", direction="in", pad=-28)
+    if (plot_river_flag):
+        ww = 0.3
+        hh = 0.15
+        ax2 = ax.inset_axes([0.5 - 0.5*ww, 0.5 - 0.5*hh, ww, hh])
+        ax2.plot(iron.dataset.time, iron.dataset.sea_level, 'g')
+        ax2.spines['top'].set_visible(False)
+        ax2.spines['right'].set_visible(True)
+        ax2.spines['bottom'].set_visible(True)
+        ax2.spines['left'].set_visible(True)
+        ax2.set_title('Ironbridge')
+        # format the ticks
+        # myFmt = mdates.DateFormatter('%H:%M')
+        # myFmt = mdates.DateFormatter('%d-%a')
+        myFmt = mdates.DateFormatter('%a')
+        days = mdates.DayLocator()
+        ax2.xaxis.set_major_locator(days)
+        ax2.xaxis.set_minor_locator(mdates.HourLocator([00, 6, 12, 18]))
+        ax2.xaxis.set_major_formatter(myFmt)
+        ax2.tick_params(axis="y", direction="in", pad=-28)
     plt.axis('off')
     plt.show()
 
