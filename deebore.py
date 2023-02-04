@@ -100,8 +100,7 @@ class BODC:
         '2016LIV.txt', '2017LIV.txt',
         '2018LIV.txt', '2019LIV.txt',
         '2020LIV.txt', '2021LIV.txt',
-        'LIV2201.txt', 'LIV2202.txt',
-        'LIV2203.txt', 'LIV2204.txt',
+        '2022LIV.txt',
         ]
         #'LIV2201.txt', 'LIV2202.txt']
         tg  = GAUGE()
