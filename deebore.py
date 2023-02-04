@@ -1598,7 +1598,7 @@ class Controller():
             tg.dataset = tg.read_hlw_to_xarray(filnam, day_start, day_end)
 
             HT = tg.dataset['sea_level'].where(tg.dataset['sea_level']\
-                                    .values > 7).dropna('time') #, drop=True)
+                                    .values > 9.5).dropna('time') #, drop=True)
         else: # year 2021 (no tide table data)
             source = 'harmonic_rec'
             print('source=',source)
