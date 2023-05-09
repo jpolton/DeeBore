@@ -78,6 +78,7 @@ class thing():
         date = [pd.to_datetime(tg.dataset.time[i].values) for i in range(nt)]
         day = [date[i].day for i in range(nt)]
         hour = [date[i].hour for i in range(nt)]
+        print(f"hour: {hour}")
         mins = [date[i].minute for i in range(nt)]
         day_str = [date[i].day_name()[0:1] for i in range(nt)]
 
@@ -181,7 +182,7 @@ if __name__ == "__main__":
     ax.text( -R_num, 0, "9",  {'ha': 'center', 'va': 'center'}, fontsize=36)
 
 
-    # Plot 2hr tide
+    # Plot last 24hr tide
     ax.plot( d.x, d.y)
     # Plot clock hour hand
     ax.plot( [0, d.x[0]], [0, d.y[0]], 'k')
@@ -204,7 +205,7 @@ if __name__ == "__main__":
         ww = 0.3
         hh = 0.15
         ax2 = ax.inset_axes([0.5 - 0.5*ww, 0.5 - 0.5*hh, ww, hh])
-        ax2.plot(iron.dataset.time, iron.dataset.sea_level, 'g')
+        ax2.plot(iron.dataset.time, iron.dataset.sea_level, 'g.')
         ax2.spines['top'].set_visible(False)
         ax2.spines['right'].set_visible(True)
         ax2.spines['bottom'].set_visible(True)
@@ -220,8 +221,12 @@ if __name__ == "__main__":
         ax2.xaxis.set_major_formatter(myFmt)
         ax2.tick_params(axis="y", direction="in", pad=-28)
     plt.axis('off')
-    plt.show()
 
+    ir = thing(iron)
+    # Plot last 24hr river
+    ax.plot( ir.x, ir.y, 'g')
+
+    plt.show()
 
     if(0):
 
