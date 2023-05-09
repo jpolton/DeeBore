@@ -34,6 +34,11 @@ Usage:
     Edit year variable
     python archive_NRW_csv.py
 
+9 May 2023    
+Had to play a bit with path level.
+Had to remove ^M from carriage returns
+Had to remove wierd/unrecognised characters that were supposed to be units
+
 '''
 
 # Begin by importing coast and other packages
@@ -229,13 +234,17 @@ def scatter_plot(ax, time, y, color, size, label=None ):
 
 #%% Load and export NRW csv files to xarray and netcdf
 ######################################################
-dir = "data/ATI 22356a - River level & flow data at Chester on the river Dee/"
+dir = "../data/ATI 22356a - River level & flow data at Chester on the river Dee/"
+suffix = "2021_jan_to_nov"
+
+dir = "../data/ATI-22356a-Mar23/"
+suffix = "2021_nov-2022_dec"
 
 try:
     fn_nrw = dir + "067020.SG[Stage].15min.csv"
     ctr067020SG = NRWGauge()
     ctr067020SG.dataset = ctr067020SG.read_nrw_to_xarray(fn_nrw, date_start=None, date_end=None)
-    save_method(ctr067020SG, ofile="ctr067020SG_2021")
+    save_method(ctr067020SG, ofile="ctr067020SG_" + suffix)
     #liv.plot_timeseries()
 except:
     print('failed for ctr067020SG')
@@ -244,7 +253,7 @@ try:
     fn_nrw = dir + "067033.SG[Stage].15min.csv"
     ctr067033SG = NRWGauge()
     ctr067033SG.dataset = ctr067033SG.read_nrw_to_xarray(fn_nrw, date_start=None, date_end=None)
-    save_method(ctr067033SG, ofile="ctr067033SG_2021")
+    save_method(ctr067033SG, ofile="ctr067033SG_" + suffix)
     #liv.plot_timeseries()
 except:
     print('failed for ctr067033SG')
@@ -254,7 +263,7 @@ try:
     fn_nrw = dir + "067033.FL[FlowLogged].15min.csv"
     ctr067033FL = NRWGauge()
     ctr067033FL.dataset = ctr067033FL.read_nrw_to_xarray(fn_nrw, date_start=None, date_end=None)
-    save_method(ctr067033FL, ofile="ctr067033FL_2021")
+    save_method(ctr067033FL, ofile="ctr067033FL_" + suffix)
     #liv.plot_timeseries()
 except:
     print('failed for ctr067033FL')
