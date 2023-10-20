@@ -118,7 +118,8 @@ def scatter_plot(ax, time, y, color, size, label=None ):
 #%% Save yearly data
 #for year in range(2010,2020+1):
 #for year in range(2021,2021+1):
-for year in range(2022,2022+1):
+#for year in range(2022,2022+1):
+for year in range(2023,2023+1):
 
     print(year)
     date_start = np.datetime64(str(year)+'-01-01')
@@ -160,6 +161,14 @@ for year in range(2022,2022+1):
         print(str(year) + 'failed for ctr2')
 
     try:
+        ctr23 = GAUGE()
+        ctr23.dataset = ctr23.read_shoothill_to_xarray(station_id="15563" ,date_start=date_start, date_end=date_end)
+        #ctr23.plot_timeseries()
+        save_method(ctr23, ofile='ctr23_'+str(year))
+    except:
+        print(str(year) + 'failed for ctr23')
+
+    try:
         iron = GAUGE()
         iron.dataset = ctr.read_shoothill_to_xarray(station_id="968" ,date_start=date_start, date_end=date_end)
         #iron.plot_timeseries()
@@ -174,7 +183,6 @@ for year in range(2022,2022+1):
         save_method(farn, ofile='farn_'+str(year))
     except:
         print(str(year) + 'failed for farn')
-
 
 
 
