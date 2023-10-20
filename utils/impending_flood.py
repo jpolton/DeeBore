@@ -23,7 +23,7 @@ To discover the StationId for a particular measurement site check the
 E.g  Liverpool (Gladstone Dock stationId="13482", which is read by default.
 
 Usage:
-DeeBore% python utils/ChristophFlood_22Jan21.py
+DeeBore% python utils/impending_flood.py
 '''
 
 # Begin by importing coast and other packages
@@ -44,11 +44,12 @@ from shoothill_api import GAUGE
 #from shoothill_api.shoothill_api import GAUGE
 
 
+ndays = 5
+
+date_end = np.datetime64('now')
+date_start = date_end - np.timedelta64(ndays, 'D')
 
 
-
-date_start = np.datetime64('2021-01-11')
-date_end = np.datetime64('2021-01-30') 
 
 # Load in data from the Shoothill API. Gladstone dock is loaded by default
 liv = GAUGE()
@@ -68,24 +69,32 @@ ax1.scatter(ctr.dataset.time, ctr.dataset.sea_level, s=1)
 ax2.scatter(liv.dataset.time, liv.dataset.sea_level, s=1)
 ax2.plot( [date_start, date_end], [8.75,8.75], 'k--')
 ax1.set_ylabel('Chester Weir (m)')
-ax2.set_ylabel('Gladston Dock, Liverpool (m)')
+ax2.set_ylabel('Gladstone Dock, Liverpool (m)')
 
 
 
-date_start = np.datetime64('2021-01-17')
-date_end = np.datetime64('2021-01-25') 
+#date_start = np.datetime64('2021-01-17')
+#date_end = np.datetime64('2021-01-25')
 
 count = 0
 
-ctr = GAUGE()
-ctr.dataset = ctr.read_shoothill_to_xarray(station_id="7899" ,date_start=date_start, date_end=date_end)
-ctr.dataset['shft'] = -ctr.dataset.sea_level[0].values + count
+try:
+    ctr = GAUGE()
+    ctr.dataset = ctr.read_shoothill_to_xarray(station_id="7899" ,date_start=date_start, date_end=date_end)
+    ctr.dataset['shft'] = -ctr.dataset.sea_level[0].values + count
 
-#count += 0.5
-ctr2 = GAUGE()
-ctr2.dataset = ctr.read_shoothill_to_xarray(station_id="7900" ,date_start=date_start, date_end=date_end)
-ctr2.dataset['shft'] = -ctr2.dataset.sea_level[8].values + count
-ctr2.plot_timeseries()
+    #count += 0.5
+    ctr2 = GAUGE()
+    ctr2.dataset = ctr.read_shoothill_to_xarray(station_id="7900" ,date_start=date_start, date_end=date_end)
+    ctr2.dataset['shft'] = -ctr2.dataset.sea_level[8].values + count
+    ctr2.plot_timeseries()
+
+except:
+
+    ctr23 = GAUGE()
+    ctr23.dataset = ctr.read_shoothill_to_xarray(station_id="15563", date_start=date_start, date_end=date_end)
+    ctr23.dataset['shft'] = -ctr23.dataset.sea_level[0].values + count
+    ctr23.plot_timeseries()
 
 count += 0.5
 iron = GAUGE()
@@ -134,8 +143,8 @@ bala.plot_timeseries()
 fig, ax = plt.subplots()
 
 ## Only get tides over the weir with 8.75m at Liverpool
-fig.suptitle('Timing of Chester Meadows flood relative to tides. Storm Christoph, Jan 2021')
-for var in [deebr, corwen, chrk, manh, farn, iron, ctr2, ctr]:
+fig.suptitle('River Dee water levels')
+for var in [deebr, corwen, chrk, manh, farn, iron, ctr23]: # ctr2, ctr]:
     ax.scatter(var.dataset.time, var.dataset.sea_level  + var.dataset.shft, s=1, label=var.dataset.site_name)
 
 ax.set_ylabel('relative river height (m)')
@@ -143,7 +152,7 @@ ax.set_xlabel('date')
 myFmt = mdates.DateFormatter('%d-%a')
 ax.xaxis.set_major_formatter(myFmt)
 plt.legend(markerscale=6)
-plt.savefig('Dee_river_levels_Jan21.png')
+plt.savefig('impending_flood.png')
 
 
 ## Ctr + Ironbridge + Farndon
@@ -151,14 +160,15 @@ plt.savefig('Dee_river_levels_Jan21.png')
 ## Only get tides over the weir with 8.75m at Liverpool
 fig, ax = plt.subplots()
 
-plt.title('Timing of Chester Meadows flood for Storm Christoph, Jan 2021')
-for var in [farn, iron, ctr, ctr2]:
+plt.title('River Dee water levels')
+for var in [farn, iron, ctr23]: #ctr2, ctr]:
     ax.scatter(var.dataset.time, var.dataset.sea_level  + 0*var.dataset.shft, s=1, label=var.dataset.site_name)
 
 ax.set_ylabel('relative river height (m)')
-ax.set_xlabel('Jan 2021')
+#ax.set_xlabel('Jan 2021')
+ax.set_xlabel('Date')
 myFmt = mdates.DateFormatter('%d-%a')
 ax.xaxis.set_major_formatter(myFmt)
 plt.legend(markerscale=6)
-plt.savefig('Dee_river_levels_Jan21_short.png')
+plt.savefig('impending_flood_short.png')
 
