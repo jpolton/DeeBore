@@ -9,7 +9,11 @@ Created on Sat Jan 30 15:55:23 2021
 '''
 Check the gauges at Chester.
 Plot Chester weir height (above AND below weir) + flow
-Plot Gladstone and Ironbridge levels.
+    Update Oct'23: Only above weir levels
+Plot Gladstone levels.
+    Update Oct'23: Gladstone data from EA
+Plot Ironbridge and Farndon levels from Shoothill
+
 Uses shoothill_api package to augment COAsT
 
 This tutorial uses data from the Shoothill API. This does require a key to be
@@ -50,9 +54,9 @@ import matplotlib.dates as mdates
 import xarray as xr
 
 import sys, os
-sys.path.append(os.path.dirname(os.path.abspath("shoothill_api/shoothill_api.py")))
-from shoothill_api import GAUGE
-#from shoothill_dir.shoothill_api import GAUGE
+#sys.path.append(os.path.dirname(os.path.abspath("shoothill_api/shoothill_api.py")))
+#from shoothill_api import GAUGE
+from shoothill_api.shoothill_api import GAUGE
 
 
 class GladstoneHarmonicReconstruction:
@@ -124,7 +128,7 @@ if __name__ == "__main__":
     ## 24 hrs
     date_end = np.datetime64('now')
     date_start = np.datetime64('now') - np.timedelta64(24,'h')
-    date_start = np.datetime64('2022-12-21')
+    #date_start = np.datetime64('2022-12-21')
 
 
 
@@ -135,7 +139,11 @@ if __name__ == "__main__":
     liv = GAUGE()
     liv.dataset = liv.read_shoothill_to_xarray(date_start=date_start, date_end=date_end)
     #liv.plot_timeseries()
-    liv = GladstoneHarmonicReconstruction(date_start=date_start, date_end=date_end+np.timedelta64(12,'h')).to_tidegauge()
+    liv_ea = GAUGE()
+    liv_ea.dataset = liv_ea.read_ea_api_to_xarray(date_start=date_start, date_end=date_end, station_id="E70124")
+    #liv_ea.plot_timeseries()
+    # Construct harmonics as Shoothill is not working for Liverpool
+    liv_h = GladstoneHarmonicReconstruction(date_start=date_start, date_end=date_end+np.timedelta64(12,'h')).to_tidegauge()
 
 
     ctrf = GAUGE()
@@ -150,12 +158,16 @@ if __name__ == "__main__":
     ctr2.dataset = ctr.read_shoothill_to_xarray(station_id="7900" ,date_start=date_start, date_end=date_end)
     #ctr2.plot_timeseries()
 
+    ctr23 = GAUGE()  # New in 2023. Data from ~27Jun'23 to 20 Oct'23+
+    ctr23.dataset = ctr.read_shoothill_to_xarray(station_id="15563" ,date_start=date_start, date_end=date_end)
+    #ctr23.plot_timeseries()
+
     iron = GAUGE()
     iron.dataset = ctr.read_shoothill_to_xarray(station_id="968" ,date_start=date_start, date_end=date_end)
     #iron.plot_timeseries()
 
-    #farn = GAUGE()
-    #farn.dataset = ctr.read_shoothill_to_xarray(station_id="972" ,date_start=date_start, date_end=date_end)
+    farn = GAUGE()
+    farn.dataset = ctr.read_shoothill_to_xarray(station_id="972" ,date_start=date_start, date_end=date_end)
     #farn.plot_timeseries()
 
 
@@ -175,9 +187,12 @@ if __name__ == "__main__":
     ## Only get tides over the weir with 8.75m at Liverpool
     fig.suptitle('Dee River heights and flow')
     #ax1.scatter(liv.dataset.time, liv.dataset.sea_level, color='k', s=1, label=liv.dataset.site_name)
-    ax1 = scatter_plot(ax1, liv.dataset.time, liv.dataset.sea_level, 'k', 1, liv.dataset.site_name.values)
+    try:    ax1 = scatter_plot(ax1, liv.dataset.time, liv.dataset.sea_level, 'k', 1, liv.dataset.site_name.values)
+    except: pass
+    ax1 = scatter_plot(ax1, liv_h.dataset.time, liv_h.dataset.sea_level, 'k', 1, liv_h.dataset.site_name.values)
     if line_flag:
         ax1 = line_plot(ax1, liv.dataset.time, liv.dataset.sea_level, 'k', 1)
+        ax1 = line_plot(ax1, liv_h.dataset.time, liv_h .dataset.sea_level, 'k', 1)
 
     ax1.plot( [date_start - np.timedelta64(1,'D'), date_end], [8.75,8.75], 'k--')
     ax1b = ax1.twinx()
@@ -195,9 +210,11 @@ if __name__ == "__main__":
     ax1b.legend(markerscale=6)
 
 
-    ax2 = scatter_plot(ax2, ctr.dataset.time, ctr.dataset.sea_level, 'k', 1, "Chester, above weir")
+    ax2 = scatter_plot(ax2, ctr.dataset.time,   ctr.dataset.sea_level, 'k', 1, "Chester, above weir")
+    ax2 = scatter_plot(ax2, ctr23.dataset.time, ctr23.dataset.sea_level, 'k', 1, "Chester, above weir")
     if line_flag:
-        ax2 = line_plot(ax2, ctr.dataset.time, ctr.dataset.sea_level, 'k', 1)
+        ax2 = line_plot(ax2, ctr.dataset.time,   ctr.dataset.sea_level, 'k', 1)
+        ax2 = line_plot(ax2, ctr23.dataset.time, ctr23.dataset.sea_level, 'k', 1)
     ax2 = scatter_plot(ax2, ctr2.dataset.time, ctr2.dataset.sea_level, 'b', 1, "Chester, below weir")
     if line_flag:
         ax2 = line_plot(ax2, ctr2.dataset.time, ctr2.dataset.sea_level, 'b', 1)
@@ -228,3 +245,45 @@ if __name__ == "__main__":
     ax2.legend(markerscale=6, loc='lower left')
 
     plt.savefig('Chester_river_levels.png')
+
+
+    ####### An alternative plot for heights: Farndon - Ironbridge - Chester - Liverpool
+
+    plt.close('all')
+    fig, ax_l = plt.subplots(1, sharex=True)
+
+    ## Only get tides over the weir with 8.75m at Liverpool
+    fig.suptitle('Dee River heights')
+    #ax1.scatter(liv.dataset.time, liv.dataset.sea_level, color='k', s=1, label=liv.dataset.site_name)
+
+
+    ax_l = scatter_plot(ax_l, farn.dataset.time, farn.dataset.sea_level, 'r', 1, farn.dataset.site_name)
+    ax_l = scatter_plot(ax_l, iron.dataset.time, iron.dataset.sea_level, 'g', 1, iron.dataset.site_name)
+    ax_l = scatter_plot(ax_l, ctr23.dataset.time, ctr23.dataset.sea_level, 'k', 1, ctr23.dataset.site_name)
+    # Add empty data to ax1 to get liverpool in the legend
+    ax_l = line_plot(ax_l, [], [], 'b', 1, liv_ea.dataset.site_name)
+    ax_r = ax_l.twinx()
+    ax_r = line_plot(ax_r, liv_ea.dataset.time, liv_ea.dataset.sea_level, 'b', 1, liv_ea.dataset.site_name)
+
+    ax_l.set_ylabel('water level (m)', color='k')
+    ax_r.set_ylabel('sea level (m)', color='b')
+    #ax_l.set_ylim([4.0,9.0])
+    #ax_r.set_ylim([4.8,8.2])
+    for tl in ax_r.get_yticklabels():
+        tl.set_color('b')
+
+    # plot the legend
+    ax_l.legend(markerscale=6, loc='upper left')
+
+
+    # format the ticks
+    myFmt = mdates.DateFormatter('%d-%a')
+    days = mdates.DayLocator()
+    ax_l.xaxis.set_major_locator(days)
+    ax_l.xaxis.set_minor_locator(mdates.HourLocator([00,6,12,18]))
+    ax_l.xaxis.set_major_formatter(myFmt)
+
+    ax_l.set_xlabel( date_start.astype(datetime.datetime).strftime('%d%b%y') + \
+                   '-' + date_end.astype(datetime.datetime).strftime('%d%b%y') )
+
+    plt.savefig('Chester_river_levels_now.png')
