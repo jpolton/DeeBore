@@ -28,8 +28,7 @@ Example usage:
 
 
 To do:
-    * LW doesn't work - Dec'23
-    * Not sure the ebb and flood work - Dec'23
+    * FW works for bodc, but fails for some api data - Dec'23
     * Smooth data before finding flood ebb
     * Workflow for updating all measured data
 
@@ -438,14 +437,14 @@ class marine_gauge():
                     tg_tmp = GAUGE()  # make a dataarray to hold time estimate
                     tg_tmp.dataset = xr.Dataset({'sea_level': ('time', [np.NaN])},
                                                 coords={'time': [obs_time]})
-                    tg_HLW = win.find_nearby_high_and_low_water(var_str='sea_level', winsize=3,
+                    tg_HLW = win.find_nearby_high_and_low_water(var_str='sea_level', winsize=winsize,
                                                                 target_times=tg_tmp.dataset.time, method='cubic',
                                                                 extrema="max")
                 elif HLW == "LW":
                     tg_tmp = GAUGE()  # make a dataarray to hold time estimate
                     tg_tmp.dataset = xr.Dataset({'sea_level': ('time', [np.NaN])},
                                                 coords={'time': [obs_time]})
-                    tg_HLW = win.find_nearby_high_and_low_water(var_str='sea_level', winsize=3,
+                    tg_HLW = win.find_nearby_high_and_low_water(var_str='sea_level', winsize=winsize,
                                                               target_times=tg_tmp.dataset.time, method='cubic',
                                                               extrema="min")
 
@@ -483,11 +482,11 @@ class marine_gauge():
                 tg_tmp.dataset = xr.Dataset({'sea_level': ('time', [np.NaN])},
                                             coords={'time': [obs_time]})
                 if HLW == 'HW':
-                    tg_HLW = tg.find_nearby_high_and_low_water(var_str='sea_level', winsize=2,
+                    tg_HLW = tg.find_nearby_high_and_low_water(var_str='sea_level', winsize=winsize,
                                                             target_times=tg_tmp.dataset.time, method='comp',
                                                             extrema="max")
                 elif HLW == 'LW':
-                    tg_HLW = tg.find_nearby_high_and_low_water(var_str='sea_level', winsize=2,
+                    tg_HLW = tg.find_nearby_high_and_low_water(var_str='sea_level', winsize=winsize,
                                                             target_times=tg_tmp.dataset.time, method='comp',
                                                             extrema="min")
                 else:
@@ -723,7 +722,7 @@ class Controller():
                 self.load_and_process(source="bodc", HLW_list=["FW", "HW", "LW"])
                 #self.load_and_process(source="bodc", HLW_list=["LW"])
                 print('load and process measured (API) data')
-                self.load_and_process(source="api", HLW_list=["HW", "LW", "FW"])
+                self.load_and_process(source="api", HLW_list=["HW", "LW"])
                 #self.load_and_process(source="api", HLW_list=["FW"])
                 print('load and process CTR data. Obs + API')
                 self.get_river_data(HLW_list=["LW"])

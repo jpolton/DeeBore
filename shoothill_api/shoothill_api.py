@@ -138,32 +138,22 @@ class GAUGE(coast.Tidegauge):
             values_min = np.zeros(nt)
             for i in range(nt):
                 HLW = self.get_tide_table_times( time_guess=target_times[i].values, measure_var=var_str, method='window', winsize=winsize )
-                if HLW.size > 1:
-                    logging.debug(f"{i}: {coast._utils.stats_util.find_maxima(HLW.time.values, -HLW.values, method=method)}")
-                    tmp_output = coast._utils.stats_util.find_maxima(HLW.time.values, -HLW.values, method=method)
+                if HLW.size >= 3: # extrema methods need 3pts
+                    logging.debug(f"{i}: {coast._utils.stats_util.find_maxima(HLW.time, -HLW, method=method)}")
+                    tmp_output = coast._utils.stats_util.find_maxima(HLW.time, -HLW, method=method)
                     try:
-                        time_min[i], values_min[i] = tmp_output[0][0], tmp_output[1][0]
+                        time_min[i], values_min[i] = tmp_output[0][0].values, -tmp_output[1][0].values
                     except:
                         time_min[i] = target_times[i].values
                         values_min[i] = np.NaN
                 else:
-                    try:
-                        time_min[i], values_min[i] = HLW.time.values[0], -HLW.values[0]
-                    except:
-                        time_min[i] = target_times[i].values
-                        values_min[i] = np.NaN
+                    time_min[i] = HLW.time.where(HLW == np.min(HLW.values), drop=True).values[0]
+                    values_min[i] = HLW.where(HLW == np.min(HLW.values), drop=True).values[0]
 
             new_dataset = xr.Dataset()
             new_dataset.attrs = self.dataset.attrs
-            ##new_dataset[var_str + "_lows"] = (var_str + "_lows", -values_min.data)
-            ##new_dataset["time_lows"] = ("time_lows", time_min.data)
-            #new_dataset[var_str + "_lows"]  = (var_str + "_lows", -values_min)
-            #new_dataset["time_lows"] = ("time_lows", time_min)
-            #new_dataset = new_dataset.swap_dims({"time_lows":"t_dim"})
-
             time = np.array(time_min)
-            #sea_level = np.array(-values_min.data)
-            sea_level = np.array(-values_min)
+            sea_level = np.array(values_min)
             new_dataset[var_str + "_lows"] = xr.DataArray(sea_level, dims='t_dim')
             new_dataset = new_dataset.assign_coords(time_lows=('t_dim', time))
 
@@ -172,30 +162,22 @@ class GAUGE(coast.Tidegauge):
             values_max = np.zeros(nt)
             for i in range(nt):
                 HLW = self.get_tide_table_times( time_guess=target_times[i].values, measure_var=var_str, method='window', winsize=winsize )
-                if HLW.size > 1:
-                    logging.debug(f"{i}: {coast._utils.stats_util.find_maxima(HLW.time.values, HLW.values, method=method)}")
-                    tmp_output = coast._utils.stats_util.find_maxima(HLW.time.values,  HLW.values, method=method)
+                if HLW.size >= 3:  # extrema methods need 3pts
+                    logging.debug(f"{i}: {coast._utils.stats_util.find_maxima(HLW.time, HLW, method=method)}")
+                    tmp_output = coast._utils.stats_util.find_maxima(HLW.time,  HLW, method=method)
                     try:
-                        time_max[i], values_max[i] = tmp_output[0][0], tmp_output[1][0]
+                        time_max[i], values_max[i] = tmp_output[0][0].values, tmp_output[1][0].values
                     except:
                         time_max[i] = target_times[i].values
                         values_max[i] = np.NaN
                 else:
-                    time_max[i], values_max[i] = HLW.time.values[0], HLW.values[0]
+                    time_max[i] = HLW.time.where(HLW == np.max(HLW.values), drop=True).values[0]
+                    values_max[i] = HLW.where(HLW == np.max(HLW.values), drop=True).values[0]
 
             new_dataset = xr.Dataset()
             new_dataset.attrs = self.dataset.attrs
-            ##new_dataset[var_str + "_highs"] = (var_str + "_highs", values_max.data)
-            ##new_dataset["time_highs"] = ("time_highs", time_max.data)
-            #new_dataset[var_str + "_highs"] = (var_str + "_highs", values_max.data)
-            #new_dataset["time_highs"] = ("time_highs", time_max)
-            #new_dataset = new_dataset.swap_dims({"time_highs":"t_dim"})
-
-
-            #new_dataset1 = xr.Dataset()
-            #new_dataset1.attrs = self.dataset.attrs
             time = np.array(time_max)
-            sea_level = np.array(values_max.data)
+            sea_level = np.array(values_max)
             new_dataset[var_str + "_highs"] = xr.DataArray(sea_level, dims='t_dim')
             new_dataset = new_dataset.assign_coords(time_highs=('t_dim', time))
 
