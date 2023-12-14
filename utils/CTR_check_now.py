@@ -44,6 +44,8 @@ conda install requests
 
 Usage:
 DeeBore% python utils/CTR_check_now.py
+
+Works in env: coast-3.10
 '''
 
 # Begin by importing coast and other packages
@@ -51,12 +53,13 @@ import datetime
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
-import xarray as xr
 
 import sys, os
-#sys.path.append(os.path.dirname(os.path.abspath("shoothill_api/shoothill_api.py")))
-#from shoothill_api import GAUGE
-from shoothill_api.shoothill_api import GAUGE
+sys.path.append(os.path.dirname(os.path.abspath("shoothill_api/shoothill_api.py")))
+try: # command line
+    from shoothill_api import GAUGE
+except: # pycharm
+    from shoothill_api.shoothill_api import GAUGE
 
 
 class GladstoneHarmonicReconstruction:
@@ -170,7 +173,9 @@ if __name__ == "__main__":
     farn.dataset = ctr.read_shoothill_to_xarray(station_id="972" ,date_start=date_start, date_end=date_end)
     #farn.plot_timeseries()
 
-
+    # Load gladstone dock tide prediction from NOC Innovation api
+    nocl = GAUGE()
+    nocl.dataset = nocl.read_nocinnov_to_xarray(date_start=date_start, date_end=date_end)
 
 
     #%% Plot data
@@ -189,7 +194,10 @@ if __name__ == "__main__":
     #ax1.scatter(liv.dataset.time, liv.dataset.sea_level, color='k', s=1, label=liv.dataset.site_name)
     try:    ax1 = scatter_plot(ax1, liv.dataset.time, liv.dataset.sea_level, 'k', 1, liv.dataset.site_name.values)
     except: pass
+    # Add harmonic reconstruction (anyTide)
     ax1 = scatter_plot(ax1, liv_h.dataset.time, liv_h.dataset.sea_level, 'k', 1, liv_h.dataset.site_name.values)
+    # Add harmonic reconstruction (API)
+    ax1 = scatter_plot(ax1, nocl.dataset.time, nocl.dataset.sea_level, 'k', 1, nocl.dataset.site_name)
     if line_flag:
         ax1 = line_plot(ax1, liv.dataset.time, liv.dataset.sea_level, 'k', 1)
         ax1 = line_plot(ax1, liv_h.dataset.time, liv_h .dataset.sea_level, 'k', 1)
@@ -263,7 +271,9 @@ if __name__ == "__main__":
     # Add empty data to ax1 to get liverpool in the legend
     ax_l = line_plot(ax_l, [], [], 'b', 1, liv_ea.dataset.site_name)
     ax_r = ax_l.twinx()
-    ax_r = line_plot(ax_r, liv_ea.dataset.time, liv_ea.dataset.sea_level, 'b', 1, liv_ea.dataset.site_name)
+    ax_r = line_plot(ax_r, liv_ea.dataset.time, liv_ea.dataset.ssh, 'b', 1, liv_ea.dataset.site_name)
+    # Add dotted harmonic pred
+    ax_r = scatter_plot(ax_r, nocl.dataset.time, nocl.dataset.sea_level, 'b', 1, nocl.dataset.site_name)
 
     ax_l.set_ylabel('water level (m)', color='k')
     ax_r.set_ylabel('sea level (m)', color='b')
