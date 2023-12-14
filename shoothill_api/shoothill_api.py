@@ -643,3 +643,116 @@ class GAUGE(coast.Tidegauge):
 
         # Assign local dataset to object-scope dataset
         return dataset
+
+
+############ NOC Innovation gauge methods ##############################################
+    @classmethod
+    def read_nocinnov_to_xarray(cls,
+                                ndays: int=5,
+                                date_start: np.datetime64=None,
+                                date_end: np.datetime64=None,
+                                station_id="Liverpool%20(Gladstone%20Dock)",
+                                ):
+        """
+        load gauge data via NOC Innovation API
+        Either loads last ndays, or from date_start:date_end
+
+        This reqires an API key that is obtained by emailing NOC Innovation.
+
+        Check the API documentation:
+        https://apps.noc-innovations.co.uk/docs/polpred-api/_contents/available-functions.html
+
+        Check for data availability, port names (here station_id) etc using the portal:
+        https://apps.noc-innovations.co.uk/
+
+        for Liverpool Gladstone Dock: station_id="Liverpool%20(Gladstone%20Dock)", is assumed by default.
+
+        INPUTS:
+            ndays : int
+            date_start : datetime. UTC format string "yyyy-MM-ddThh:mm:ssZ" E.g 2023-12-08T23:59:59Z
+            date_end : datetime
+            station_id : str (station id)
+        OUTPUT:
+            sea_level, time : xr.Dataset
+
+        https://apps.noc-innovations.co.uk/api/polpred-api/latest/compute-port?key=ArDVr8ntwFyq5x42&port_name=Liverpool%20(Gladstone%20Dock)&dt_start=2023-12-08T00:00:00Z&dt_end=2023-12-08T23:59:59Z&interval=60
+        """
+        import requests,json
+
+        try:
+            import config_keys # Load secret keys
+        except:
+            logging.info('Need a NOC API Key. Email to get one')
+            print('Expected a config_keys.py file of the form:')
+            print('')
+            print('# API keys excluded from github repo')
+            print('NOC_KEY = "ArD...x42"')
+
+        cls.SessionHeaderId=config_keys.NOC_KEY #'ArD...snip...x42'
+        cls.ndays=ndays
+        cls.date_start=date_start
+        cls.date_end=date_end
+        cls.station_id=station_id # Shoothill id
+
+        logging.info("load gauge")
+
+        if cls.station_id == "Liverpool%20(Gladstone%20Dock)":
+            id_ref = "Gladstone Dock"
+            datum_shift = 5.272
+        else:
+            id_ref = "No label"
+            logging.debug(f"Not ready for that station id. {cls.station_id}")
+
+        if (type(cls.date_start) is np.datetime64) & (type(cls.date_end) is np.datetime64):
+            logging.info(f"GETting data from {cls.date_start} to {cls.date_end}")
+            startTime = cls.date_start.item().strftime('%Y-%m-%dT%H:%M:%SZ')
+            endTime = cls.date_end.item().strftime('%Y-%m-%dT%H:%M:%SZ')
+        else:
+            startTime = str(cls.date_start)
+            endTime = str(cls.date_end)
+
+        headers = {'content-type': 'application/json'}
+
+        #%% Construct station info API request
+        # Obtain and process header information
+        logging.info("load station info")
+        htmlcall_station_id = 'https://apps.noc-innovations.co.uk/api/polpred-api/latest/compute-port?key='
+        url  = htmlcall_station_id+str(config_keys.NOC_KEY) + "&port_name=" + str(cls.station_id) + "&dt_start=" + startTime + "&dt_end=" + endTime + "&interval=5"
+
+
+        #%% Get the data
+        request_raw = requests.get(url, headers=headers)
+        request = json.loads(request_raw.content)
+        logging.debug(f"NOC API request: {request_raw.text}")
+        # Check the output
+        logging.info(f"Gauge id is {request['params']['port_name']}")
+        try:
+            logging.info(f"timestamp and value of the zero index is {[ request['data']['items'][00]['dt'], request['data']['items'][00]['z'] ]}")
+        except:
+            logging.info(f"timestamp and value of the zero index: problem")
+
+        header_dict = request['params']
+        header_dict['site_name'] = header_dict['port_name']
+        header_dict['datum_shift'] = datum_shift
+
+        #%% Process timeseries data
+        dataset = xr.Dataset()
+        time = []
+        sea_level = []
+        nvals = request['data']['totalItems']
+        time = np.array([np.datetime64( request['data']['items'][i]['dt'] ) for i in range(nvals)])
+        sea_level = datum_shift + np.array([ request['data']['items'][i]['z'] for i in range(nvals)])
+
+        #%% Assign arrays to Dataset
+        dataset['sea_level'] = xr.DataArray(sea_level, dims=['time'])
+        dataset = dataset.assign_coords(time = ('time', time))
+
+        dataset.attrs = header_dict
+        logging.debug(f"NOC API request headers: {header_dict}")
+        try:
+            logging.debug(f"NOC API request 1st time: {time[0]} and value: {sea_level[0]}")
+        except:
+            logging.debug(f"NOC API request 1st time: problem")
+        # Assign local dataset to object-scope dataset
+        return dataset
+
