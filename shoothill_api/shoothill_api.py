@@ -298,7 +298,7 @@ class GAUGE(coast.Tidegauge):
         interp = y.interp(time=time_max)
         plt.plot( win.dataset.time, win.dataset.sea_level); plt.plot(interp.time, interp,'+'); plt.show()
         """
-        y = self.dataset[var_str].rolling(time=3, center=True).mean() # Rolling smoothing. Note we are only interested in the steep bit when it is near linear.
+        y = self.dataset[var_str].rolling(t_dim=3, center=True).mean() # Rolling smoothing. Note we are only interested in the steep bit when it is near linear.
         try:
             f = y.differentiate("time")
         except ValueError: # There is a problem if there are chunk sizes of 1. Rechunk
@@ -350,8 +350,8 @@ class GAUGE(coast.Tidegauge):
         #f_ds = xr.Dataset({"sea_level_dt": ("time", f_smooth(x_float))}, coords={"time": x_out})
         #f_ds = xr.Dataset({"sea_level_dt": ("time", f)}, coords={"time": x_out})
 
-        time_max, values_max = coast.stats_util.find_maxima(x, f, method=method, **kwargs)
-        time_min, values_min = coast.stats_util.find_maxima(x, -f, method=method, **kwargs)
+        time_max, values_max = coast._utils.stats_util.find_maxima(x, f, method=method, **kwargs)
+        time_min, values_min = coast._utils.stats_util.find_maxima(x, -f, method=method, **kwargs)
         #time_max, values_max = coast.stats_util.find_maxima(f_ds.time, f_ds.sea_level_dt, method=method, **kwargs)
         #time_min, values_min = coast.stats_util.find_maxima(f_ds.time, -f_ds.sea_level_dt, method=method, **kwargs)
 
@@ -367,8 +367,14 @@ class GAUGE(coast.Tidegauge):
         #inflection_ebb = y.interp(time=time_min[values_min.values.argmax()])
 
         ## Extract the large value (i.e. corresponding to steepest sea level)
-        inflection_flood = y.interp(time=time_max.where( values_max == values_max.max(), drop=True ))
-        inflection_ebb = y.interp(time=time_min.where( values_min == values_min.max(), drop=True ))
+        inflection_flood = y.swap_dims({"t_dim":"time"}).interp(time=time_max \
+                                                        .where( values_max == values_max.max(), drop=True ) \
+                                                                , kwargs={"fill_value": "extrapolate"})
+
+        inflection_ebb = y.swap_dims({"t_dim":"time"}).interp(time=time_min \
+                                                        .where( values_min == values_min.max(), drop=True ) \
+                                                              , kwargs={"fill_value": "extrapolate"})
+
         #inflection_flood = y.interp(time=time_max)
         #inflection_ebb = y.interp(time=time_min)
 
@@ -376,14 +382,21 @@ class GAUGE(coast.Tidegauge):
 
         new_dataset = xr.Dataset()
         new_dataset.attrs = self.dataset.attrs
-        #new_dataset[var_str + "_rise"] = ("time_rise", inflection_rise.values)
-        #new_dataset[var_str + "_fall"] = ("time_fall", inflection_fall.values)
-        #new_dataset["time_rise"] = ("time_rise", inflection_rise.time.values)
-        #new_dataset["time_fall"] = ("time_fall", inflection_fall.values)
-        new_dataset[var_str + "_flood"] = ("time_flood", inflection_flood.values)
-        new_dataset[var_str + "_ebb"]  = ("time_ebb",  inflection_ebb.values)
-        new_dataset["time_flood"] = ("time_flood", inflection_flood.time.values)
-        new_dataset["time_ebb"]  =  ("time_ebb", inflection_ebb.time.values)
+        #new_dataset[var_str + "_flood"] = ("time_flood", inflection_flood.values)
+        #new_dataset[var_str + "_ebb"]  = ("time_ebb",  inflection_ebb.values)
+        #new_dataset["time_flood"] = ("time_flood", inflection_flood.time.values)
+        #new_dataset["time_ebb"]  =  ("time_ebb", inflection_ebb.time.values)
+
+        time = np.array(inflection_flood.time.values)
+        sea_level = np.array(inflection_flood.data)
+        new_dataset[var_str + "_flood"] = xr.DataArray(sea_level, dims='t_dim')
+        new_dataset = new_dataset.assign_coords(time_flood=('t_dim', time))
+
+        time = np.array(inflection_ebb.time.values)
+        sea_level = np.array(inflection_ebb.data)
+        new_dataset[var_str + "_ebb"] = xr.DataArray(sea_level, dims='t_dim')
+        new_dataset = new_dataset.assign_coords(time_ebb=('t_dim', time))
+
 
         new_object = GAUGE()
         new_object.dataset = new_dataset

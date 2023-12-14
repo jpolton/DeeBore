@@ -28,27 +28,15 @@ Example usage:
 
 
 To do:
+    * LW doesn't work - Dec'23
+    * Not sure the ebb and flood work - Dec'23
     * Smooth data before finding flood ebb
     * Workflow for updating all measured data
 
 ---
-    env: coast-3.10
+    Dec'23
+    env: coast-3.10, pip install ics
 
-    ### Build python environment:
-    ## Create an environment with coast installed
-    yes | conda env remove --name workshop_env
-    yes | conda create --name workshop_env python=3.10
-    conda activate workshop_env
-    yes | conda install -c bodc coast=3.3.0
-    # enforce the GSW package number
-    yes | conda install -c conda-forge gsw=3.6.17
-    # install cartopy, not part of coast package
-    yes | conda install -c conda-forge cartopy=0.21.0
-
-    ## install request for shoothill server requests
-    conda install requests
-    ## ical integration
-    conda install ics
 
 """
 
@@ -426,17 +414,14 @@ class marine_gauge():
             # This produces an xr.dataset with sea_level_highs and sea_level_lows
             # with time variables time_highs and time_lows.
             win = GAUGE()
-            time_dim_swap_flag = False
             try:
                 win.dataset = tg.dataset.sel( time=slice(obs_time - np.timedelta64(winsize, "h"), obs_time + np.timedelta64(winsize, "h"))  )
                 #win.dataset = win.dataset.swap_dims({'time': 't_dim'})
-                time_dim_swap_flag = False
             except:
                 win.dataset = tg.dataset.swap_dims({'t_dim': 'time'})
-                win.dataset = win.dataset.sel( time=slice(obs_time - np.timedelta64(winsize, "h"), obs_time + np.timedelta64(winsize, "h"))  )
+                win.dataset = win.dataset.sel(
+                    time=slice(obs_time - np.timedelta64(winsize, "h"), obs_time + np.timedelta64(winsize, "h")))
                 win.dataset = win.dataset.swap_dims({'time': 't_dim'})
-                time_dim_swap_flag = True
-
             #if HLW == "LW":
             #    print(f"win.dataset {win.dataset}")
             #print(i," win.dataset.time.size", win.dataset.time.size)
@@ -1253,7 +1238,6 @@ class Controller():
                 HT_h.append( HW.values )
                 #print('len(HT_h)', len(HT_h))
                 HT_t.append( HW[time_var].values )
-                print(f"{i}")
                 self.counter = i
                 #self.check_event_plot(height=HW.values, time=HW[time_var].values,
                 #                windowsize=5, source=source, HLW=HLW )
@@ -1695,11 +1679,13 @@ class Controller():
 
         if(1): # np.datetime64('now', 'Y') < np.datetime64('2021'): # year 2020
             print("predict_bore(): should check is table data is available. If not use harm reconstructed data")
-            tg = GAUGE()
-            tg.dataset = tg.read_hlw_to_xarray(filnam, day_start, day_end)
+            tg = coast.Tidegauge()
+            tg.read_hlw(filnam, day_start, day_end)
+            tg.dataset = tg.dataset.squeeze(dim='id_dim')
+            tg.dataset = tg.dataset.rename_vars({"ssh": "sea_level"})
 
             HT = tg.dataset['sea_level'].where(tg.dataset['sea_level']\
-                                    .values > 9.5).dropna('time') #, drop=True)
+                                    .values > 9.5).dropna('t_dim') #, drop=True)
         else: # year 2021 (no tide table data)
             source = 'harmonic_rec'
             print('source=',source)
@@ -1733,7 +1719,7 @@ class Controller():
             description += "Saltney put-in: " + put_in + '\n'
             description += ("Saltney FB:"+ np.datetime_as_string(Saltney_time_pred[i], unit='m', timezone=pytz.timezone('Europe/London')) +'\n')
             try:
-                Glad_HLW = tg.get_tide_table_times( Saltney_time_pred[i], method='nearest_2' )
+                Glad_HLW = tg.get_tide_table_times( Saltney_time_pred[i], measure_var='sea_level', method='nearest_2' )
                 # Extract the High Tide value
                 liv_ht = str(Glad_HLW[ np.argmax(Glad_HLW.values) ].values)+ 'm'
                 description += 'Liv HT:    '+np.datetime_as_string(Glad_HLW[ np.argmax(Glad_HLW.values) ].time.values, unit='m', timezone=pytz.timezone('Europe/London'))+" "+ liv_ht +'\n'
