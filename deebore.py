@@ -476,7 +476,7 @@ class marine_gauge():
                         #plt.show()
                 else:
                     print(f"This should not have happened... HLW:{HLW}")
-        else:  # I.e. source != "bodc" and source != "api"
+        else:  # I.e. source != "bodc" and source != "api". Includes "ctr"
             if(1): # try:
                 tg_tmp = GAUGE()  # make a dataarray to hold time estimate
                 tg_tmp.dataset = xr.Dataset({'sea_level': ('time', [np.NaN])},

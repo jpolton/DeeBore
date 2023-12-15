@@ -147,8 +147,12 @@ class GAUGE(coast.Tidegauge):
                         time_min[i] = target_times[i].values
                         values_min[i] = np.NaN
                 else:
-                    time_min[i] = HLW.time.where(HLW == np.min(HLW.values), drop=True).values[0]
-                    values_min[i] = HLW.where(HLW == np.min(HLW.values), drop=True).values[0]
+                    try:
+                        time_min[i] = HLW.time.where(HLW == np.min(HLW.values), drop=True).values[0]
+                        values_min[i] = HLW.where(HLW == np.min(HLW.values), drop=True).values[0]
+                    except: # catch exception if no values found in range
+                        time_min[i] = target_times[i].values
+                        values_min[i] = np.NaN
 
             new_dataset = xr.Dataset()
             new_dataset.attrs = self.dataset.attrs
@@ -171,8 +175,12 @@ class GAUGE(coast.Tidegauge):
                         time_max[i] = target_times[i].values
                         values_max[i] = np.NaN
                 else:
-                    time_max[i] = HLW.time.where(HLW == np.max(HLW.values), drop=True).values[0]
-                    values_max[i] = HLW.where(HLW == np.max(HLW.values), drop=True).values[0]
+                    try:
+                        time_max[i] = HLW.time.where(HLW == np.max(HLW.values), drop=True).values[0]
+                        values_max[i] = HLW.where(HLW == np.max(HLW.values), drop=True).values[0]
+                    except: # catch exception if no values found in range
+                        time_min[i] = target_times[i].values
+                        values_min[i] = np.NaN
 
             new_dataset = xr.Dataset()
             new_dataset.attrs = self.dataset.attrs
