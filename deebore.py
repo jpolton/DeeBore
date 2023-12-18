@@ -777,12 +777,12 @@ class Controller():
             elif command == "3":
                 print('plot bore data (lag vs tidal height')
                 plt.close('all');self.plot_lag_vs_height('bodc')
-                plt.close('all');self.plot_lag_vs_height('bodc', HLW="FW")
+                #plt.close('all');self.plot_lag_vs_height('bodc', HLW="FW")
                 plt.close('all');self.plot_lag_vs_height('all')
                 plt.close('all');self.plot_lag_vs_height('harmonic')
                 plt.close('all');self.plot_lag_vs_height('harmonic_rec')
                 plt.close('all');self.plot_lag_vs_height('api')
-                plt.close('all');self.plot_lag_vs_height('api', HLW="FW")
+                #plt.close('all');self.plot_lag_vs_height('api', HLW="FW")
 
             elif command == "4":
                 print('plot difference between predicted and measured (lag vs tidal height)')
@@ -1361,9 +1361,14 @@ class Controller():
             Xsalt_api = self.bore['Saltney_lag_'+HLW+'_api'].where( np.isnan(self.bore['liv_height_'+HLW+'_bodc']))
             Xblue_api = self.bore['bluebridge_lag_'+HLW+'_api'].where( np.isnan(self.bore['liv_height_'+HLW+'_bodc']))
             Xfit = self.bore['linfit_lag_'+HLW+'_bodc']
-            Xsalt_api_latest = Xsalt_api.where( xr.ufuncs.isfinite(Xsalt_api), drop=True)[0] # NB obs are in reverse time order
-            Yliv_api_latest  = Yliv_api.where( xr.ufuncs.isfinite(Xsalt_api), drop=True)[0] # NB obs are in reverse time order
-            lab = self.bore.time.where( xr.ufuncs.isfinite(Xsalt_api), drop=True)[0].values.astype('datetime64[D]').astype(object).strftime('%d%b%y')
+            try:
+                Xsalt_api_latest = Xsalt_api.where( np.isfinite(Xsalt_api), drop=True)[0] # NB obs are in reverse time order
+                Yliv_api_latest  = Yliv_api.where( np.isfinite(Xsalt_api), drop=True)[0] # NB obs are in reverse time order
+                lab = self.bore.time.where( np.isfinite(Xsalt_api), drop=True)[0].values.astype('datetime64[D]').astype(object).strftime('%d%b%y')
+            except: # if all nans cannot select a non-nan value
+                Xsalt_api_latest = Xsalt_api[0]
+                Yliv_api_latest = Yliv_api[0]
+                lab = ""
 
             plt.plot( Xsalt,Yliv, 'r.', label='Saltney')
             plt.plot( Xsalt[I],Yliv[I], 'k+', label='Class A')
