@@ -162,7 +162,7 @@ if __name__ == "__main__":
     #ctr2.plot_timeseries()
 
     ctr23 = GAUGE()  # New in 2023. Data from ~27Jun'23 to 20 Oct'23+
-    ctr23.dataset = ctr.read_shoothill_to_xarray(station_id="15563" ,date_start=date_start, date_end=date_end)
+    ctr23.dataset = ctr23.read_shoothill_to_xarray(station_id="15563" ,date_start=date_start, date_end=date_end)
     #ctr23.plot_timeseries()
 
     iron = GAUGE()
