@@ -133,7 +133,9 @@ if __name__ == "__main__":
     date_start = np.datetime64('now') - np.timedelta64(24,'h')
     #date_start = np.datetime64('2022-12-21')
 
-
+    ## 24 hrs
+    date_end = np.datetime64('now') - np.timedelta64(18,'h')
+    date_start = np.datetime64('now') - np.timedelta64(23,'h')
 
     #%% Load data
 
@@ -144,6 +146,8 @@ if __name__ == "__main__":
     #liv.plot_timeseries()
     liv_ea = GAUGE()
     liv_ea.dataset = liv_ea.read_ea_api_to_xarray(date_start=date_start, date_end=date_end, station_id="E70124")
+    liv_ea.dataset = liv_ea.dataset.sortby(liv_ea.dataset.time)  # sometimes the arrives out of order
+
     #liv_ea.plot_timeseries()
     # Construct harmonics as Shoothill is not working for Liverpool
     liv_h = GladstoneHarmonicReconstruction(date_start=date_start, date_end=date_end+np.timedelta64(12,'h')).to_tidegauge()
@@ -164,6 +168,10 @@ if __name__ == "__main__":
     ctr23 = GAUGE()  # New in 2023. Data from ~27Jun'23 to 20 Oct'23+
     ctr23.dataset = ctr23.read_shoothill_to_xarray(station_id="15563" ,date_start=date_start, date_end=date_end)
     #ctr23.plot_timeseries()
+
+    ctr_ea = GAUGE()
+    ctr_ea.dataset = ctr_ea.read_ea_api_to_xarray(date_start=date_start, date_end=date_end, station_id="067033")
+    ctr_ea.dataset = ctr_ea.dataset.sortby(ctr_ea.dataset.time) # sometimes the arrives out of order
 
     iron = GAUGE()
     iron.dataset = ctr.read_shoothill_to_xarray(station_id="968" ,date_start=date_start, date_end=date_end)
@@ -265,8 +273,9 @@ if __name__ == "__main__":
     #ax1.scatter(liv.dataset.time, liv.dataset.sea_level, color='k', s=1, label=liv.dataset.site_name)
 
 
-    ax_l = scatter_plot(ax_l, farn.dataset.time, farn.dataset.sea_level, 'r', 1, farn.dataset.site_name)
-    ax_l = scatter_plot(ax_l, iron.dataset.time, iron.dataset.sea_level, 'g', 1, iron.dataset.site_name)
+    ax_l = line_plot(ax_l, ctr_ea.dataset.time, ctr_ea.dataset.ssh, 'b', 1, ctr_ea.dataset.site_name)
+    ax_l = line_plot(ax_l, farn.dataset.time, farn.dataset.sea_level, 'r', 1, farn.dataset.site_name)
+    ax_l = line_plot(ax_l, iron.dataset.time, iron.dataset.sea_level, 'g', 1, iron.dataset.site_name)
     ax_l = scatter_plot(ax_l, ctr23.dataset.time, ctr23.dataset.sea_level, 'k', 1, ctr23.dataset.site_name)
     # Add empty data to ax1 to get liverpool in the legend
     ax_l = line_plot(ax_l, [], [], 'b', 1, liv_ea.dataset.site_name)
