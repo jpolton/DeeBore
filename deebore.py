@@ -129,17 +129,27 @@ class BODC:
         '2016LIV.txt', '2017LIV.txt',
         '2018LIV.txt', '2019LIV.txt',
         '2020LIV.txt', '2021LIV.txt',
-        '2022LIV.txt',
+        '2022LIV_cut14Jul.txt',  # removed 14th July 2022 as the observed waterlevels during the bore event was obviously incorrect.
+        'ClassAObsAfterSurgeQC2022jul.nc', # Alternative July 2022 file to patch bad data
         ]
         #'LIV2201.txt', 'LIV2202.txt']
         tg = coast.Tidegauge()
         for file in filelist:
-            tg0=coast.Tidegauge()
-            tg0.read_bodc(dir+file)
+            tg0 = coast.Tidegauge()
+            if file.endswith(".txt"):
+                tg0.read_bodc(dir+file)
+            elif file.endswith(".nc"):  # if file ends .nc
+                ds = xr.open_dataset(dir+file).isel(station=[9]).rename_dims({'time':'t_dim', 'station':'id_dim'})\
+                                                                .rename_vars({"station_name":"site_name"})
+                if (ds.site_name.values == b'EA-Liverpool'):
+                    tg0.dataset = ds.rename_vars({"zos_total_observed":"ssh", "timeseries":"time"})
+                    tg0.dataset = tg0.dataset.set_coords(["longitude", "latitude", "site_name", "time"])
+            else:
+                print(f"Did not expect file: {file}")
             if tg.dataset is None:
                 tg.dataset = tg0.dataset
             else:
-                tg.dataset = xr.concat([ tg.dataset, tg0.dataset], dim='t_dim')
+                tg.dataset = xr.concat([ tg.dataset, tg0.dataset], dim='t_dim').sortby("time")
         # Use QC to drop null values
         #tg.dataset['sea_level'] = tg.dataset.sea_level.where( np.logical_or(tg.dataset.qc_flags=='', tg.dataset.qc_flags=='T'), drop=True)
         try:
