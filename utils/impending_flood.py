@@ -31,17 +31,19 @@ import datetime
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
-
+plt.switch_backend("agg")
 
 import os,sys
-coastdir = os.path.dirname('/Users/jeff/GitHub/COAsT/coast')
+coastdir = os.path.dirname('/Users/jelt/GitHub/COAsT/coast')
 sys.path.insert(0, coastdir)
 #import coast
 
 import sys, os
 sys.path.append(os.path.dirname(os.path.abspath("shoothill_api/shoothill_api.py")))
-from shoothill_api import GAUGE
-#from shoothill_api.shoothill_api import GAUGE
+try: # command line
+    from shoothill_api import GAUGE
+except: # pycharm
+    from shoothill_api.shoothill_api import GAUGE
 
 
 ndays = 5
@@ -92,51 +94,59 @@ try:
 except:
 
     ctr23 = GAUGE()
-    ctr23.dataset = ctr.read_shoothill_to_xarray(station_id="15563", date_start=date_start, date_end=date_end)
+    ctr23.dataset = ctr23.read_shoothill_to_xarray(station_id="15563", date_start=date_start, date_end=date_end)
     ctr23.dataset['shft'] = -ctr23.dataset.sea_level[0].values + count
-    ctr23.plot_timeseries()
+    ctr23.plot_timeseries(var_list=["sea_level"])
+
+    ctr_gw = GAUGE()
+    ctr_gw.dataset = ctr_gw.read_shoothill_to_xarray(station_id="10831", date_start=date_start, date_end=date_end,
+                                                     dataType=7)
+    ctr_gw.dataset['sea_level'] = (ctr_gw.dataset['sea_level'][0] - ctr_gw.dataset['sea_level'])*4 + 4 # scale to make ground water look like a river gauge
+    ctr_gw.dataset['shft'] = -ctr_gw.dataset.sea_level[0].values + count
+
+    ctr_gw.plot_timeseries(var_list=["sea_level"])
 
 count += 0.5
 iron = GAUGE()
 iron.dataset = ctr.read_shoothill_to_xarray(station_id="968" ,date_start=date_start, date_end=date_end)
 iron.dataset['shft'] = -iron.dataset.sea_level[0].values + count
-iron.plot_timeseries()
+iron.plot_timeseries(var_list=["sea_level"])
 
 count += 0.5
 farn = GAUGE()
 farn.dataset = ctr.read_shoothill_to_xarray(station_id="972" ,date_start=date_start, date_end=date_end)
 farn.dataset['shft'] = -farn.dataset.sea_level[0].values + count
-farn.plot_timeseries()
+farn.plot_timeseries(var_list=["sea_level"])
 
 count += 0.5
 manh = GAUGE()
 manh.dataset = ctr.read_shoothill_to_xarray(station_id="963" ,date_start=date_start, date_end=date_end)
 manh.dataset['shft'] = -manh.dataset.sea_level[0].values + count
-manh.plot_timeseries()
+manh.plot_timeseries(var_list=["sea_level"])
 
 count += 0.5
 chrk = GAUGE()
 chrk.dataset = ctr.read_shoothill_to_xarray(station_id="957" ,date_start=date_start, date_end=date_end)
 chrk.dataset['shft'] = -chrk.dataset.sea_level[0].values + count
-chrk.plot_timeseries()
+chrk.plot_timeseries(var_list=["sea_level"])
 
 #count += 0.5
 corwen = GAUGE()
 corwen.dataset = ctr.read_shoothill_to_xarray(station_id="962" ,date_start=date_start, date_end=date_end)
 corwen.dataset['shft'] = -corwen.dataset.sea_level[0].values + count
-corwen.plot_timeseries()
+corwen.plot_timeseries(var_list=["sea_level"])
 
 count += 0.5
 deebr = GAUGE()
 deebr.dataset = ctr.read_shoothill_to_xarray(station_id="971" ,date_start=date_start, date_end=date_end)
 deebr.dataset['shft'] = -deebr.dataset.sea_level[0].values + count
-deebr.plot_timeseries()
+deebr.plot_timeseries(var_list=["sea_level"])
 
 count += 0.5
 bala = GAUGE()
 bala.dataset = ctr.read_shoothill_to_xarray(station_id="965" ,date_start=date_start, date_end=date_end)
 bala.dataset['shft'] = -bala.dataset.sea_level[0].values + count
-bala.plot_timeseries()
+bala.plot_timeseries(var_list=["sea_level"])
 
 
 
@@ -161,7 +171,7 @@ plt.savefig('impending_flood.png')
 fig, ax = plt.subplots()
 
 plt.title('River Dee water levels')
-for var in [farn, iron, ctr23]: #ctr2, ctr]:
+for var in [farn, iron, ctr23, ctr_gw]: #ctr2, ctr]:
     ax.scatter(var.dataset.time, var.dataset.sea_level  + 0*var.dataset.shft, s=1, label=var.dataset.site_name)
 
 ax.set_ylabel('relative river height (m)')

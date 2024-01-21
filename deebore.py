@@ -16,7 +16,7 @@ Conda environment:
     # enforce the GSW package number (something fishy with the build process bumped up this version number)
     yes | conda install -c conda-forge gsw=3.3.1
     # install cartopy, not part of coast package
-    yes | conda install -c conda-forge cartopy=0.20.1
+    yes | conda install -c conda-forge cartopy=0.20.1 tqdm
 
     ## install request for shoothill server requests
     conda install requests
@@ -28,8 +28,15 @@ Example usage:
 
 
 To do:
+    * FW works for bodc, but fails for some api data - Dec'23
     * Smooth data before finding flood ebb
     * Workflow for updating all measured data
+
+---
+    Dec'23
+    env: coast-3.10, pip install ics
+
+
 """
 
 import os
@@ -44,8 +51,18 @@ import xarray as xr
 import pytz
 import pickle
 
-from shoothill_api.shoothill_api import GAUGE
-from coast.general_utils import day_of_week
+import sys, os
+sys.path.append(os.path.dirname(os.path.abspath("shoothill_api/shoothill_api.py")))
+try:
+    from shoothill_api import GAUGE
+except:
+    from shoothill_api.shoothill_api import GAUGE
+
+coastdir = os.path.dirname('/Users/jelt/GitHub/COAsT/coast')
+sys.path.insert(0, coastdir)
+
+import coast
+from coast._utils.general_utils import day_of_week
 #from coast.stats_util import find_maxima
 
 
@@ -69,15 +86,27 @@ class GladstoneTideTable:
         filnam3 = '/Users/jelt/GitHub/DeeBore/data/Liverpool_2021_2022_HLW.txt'
         filnam4 = '/Users/jelt/GitHub/DeeBore/data/Liverpool_2023_2025_HLW.txt'
         tg  = GAUGE()
-        tg1 = GAUGE()
-        tg2 = GAUGE()
-        tg3 = GAUGE()
-        tg4 = GAUGE()
-        tg1.dataset = tg1.read_hlw_to_xarray(filnam1)#, self.bore.time.min().values, self.bore.time.max().values)
-        tg2.dataset = tg2.read_hlw_to_xarray(filnam2)#, self.bore.time.min().values, self.bore.time.max().values)
-        tg3.dataset = tg3.read_hlw_to_xarray(filnam3)#, self.bore.time.min().values, self.bore.time.max().values)
-        tg4.dataset = tg4.read_hlw_to_xarray(filnam4)#, self.bore.time.min().values, self.bore.time.max().values)
-        tg.dataset = xr.concat([ tg1.dataset, tg2.dataset, tg3.dataset, tg4.dataset], dim='time')
+        tg1 = coast.Tidegauge()
+        tg2 = coast.Tidegauge()
+        tg3 = coast.Tidegauge()
+        tg4 = coast.Tidegauge()
+
+        datasets = []
+        for filnam in [filnam1, filnam2, filnam3, filnam4]:
+            del tg1
+            #tg1 = GAUGE()
+            tg1 = coast.Tidegauge()
+            tg1.read_hlw(filnam)
+            datasets.append( tg1.dataset )
+        tg.dataset = xr.concat( datasets, dim='t_dim')
+        tg.dataset = tg.dataset.squeeze(dim='id_dim')
+        tg.dataset = tg.dataset.rename_vars({"ssh":"sea_level"})
+
+        #tg1.dataset = tg1.read_hlw(filnam1)#, self.bore.time.min().values, self.bore.time.max().values)
+        #tg2.dataset = tg2.read_hlw(filnam2)#, self.bore.time.min().values, self.bore.time.max().values)
+        #tg3.dataset = tg3.read_hlw(filnam3)#, self.bore.time.min().values, self.bore.time.max().values)
+        #tg4.dataset = tg4.read_hlw(filnam4)#, self.bore.time.min().values, self.bore.time.max().values)
+        #tg.dataset = xr.concat([ tg1.dataset, tg2.dataset, tg3.dataset, tg4.dataset], dim='t_dim')
         self.tg = tg
 
     def to_tidegauge(self):
@@ -100,20 +129,44 @@ class BODC:
         '2016LIV.txt', '2017LIV.txt',
         '2018LIV.txt', '2019LIV.txt',
         '2020LIV.txt', '2021LIV.txt',
-        '2022LIV.txt',
+        '2022LIV.txt',  # event on 14th July 2022 was obviously incorrect.
+        'ClassAObsAfterSurgeQC2022jul.nc', # Alternative data to patch July 2022 bad data
+        'ClassAObsAfterSurgeQC2023jan.nc',
+        'ClassAObsAfterSurgeQC2023feb.nc',
+        'ClassAObsAfterSurgeQC2023mar.nc',
+        'ClassAObsAfterSurgeQC2023oct.nc',
         ]
         #'LIV2201.txt', 'LIV2202.txt']
-        tg  = GAUGE()
+        tg = coast.Tidegauge()
         for file in filelist:
-            tg0=GAUGE()
-            tg0.dataset = tg0.read_bodc_to_xarray(dir+file)
+            tg0 = coast.Tidegauge()
+            if file.endswith(".txt"):
+                tg0.read_bodc(dir+file)
+            elif file.endswith(".nc"):  # if file ends .nc
+                ds = xr.open_dataset(dir+file).isel(station=[9]).rename_dims({'time':'t_dim', 'station':'id_dim'})\
+                                                                .rename_vars({"station_name":"site_name"})
+                if (ds.site_name.values == b'EA-Liverpool'):
+                    tg0.dataset = ds.rename_vars({"zos_total_observed":"ssh", "timeseries":"time"})
+                    tg0.dataset = tg0.dataset.set_coords(["longitude", "latitude", "site_name", "time"])
+            else:
+                print(f"Did not expect file: {file}")
             if tg.dataset is None:
                 tg.dataset = tg0.dataset
             else:
-                tg.dataset = xr.concat([ tg.dataset, tg0.dataset], dim='time')
+                # insert new data is time overlaps exist, then merge
+                tg.dataset = tg.dataset.where( (tg.dataset.time < tg0.dataset.time.min()) | (tg.dataset.time > tg0.dataset.time.max()), drop=True )
+                tg.dataset = xr.concat([ tg.dataset, tg0.dataset], dim='t_dim').sortby("time")
         # Use QC to drop null values
         #tg.dataset['sea_level'] = tg.dataset.sea_level.where( np.logical_or(tg.dataset.qc_flags=='', tg.dataset.qc_flags=='T'), drop=True)
-        tg.dataset['sea_level'] = tg.dataset.sea_level.where( tg.dataset.qc_flags!='N', drop=True)
+        try:
+            tg.dataset = tg.dataset.rename_vars({'ssh': 'sea_level'})
+        except:
+            pass
+        try:
+            tg.dataset = tg.dataset.squeeze(dim='id_dim')
+        except:
+            pass
+        tg.dataset = tg.dataset.where( tg.dataset.qc_flags!='N', drop=True)
         # Fix some attributes (others might not be correct for all data)
         tg.dataset['start_date'] = tg.dataset.time.min().values
         tg.dataset['end_date'] = tg.dataset.time.max().values
@@ -376,20 +429,41 @@ class marine_gauge():
             # This produces an xr.dataset with sea_level_highs and sea_level_lows
             # with time variables time_highs and time_lows.
             win = GAUGE()
-            win.dataset = tg.dataset.sel( time=slice(obs_time - np.timedelta64(winsize, "h"), obs_time + np.timedelta64(winsize, "h"))  )
+            try:
+                win.dataset = tg.dataset.sel( time=slice(obs_time - np.timedelta64(winsize, "h"), obs_time + np.timedelta64(winsize, "h"))  )
+                #win.dataset = win.dataset.swap_dims({'time': 't_dim'})
+            except:
+                win.dataset = tg.dataset.swap_dims({'t_dim': 'time'})
+                win.dataset = win.dataset.sel(
+                    time=slice(obs_time - np.timedelta64(winsize, "h"), obs_time + np.timedelta64(winsize, "h")))
+                win.dataset = win.dataset.swap_dims({'time': 't_dim'})
             #if HLW == "LW":
             #    print(f"win.dataset {win.dataset}")
             #print(i," win.dataset.time.size", win.dataset.time.size)
             if win.dataset.time.size == 0:
                 tg_HLW = GAUGE()
                 tg_HLW.dataset = xr.Dataset({measure_var: (time_var, [np.NaN])}, coords={time_var: [obs_time]})
+                tg_HLW.dataset = tg_HLW.dataset.swap_dims({time_var: 't_dim'})
             else:
                 if HLW == "FW" or HLW == "EW":
                     tg_HLW = win.find_flood_and_ebb_water(var_str='sea_level',method='cubic')
                     #print(f"inflection point time: {tg_HLW.dataset[time_var]}")
                     print(f"inflection points: {len(tg_HLW.dataset[time_var])}")
-                elif HLW == "HW" or HLW == "LW":
-                    tg_HLW = win.find_high_and_low_water(var_str='sea_level',method='cubic')
+                elif HLW == "HW":
+                    tg_tmp = GAUGE()  # make a dataarray to hold time estimate
+                    tg_tmp.dataset = xr.Dataset({'sea_level': ('time', [np.NaN])},
+                                                coords={'time': [obs_time]})
+                    tg_HLW = win.find_nearby_high_and_low_water(var_str='sea_level', winsize=winsize,
+                                                                target_times=tg_tmp.dataset.time, method='cubic',
+                                                                extrema="max")
+                elif HLW == "LW":
+                    tg_tmp = GAUGE()  # make a dataarray to hold time estimate
+                    tg_tmp.dataset = xr.Dataset({'sea_level': ('time', [np.NaN])},
+                                                coords={'time': [obs_time]})
+                    tg_HLW = win.find_nearby_high_and_low_water(var_str='sea_level', winsize=winsize,
+                                                              target_times=tg_tmp.dataset.time, method='cubic',
+                                                              extrema="min")
+
                     if len(tg_HLW.dataset[time_var]) > 1:
                         # should only find one extrema in window. Messy code to try and sort it. E.g. 6 Dec 2021
                         print(f"Extrema points: {len(tg_HLW.dataset[time_var])}")
@@ -397,6 +471,7 @@ class marine_gauge():
                             ave_sec = ((tg_HLW.dataset[time_var].max() - tg_HLW.dataset[time_var].min()) / np.timedelta64(1, 's')).values
                             ave_time = tg_HLW.dataset[time_var].min().values + np.timedelta64(int(ave_sec*0.5), 's')
                             tg_HLW.dataset = xr.Dataset({measure_var: (time_var, [tg_HLW.dataset[measure_var].mean().values])}, coords={time_var: [ave_time]})
+                            tg_HLW.dataset = tg_HLW.dataset.swap_dims({time_var: 't_dim'})
                         else:
                             if HLW == "LW":
                                 ind = tg_HLW.dataset[measure_var].argmin().values
@@ -407,6 +482,7 @@ class marine_gauge():
                             tg_HLW = GAUGE()
                             tg_HLW.dataset = xr.Dataset({measure_var: (time_var, [tmp.dataset[measure_var][ind].values])},
                                                         coords={time_var: [tmp.dataset[time_var][ind].values]})
+                            tg_HLW.dataset = tg_HLW.dataset.swap_dims({time_var: 't_dim'})
                         print(f"NEW extrema points: {len(tg_HLW.dataset[time_var])}")
                         #plt.plot(win.dataset['time'], win.dataset['sea_level'], 'k.');
                         #plt.plot(tg_HLW.dataset['time_highs'], tg_HLW.dataset['sea_level_highs'], 'r.');
@@ -416,9 +492,27 @@ class marine_gauge():
                         #plt.show()
                 else:
                     print(f"This should not have happened... HLW:{HLW}")
-        else:
-            tg_HLW = tg.find_high_and_low_water(var_str='sea_level')
+        else:  # I.e. source != "bodc" and source != "api". Includes "ctr"
+            if(1): # try:
+                tg_tmp = GAUGE()  # make a dataarray to hold time estimate
+                tg_tmp.dataset = xr.Dataset({'sea_level': ('time', [np.NaN])},
+                                            coords={'time': [obs_time]})
+                if HLW == 'HW':
+                    tg_HLW = tg.find_nearby_high_and_low_water(var_str='sea_level', winsize=winsize,
+                                                            target_times=tg_tmp.dataset.time, method='comp',
+                                                            extrema="max")
+                elif HLW == 'LW':
+                    tg_HLW = tg.find_nearby_high_and_low_water(var_str='sea_level', winsize=winsize,
+                                                            target_times=tg_tmp.dataset.time, method='comp',
+                                                            extrema="min")
+                else:
+                    print(f"Not expecting this scenario: {HLW}")
+            else: # except:
+                tg.dataset = tg.dataset.swap_dims({'time': 't_dim'})
+                tg_HLW = tg.find_nearby_high_and_low_water(var_str='sea_level')
 
+        #tg_HLW.dataset = tg_HLW.dataset.swap_dims({'time': 't_dim'})
+        #tg_HLW.dataset = tg_HLW.dataset.swap_dims({'t_dim': 'time'})
         HW = tg_HLW.get_tide_table_times(
                                 time_guess=obs_time,
                                 time_var=time_var,
@@ -641,10 +735,11 @@ class Controller():
                 print('load and process all data')
                 self.load_csv()
                 print('load and process measured (bodc) data')
-                self.load_and_process(source="bodc", HLW_list=["FW", "HW", "LW"])
+                self.load_and_process(source="bodc", HLW_list=["HW", "LW"])
+                #self.load_and_process(source="bodc", HLW_list=["FW", "HW", "LW"])
                 #self.load_and_process(source="bodc", HLW_list=["LW"])
                 print('load and process measured (API) data')
-                self.load_and_process(source="api", HLW_list=["HW", "LW", "FW"])
+                self.load_and_process(source="api", HLW_list=["HW", "LW"])
                 #self.load_and_process(source="api", HLW_list=["FW"])
                 print('load and process CTR data. Obs + API')
                 self.get_river_data(HLW_list=["LW"])
@@ -699,12 +794,12 @@ class Controller():
             elif command == "3":
                 print('plot bore data (lag vs tidal height')
                 plt.close('all');self.plot_lag_vs_height('bodc')
-                plt.close('all');self.plot_lag_vs_height('bodc', HLW="FW")
+                #plt.close('all');self.plot_lag_vs_height('bodc', HLW="FW")
                 plt.close('all');self.plot_lag_vs_height('all')
                 plt.close('all');self.plot_lag_vs_height('harmonic')
                 plt.close('all');self.plot_lag_vs_height('harmonic_rec')
                 plt.close('all');self.plot_lag_vs_height('api')
-                plt.close('all');self.plot_lag_vs_height('api', HLW="FW")
+                #plt.close('all');self.plot_lag_vs_height('api', HLW="FW")
 
             elif command == "4":
                 print('plot difference between predicted and measured (lag vs tidal height)')
@@ -1019,6 +1114,7 @@ class Controller():
         ax.plot(self.tg.dataset.time, self.tg.dataset.sea_level)
         ax.plot( time, height, 'r+' )
         ax.plot( [self.bore.time[i].values,self.bore.time[i].values],[0,11],'k')
+        print(f"{i, [time - np.timedelta64(windowsize,'h'), time + np.timedelta64(windowsize,'h')]}")
         ax.set_xlim([time - np.timedelta64(windowsize,'h'),
                   time + np.timedelta64(windowsize,'h')])
         ax.set_ylim([0,11])
@@ -1039,7 +1135,12 @@ class Controller():
                 ins = inset_axes(ax,width="30%", height="30%", loc="center")
 
 
-        ins_dataset = self.tg.dataset.sel( time=slice(time - np.timedelta64(ins_winsize,'m'), time + np.timedelta64(ins_winsize,'m'))  )
+        try:
+            self.tg.dataset = self.tg.dataset.swap_dims({'t_dim': 'time'})
+            ins_dataset = self.tg.dataset.sel( time=slice(time - np.timedelta64(ins_winsize,'m'), time + np.timedelta64(ins_winsize,'m'))  )
+            self.tg.dataset = self.tg.dataset.swap_dims({'time': 't_dim'})
+        except:
+            ins_dataset = self.tg.dataset.sel( time=slice(time - np.timedelta64(ins_winsize,'m'), time + np.timedelta64(ins_winsize,'m'))  )
         ins.plot(ins_dataset.time, ins_dataset.sea_level,'b+')
         ins.plot( time, height, 'r+' )
         ins.set_xticks([])
@@ -1277,9 +1378,14 @@ class Controller():
             Xsalt_api = self.bore['Saltney_lag_'+HLW+'_api'].where( np.isnan(self.bore['liv_height_'+HLW+'_bodc']))
             Xblue_api = self.bore['bluebridge_lag_'+HLW+'_api'].where( np.isnan(self.bore['liv_height_'+HLW+'_bodc']))
             Xfit = self.bore['linfit_lag_'+HLW+'_bodc']
-            Xsalt_api_latest = Xsalt_api.where( xr.ufuncs.isfinite(Xsalt_api), drop=True)[0] # NB obs are in reverse time order
-            Yliv_api_latest  = Yliv_api.where( xr.ufuncs.isfinite(Xsalt_api), drop=True)[0] # NB obs are in reverse time order
-            lab = self.bore.time.where( xr.ufuncs.isfinite(Xsalt_api), drop=True)[0].values.astype('datetime64[D]').astype(object).strftime('%d%b%y')
+            try:
+                Xsalt_api_latest = Xsalt_api.where( np.isfinite(Xsalt_api), drop=True)[0] # NB obs are in reverse time order
+                Yliv_api_latest  = Yliv_api.where( np.isfinite(Xsalt_api), drop=True)[0] # NB obs are in reverse time order
+                lab = self.bore.time.where( np.isfinite(Xsalt_api), drop=True)[0].values.astype('datetime64[D]').astype(object).strftime('%d%b%y')
+            except: # if all nans cannot select a non-nan value
+                Xsalt_api_latest = Xsalt_api[0]
+                Yliv_api_latest = Yliv_api[0]
+                lab = ""
 
             plt.plot( Xsalt,Yliv, 'r.', label='Saltney')
             plt.plot( Xsalt[I],Yliv[I], 'k+', label='Class A')
@@ -1304,9 +1410,9 @@ class Controller():
             plt.plot( Xsalt[I],Yliv[I], 'k+', label='Class A')
             plt.plot( Xblue,Yliv, 'b.', label='Bluebridge')
             plt.plot( Xfit,Yliv, 'k-', label=source+': rmse '+'{:4.1f}'.format(self.stats(source,HLW))+'mins')
-            Xsalt_latest = Xsalt.where( xr.ufuncs.isfinite(Xsalt), drop=True)[0]
-            Yliv_latest  = Yliv.where( xr.ufuncs.isfinite(Xsalt), drop=True)[0]
-            lab = self.bore.time.where( xr.ufuncs.isfinite(Xsalt), drop=True)[0].values.astype('datetime64[D]').astype(object).strftime('%d%b%y')
+            Xsalt_latest = Xsalt.where( np.isfinite(Xsalt), drop=True)[0]
+            Yliv_latest  = Yliv.where( np.isfinite(Xsalt), drop=True)[0]
+            lab = self.bore.time.where( np.isfinite(Xsalt), drop=True)[0].values.astype('datetime64[D]').astype(object).strftime('%d%b%y')
 
             # Highlight recent data
             Yliv_new = self.bore['liv_height_'+HLW+'_'+source].where( self.bore.time > np.datetime64('2021-01-01') )
@@ -1594,18 +1700,20 @@ class Controller():
 
         if(1): # np.datetime64('now', 'Y') < np.datetime64('2021'): # year 2020
             print("predict_bore(): should check is table data is available. If not use harm reconstructed data")
-            tg = GAUGE()
-            tg.dataset = tg.read_hlw_to_xarray(filnam, day_start, day_end)
+            tg = coast.Tidegauge()
+            tg.read_hlw(filnam, day_start, day_end)
+            tg.dataset = tg.dataset.squeeze(dim='id_dim')
+            tg.dataset = tg.dataset.rename_vars({"ssh": "sea_level"})
 
             HT = tg.dataset['sea_level'].where(tg.dataset['sea_level']\
-                                    .values > 9.5).dropna('time') #, drop=True)
+                                    .values > 9.5).dropna('t_dim') #, drop=True)
         else: # year 2021 (no tide table data)
             source = 'harmonic_rec'
             print('source=',source)
             tg = GAUGE()
             tg_tmp = GAUGE()
             tg_tmp.dataset = tg_tmp.anyTide_to_xarray(date_start=day_start, date_end=day_end)
-            tg = tg_tmp.find_high_and_low_water(var_str='sea_level')
+            tg = tg_tmp.find_nearby_high_and_low_water(var_str='sea_level')
             #tg.dataset = tg.get_Glad_data(source='harmonic_rec',date_start=day, date_end=dayp1)
 
             HT = tg.dataset['sea_level_highs'].where(tg.dataset['sea_level_highs']\
@@ -1632,7 +1740,7 @@ class Controller():
             description += "Saltney put-in: " + put_in + '\n'
             description += ("Saltney FB:"+ np.datetime_as_string(Saltney_time_pred[i], unit='m', timezone=pytz.timezone('Europe/London')) +'\n')
             try:
-                Glad_HLW = tg.get_tide_table_times( Saltney_time_pred[i], method='nearest_2' )
+                Glad_HLW = tg.get_tide_table_times( Saltney_time_pred[i], measure_var='sea_level', method='nearest_2' )
                 # Extract the High Tide value
                 liv_ht = str(Glad_HLW[ np.argmax(Glad_HLW.values) ].values)+ 'm'
                 description += 'Liv HT:    '+np.datetime_as_string(Glad_HLW[ np.argmax(Glad_HLW.values) ].time.values, unit='m', timezone=pytz.timezone('Europe/London'))+" "+ liv_ht +'\n'
@@ -1682,16 +1790,17 @@ class Controller():
         filnam = 'data/Liverpool_2015_2020_HLW.txt'
         date_start = datetime.datetime(2020, 1, 1)
         date_end = datetime.datetime(2020, 12, 31)
-        tg = GAUGE()
-        tg.dataset = tg.read_hlw_to_xarray(filnam, date_start, date_end)
-        # Exaple plot
+        tg = coast.Tidegauge()
+        tg.read_hlw(filnam, date_start, date_end)
+        tg.dataset = tg.dataset.rename_vars({"ssh":"sea_level"})
+        # Example plot
         plt.figure()
         tg.dataset.plot.scatter(x="time", y="sea_level")
         plt.savefig('figs/Liverpool_HLW.png')
         plt.close('all')
 
-        print(f"stats: mean {tg.time_mean('sea_level')}")
-        print(f"stats: std {tg.time_std('sea_level')}")
+        #print(f"stats: mean {tg.time_mean('sea_level')}")
+        #print(f"stats: std {tg.time_std('sea_level')}")
 
     def shoothill(self):
 
@@ -1705,29 +1814,30 @@ class Controller():
 
         # E.g  Liverpool (Gladstone Dock station_id="13482", which is read by default.
         # Load in data from the Shoothill API
-        sg = GAUGE()
-        sg.dataset = sg.read_shoothill_to_xarray(date_start=date_start, date_end=date_end)
+        if(0):
+            sg = GAUGE()
+            sg.dataset = sg.read_shoothill_to_xarray(date_start=date_start, date_end=date_end)
 
-        #sg = GAUGE(startday=date_start, endday=date_end) # create modified Tidegauge object
-        sg_HLW = sg.find_high_and_low_water(var_str='sea_level', method='cubic')
-        #g.dataset
-        #g_HLW.dataset
+            #sg = GAUGE(startday=date_start, endday=date_end) # create modified Tidegauge object
+            sg_HLW = sg.find_nearby_high_and_low_water(var_str='sea_level', method='cubic')
+            #g.dataset
+            #g_HLW.dataset
 
-        plt.figure()
-        sg.dataset.plot.scatter(x="time", y="sea_level")
-        sg_HLW.dataset.plot.scatter(x="time_highs", y="sea_level_highs")
-        sg_HLW.dataset.plot.scatter(x="time_lows", y="sea_level_lows")
-        plt.savefig('figs/Liverpool_shoothill.png')
-        plt.close('all')
+            plt.figure()
+            sg.dataset.plot.scatter(x="time", y="sea_level")
+            sg_HLW.dataset.plot.scatter(x="time_highs", y="sea_level_highs")
+            sg_HLW.dataset.plot.scatter(x="time_lows", y="sea_level_lows")
+            plt.savefig('figs/Liverpool_shoothill.png')
+            plt.close('all')
 
         """
         Compare harmonic predicted highs with measured highs
         """
         # Compare tide predictions with measured HLW
         filnam = 'data/Liverpool_2015_2020_HLW.txt'
-        tg = GAUGE()
-        tg.dataset = tg.read_hlw_to_xarray(filnam, date_start, date_end)
-        tg_HLW = tg.find_high_and_low_water(var_str='sea_level')
+        tg = coast.Tidegauge()
+        tg.dataset = tg.read_hlw(filnam, date_start, date_end)
+        tg_HLW = tg.find_nearby_high_and_low_water(var_str='sea_level')
 
         sg = GAUGE()
         sg.dataset = sg.read_shoothill_to_xarray(date_start=date_start, date_end=date_end)
