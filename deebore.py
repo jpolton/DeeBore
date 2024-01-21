@@ -129,8 +129,12 @@ class BODC:
         '2016LIV.txt', '2017LIV.txt',
         '2018LIV.txt', '2019LIV.txt',
         '2020LIV.txt', '2021LIV.txt',
-        '2022LIV_cut14Jul.txt',  # removed 14th July 2022 as the observed waterlevels during the bore event was obviously incorrect.
-        'ClassAObsAfterSurgeQC2022jul.nc', # Alternative July 2022 file to patch bad data
+        '2022LIV.txt',  # event on 14th July 2022 was obviously incorrect.
+        'ClassAObsAfterSurgeQC2022jul.nc', # Alternative data to patch July 2022 bad data
+        'ClassAObsAfterSurgeQC2023jan.nc',
+        'ClassAObsAfterSurgeQC2023feb.nc',
+        'ClassAObsAfterSurgeQC2023mar.nc',
+        'ClassAObsAfterSurgeQC2023oct.nc',
         ]
         #'LIV2201.txt', 'LIV2202.txt']
         tg = coast.Tidegauge()
@@ -149,6 +153,8 @@ class BODC:
             if tg.dataset is None:
                 tg.dataset = tg0.dataset
             else:
+                # insert new data is time overlaps exist, then merge
+                tg.dataset = tg.dataset.where( (tg.dataset.time < tg0.dataset.time.min()) | (tg.dataset.time > tg0.dataset.time.max()), drop=True )
                 tg.dataset = xr.concat([ tg.dataset, tg0.dataset], dim='t_dim').sortby("time")
         # Use QC to drop null values
         #tg.dataset['sea_level'] = tg.dataset.sea_level.where( np.logical_or(tg.dataset.qc_flags=='', tg.dataset.qc_flags=='T'), drop=True)
@@ -729,7 +735,8 @@ class Controller():
                 print('load and process all data')
                 self.load_csv()
                 print('load and process measured (bodc) data')
-                self.load_and_process(source="bodc", HLW_list=["FW", "HW", "LW"])
+                self.load_and_process(source="bodc", HLW_list=["HW", "LW"])
+                #self.load_and_process(source="bodc", HLW_list=["FW", "HW", "LW"])
                 #self.load_and_process(source="bodc", HLW_list=["LW"])
                 print('load and process measured (API) data')
                 self.load_and_process(source="api", HLW_list=["HW", "LW"])
@@ -1783,16 +1790,17 @@ class Controller():
         filnam = 'data/Liverpool_2015_2020_HLW.txt'
         date_start = datetime.datetime(2020, 1, 1)
         date_end = datetime.datetime(2020, 12, 31)
-        tg = GAUGE()
-        tg.dataset = tg.read_hlw(filnam, date_start, date_end)
-        # Exaple plot
+        tg = coast.Tidegauge()
+        tg.read_hlw(filnam, date_start, date_end)
+        tg.dataset = tg.dataset.rename_vars({"ssh":"sea_level"})
+        # Example plot
         plt.figure()
         tg.dataset.plot.scatter(x="time", y="sea_level")
         plt.savefig('figs/Liverpool_HLW.png')
         plt.close('all')
 
-        print(f"stats: mean {tg.time_mean('sea_level')}")
-        print(f"stats: std {tg.time_std('sea_level')}")
+        #print(f"stats: mean {tg.time_mean('sea_level')}")
+        #print(f"stats: std {tg.time_std('sea_level')}")
 
     def shoothill(self):
 
@@ -1806,28 +1814,29 @@ class Controller():
 
         # E.g  Liverpool (Gladstone Dock station_id="13482", which is read by default.
         # Load in data from the Shoothill API
-        sg = GAUGE()
-        sg.dataset = sg.read_shoothill_to_xarray(date_start=date_start, date_end=date_end)
+        if(0):
+            sg = GAUGE()
+            sg.dataset = sg.read_shoothill_to_xarray(date_start=date_start, date_end=date_end)
 
-        #sg = GAUGE(startday=date_start, endday=date_end) # create modified Tidegauge object
-        sg_HLW = sg.find_nearby_high_and_low_water(var_str='sea_level', method='cubic')
-        #g.dataset
-        #g_HLW.dataset
+            #sg = GAUGE(startday=date_start, endday=date_end) # create modified Tidegauge object
+            sg_HLW = sg.find_nearby_high_and_low_water(var_str='sea_level', method='cubic')
+            #g.dataset
+            #g_HLW.dataset
 
-        plt.figure()
-        sg.dataset.plot.scatter(x="time", y="sea_level")
-        sg_HLW.dataset.plot.scatter(x="time_highs", y="sea_level_highs")
-        sg_HLW.dataset.plot.scatter(x="time_lows", y="sea_level_lows")
-        plt.savefig('figs/Liverpool_shoothill.png')
-        plt.close('all')
+            plt.figure()
+            sg.dataset.plot.scatter(x="time", y="sea_level")
+            sg_HLW.dataset.plot.scatter(x="time_highs", y="sea_level_highs")
+            sg_HLW.dataset.plot.scatter(x="time_lows", y="sea_level_lows")
+            plt.savefig('figs/Liverpool_shoothill.png')
+            plt.close('all')
 
         """
         Compare harmonic predicted highs with measured highs
         """
         # Compare tide predictions with measured HLW
         filnam = 'data/Liverpool_2015_2020_HLW.txt'
-        tg = GAUGE()
-        tg.dataset = tg.read_hlw_to_xarray(filnam, date_start, date_end)
+        tg = coast.Tidegauge()
+        tg.dataset = tg.read_hlw(filnam, date_start, date_end)
         tg_HLW = tg.find_nearby_high_and_low_water(var_str='sea_level')
 
         sg = GAUGE()
