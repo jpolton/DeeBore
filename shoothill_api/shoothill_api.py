@@ -357,13 +357,23 @@ class GAUGE(coast.Tidegauge):
         #inflection_ebb = y.interp(time=time_min[values_min.values.argmax()])
 
         ## Extract the large value (i.e. corresponding to steepest sea level)
-        inflection_flood = y.swap_dims({"t_dim":"time"}).interp(time=time_max \
-                                                        .where( values_max == values_max.max(), drop=True ) \
-                                                                , kwargs={"fill_value": "extrapolate"})
+        inflection_flood = y.swap_dims({"t_dim": "time"}).interp(time=time_max.swap_dims({"t_dim": "time"}),
+                                              kwargs={"fill_value": "extrapolate"})[values_max.values.argmax()].rename({var_str + "_flood"})
 
-        inflection_ebb = y.swap_dims({"t_dim":"time"}).interp(time=time_min \
-                                                        .where( values_min == values_min.max(), drop=True ) \
-                                                              , kwargs={"fill_value": "extrapolate"})
+        #inflection_flood = y.swap_dims({"t_dim":"time"}).where( values_max == values_max.max(), drop=True ) \
+        #                                                .interp(time=time_max \
+        #                                                        , kwargs={"fill_value": "extrapolate"})
+        inflection_flood = xr.DataArray([inflection_flood.values], dims=("t_dim"), coords={"t_dim": inflection_flood.time}).rename(var_str + "_flood")
+
+        inflection_ebb = (y.swap_dims({"t_dim": "time"}).interp(time=time_min.swap_dims({"t_dim": "time"}),
+                                              kwargs={"fill_value": "extrapolate"})[values_min.values.argmax()]
+                                                .rename({var_str + "_ebb"}))  # argMAX because values_min is computed by finding MAX(-f)
+
+        inflection_ebb = xr.DataArray([inflection_ebb.values], dims="t_dim", coords={"t_dim": inflection_ebb.time}).rename(var_str + "_ebb")
+
+        #inflection_ebb =  (y.swap_dims({"t_dim":"time"}).where( values_min == values_min.max(), drop=True ) \
+        #                                                .interp(time=time_min \
+        #                                                      , kwargs={"fill_value": "extrapolate"}))
 
         #inflection_flood = y.interp(time=time_max)
         #inflection_ebb = y.interp(time=time_min)
@@ -377,15 +387,32 @@ class GAUGE(coast.Tidegauge):
         #new_dataset["time_flood"] = ("time_flood", inflection_flood.time.values)
         #new_dataset["time_ebb"]  =  ("time_ebb", inflection_ebb.time.values)
 
-        time = np.array(inflection_flood.time.values)
-        sea_level = np.array(inflection_flood.data)
-        new_dataset[var_str + "_flood"] = xr.DataArray(sea_level, dims='t_dim')
-        new_dataset = new_dataset.assign_coords(time_flood=('t_dim', time))
+        if(0):
+            new_dataset = xr.Dataset()
+            new_dataset.attrs = self.dataset.attrs
+            time = np.array(time_min)
+            sea_level = np.array(values_min)
+            new_dataset[var_str + "_lows"] = xr.DataArray(sea_level, dims='t_dim')
+            new_dataset = new_dataset.assign_coords(time_lows=('t_dim', time))
+
+
+
+        new_dataset[var_str + "_flood"] = inflection_flood
+        new_dataset[var_str + "_ebb"]   = inflection_ebb
+
+
+        #new_dataset[var_str + "_flood"] = xr.DataArray([sea_level], dims='t_dim')
+        #new_dataset["time_flood"] = xr.DataArray([time], dims='t_dim')
+        #new_dataset = new_dataset.assign_coords(time_flood=('t_dim', [time]))
 
         time = np.array(inflection_ebb.time.values)
         sea_level = np.array(inflection_ebb.data)
-        new_dataset[var_str + "_ebb"] = xr.DataArray(sea_level, dims='t_dim')
-        new_dataset = new_dataset.assign_coords(time_ebb=('t_dim', time))
+
+
+
+        #new_dataset[var_str + "_ebb"] = xr.DataArray([sea_level], dims='t_dim')
+        #new_dataset["time_ebb"] = xr.DataArray([time], dims='t_dim')
+        #new_dataset = new_dataset.assign_coords(time_ebb=('t_dim', [time]))
 
 
         new_object = GAUGE()
