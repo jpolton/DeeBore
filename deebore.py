@@ -134,6 +134,7 @@ class BODC:
         'ClassAObsAfterSurgeQC2023jan.nc',
         'ClassAObsAfterSurgeQC2023feb.nc',
         'ClassAObsAfterSurgeQC2023mar.nc',
+        'ClassAObsAfterSurgeQC2023sep.nc',
         'ClassAObsAfterSurgeQC2023oct.nc',
         ]
         #'LIV2201.txt', 'LIV2202.txt']

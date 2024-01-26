@@ -480,6 +480,8 @@ class GAUGE(coast.Tidegauge):
             id_ref = "Farndon"
         elif cls.station_id == "968":
             id_ref = "Ironbridge (Dee)"
+        elif cls.station_id == "7522":
+            id_ref = "Sheerness"
         else:
             id_ref = "No label"
             logging.debug(f"Not ready for that station id. {cls.station_id}")
@@ -728,7 +730,10 @@ class GAUGE(coast.Tidegauge):
 
         if cls.station_id == "Liverpool%20(Gladstone%20Dock)":
             id_ref = "Gladstone Dock"
-            datum_shift = 5.272
+            datum_shift = 5.272  # taken from harm_class_A.txt
+        elif cls.station_id == "Sheerness":
+            id_ref = "Sheerness"
+            datum_shift = 3.047 # taken from harm_class_A.txt
         else:
             id_ref = "No label"
             logging.debug(f"Not ready for that station id. {cls.station_id}")
