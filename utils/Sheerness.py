@@ -41,6 +41,7 @@ import xarray as xr
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 import json
+from socket import gethostname
 
 import sys, os
 sys.path.append(os.path.dirname(os.path.abspath("shoothill_api/shoothill_api.py")))
@@ -49,7 +50,13 @@ try: # command line
 except: # pycharm
     from shoothill_api.shoothill_api import GAUGE
 
-coastdir = os.path.dirname('/Users/jelt/GitHub/COAsT/coast')
+#if "LJOB" in gethostname().upper():
+coastdir = os.path.dirname(os.environ["HOME"]+'/GitHub/COAsT/coast')
+#elif "LIVMAZ" in gethostname().upper():  # Debugging on local machine
+#    coastdir = os.path.dirname('/Users/jelt/GitHub/COAsT/coast')
+#else:
+#    print(f"Unfamiliar machine: {gethostname()}")
+
 sys.path.insert(0, coastdir)
 import coast
 from coast._utils.general_utils import day_of_week
@@ -82,15 +89,19 @@ class GladstoneHarmonicReconstruction:
 
     def to_tidegauge(self):
         return self.tg
-            
 
 class QCdata:
     """
     tg = QCdata().to_tidegauge()
     """
-    def __init__(self, date_start=None, date_end=None):
+    def __init__(self, date_start=None, date_end=None, dir=None):
 
-        dir = '/Users/jelt/DATA/SURGE/observations/'  #2020/ClassAObsAfterSurgeQC*.nc
+        if dir == None:
+            if "LJOB" in gethostname().upper():
+                dir = '/projectsa/surge_archive/observations/netcdf/'  #2020/ClassAObsAfterSurgeQC*.nc
+            else:
+                dir = '/Users/jelt/DATA/SURGE/observations/'  #2020/ClassAObsAfterSurgeQC*.nc
+            print(f"Try dir:{dir}")
 
         # Load data from nc file. Hardwired station number and station name
         station_id = 16
@@ -104,14 +115,12 @@ class QCdata:
         tg.dataset = ds.rename_vars({"zos_total_observed": "sea_level", "timeseries": "time"})
         tg.dataset = tg.dataset.set_coords(["longitude", "latitude", "site_name", "time"])
 
-        try:
-            pass
-            #tg.dataset = tg.dataset.squeeze(dim='id_dim')
-        except:
-            pass
         #tg.dataset = tg.dataset.where( tg.dataset.qc_flags!='N', drop=True)  # BODC flags
         tg.dataset = tg.dataset.where( tg.dataset.zos_flags != 0, drop=False)
         tg.dataset['time'] = tg.dataset.time.dt.round('s')  # round to the nearest second
+        tg.dataset['site_name'] = np.unique(tg.dataset.site_name)  # fix issue with replication over t_dim
+        tg.dataset['latitude'] = np.unique(tg.dataset.latitude)    # fix issue with replication over t_dim
+        tg.dataset['longitude'] = np.unique(tg.dataset.longitude)  # fix issue with replication over t_dim
 
 
         # Return only values between stated dates
@@ -135,14 +144,23 @@ class QCdata:
     def to_tidegauge(self):
         return self.tg
 
+
+
 class AMM7_surge_ERA5:
     """
     Class to handle AMM7_surge data forced by ERA5
         tg = AMM7_surge_ERA5().to_tidegauge()
 
     """
-    def __init__(self, date_start=None, date_end=None):
-        fn_SHNS = "/Users/jelt/DATA/surge_hindcast_ERA5_ClassA_bysite/SHNS.nc"
+    def __init__(self, date_start=None, date_end=None, dir=None):
+        if dir == None:
+            if "LJOB" in gethostname().upper():
+                dir = "/projectsa/surge_archive/surge_hindcast/surge_hindcast_NEMOSurge_ERA5/surge_hindcast_ERA5_ClassA_bysite/"
+            else:
+                dir = "/Users/jelt/DATA/surge_hindcast_ERA5_ClassA_bysite/"
+            print(f"Try dir:{dir}")
+
+        fn_SHNS = dir+"SHNS.nc"
         tg = GAUGE()
         tg.dataset = xr.open_dataset(fn_SHNS).swap_dims({"time":"t_dim"})
         tg.dataset['time'] = tg.dataset.timeseries.dt.round('s') # round to the nearest second
@@ -247,7 +265,7 @@ if __name__ == "__main__":
 
         sh_diff = sh_qc
         sh_diff.dataset['sea_level'] = sh_qc.dataset['sea_level'] - sh_nemo.dataset['sea_level']
-        sh_diff.dataset = sh_diff.dataset.expand_dims(dim={"id_dim": 1})
+        #sh_diff.dataset = sh_diff.dataset.expand_dims(dim={"id_dim": 1})
 
         if(0):
             # Harmonic analysis
@@ -351,7 +369,7 @@ if __name__ == "__main__":
         if flag_interactive:
             plt.show()
         else:
-            plt.savefig('Sheerness_river_levels_'+yyyy+'measured.png')
+            plt.savefig('Sheerness_river_levels_'+yyyy+'_measured.png')
 
     # Save json file of harmonics
     with open('data.json', 'w', encoding='utf-8') as f:

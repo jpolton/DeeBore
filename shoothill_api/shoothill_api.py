@@ -47,7 +47,14 @@ To do:
 """
 # Either local use of COAsT: pip install .
 import os, sys
-coastdir = os.path.dirname('/Users/jelt/GitHub/COAsT/coast')
+from socket import gethostname
+
+#if "LJOB" in gethostname().upper():
+coastdir = os.path.dirname(os.environ["HOME"]+'/GitHub/COAsT/coast')
+#elif "LIVMAZ" in gethostname().upper():  # Debugging on local machine
+#    coastdir = os.path.dirname('/Users/jelt/GitHub/COAsT/coast')
+#else:
+#    print(f"Unfamiliar machine: {gethostname()}")
 sys.path.insert(0, coastdir)
 # Or a just pre-built
 import coast
@@ -592,7 +599,7 @@ class GAUGE(coast.Tidegauge):
         """
         import os, sys
 
-        anytidedir = os.path.dirname('/Users/jelt/GitHub/anyTide/')
+        anytidedir = os.path.dirname(os.environ["HOME"]+'/GitHub/anyTide/')
         sys.path.insert(0, anytidedir)
 
         from NOCtidepred import get_port
