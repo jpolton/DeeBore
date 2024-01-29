@@ -40,6 +40,7 @@ import numpy as np
 import xarray as xr
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
+import json
 
 import sys, os
 sys.path.append(os.path.dirname(os.path.abspath("shoothill_api/shoothill_api.py")))
@@ -54,7 +55,7 @@ import coast
 from coast._utils.general_utils import day_of_week
 
 # For interactive plotting / else save to .png
-flag_interactive = True
+flag_interactive = False
 if flag_interactive:
     import matplotlib as mpl
     mpl.use('macosx')
@@ -157,8 +158,10 @@ class QCdata:
 
 
         # Fix some attributes (others might not be correct for all data)
-        tg.dataset['date_start'] = tg.dataset.time.min().values
-        tg.dataset['date_end'] = tg.dataset.time.max().values
+        try:
+            tg.dataset['date_start'] = tg.dataset.time.min().values
+            tg.dataset['date_end'] = tg.dataset.time.max().values
+        except: pass
         self.tg = tg
 
     def to_tidegauge(self):
@@ -215,175 +218,173 @@ if __name__ == "__main__":
 
 
 
-    ndays = 2
 
-    date_end = np.datetime64('now')
-    date_start = date_end - np.timedelta64(ndays,'D')
-
-    ## Christoph 22 Jan 21
-    date_end = np.datetime64('2021-01-28')
-    ndays = 10
-    date_start = date_end - np.timedelta64(ndays,'D')
-
-    ## 2021
-    date_end = np.datetime64('now')
-    date_start = np.datetime64('2021-01-01')
-
-    ## 24 hrs
+    ## last 24 hrs
     date_end = np.datetime64('now')
     date_start = np.datetime64('now') - np.timedelta64(24,'h')
-    #date_start = np.datetime64('2022-12-21')
-
-    ## 24 hrs
-    date_end = np.datetime64('now') - np.timedelta64(18,'h')
-    date_start = np.datetime64('now') - np.timedelta64(23,'h')
 
 
     #date_start = sh_qc.dataset.time.min().values.astype('datetime64[s]')  # cast as seconds
     #date_end   = sh_qc.dataset.time.max().values.astype('datetime64[s]')
 
-    date_start = np.datetime64('2023-01-01')
-    date_end = np.datetime64('2023-11-01')
-
-    date_start = np.datetime64('2020-01-01')
-    date_end = np.datetime64('2020-12-31')
-
-    #%% Load data
-    if(0):
-        sh_ea = GAUGE()
-        sh_ea.dataset = sh_ea.read_ea_api_to_xarray(date_start=date_start, date_end=date_end, station_id="E71539")
-        sh_ea.dataset = sh_ea.dataset.sortby(sh_ea.dataset.time)  # sometimes the arrives out of order
-
-        sh_ea2 = GAUGE()
-        sh_ea2.dataset = sh_ea2.read_ea_api_to_xarray(date_start=date_start, date_end=date_end, station_id="E71524")
-        sh_ea2.dataset = sh_ea2.dataset.sortby(sh_ea2.dataset.time) # sometimes the arrives out of order
-
-        sh_shoot = GAUGE()
-        sh_shoot.dataset = sh_shoot.read_shoothill_to_xarray(station_id="7522", date_start=date_start, date_end=date_end, dataType=4)
-        sh_shoot.plot_timeseries('sea_level')
-
-        # Load Sheerness tide prediction from NOC Innovation api
-        sh_noci = GAUGE()
-        sh_noci.dataset = sh_noci.read_nocinnov_to_xarray(station_id="Sheerness", date_start=date_start, date_end=date_end)
-        sh_noci.plot_timeseries('sea_level')
+    dict = {}
 
 
+    for year in range(2020,2020+1):
+        yyyy = str(year)
+        date_start = np.datetime64(yyyy + '-01-01')
+        date_end = np.datetime64(yyyy + '-12-31')
+        #date_start = np.datetime64(yyyy+'-11-04')
+        #date_end   = np.datetime64(yyyy+'-11-07')
 
+        #%% Load data
+        if(0):
+            sh_ea = GAUGE()
+            sh_ea.dataset = sh_ea.read_ea_api_to_xarray(date_start=date_start, date_end=date_end, station_id="E71539")
+            sh_ea.dataset = sh_ea.dataset.sortby(sh_ea.dataset.time)  # sometimes the arrives out of order
 
-    # Load Sheerness from QC'd data
-    sh_qc = QCdata(date_start=date_start, date_end=date_end).to_tidegauge()
+            sh_ea2 = GAUGE()
+            sh_ea2.dataset = sh_ea2.read_ea_api_to_xarray(date_start=date_start, date_end=date_end, station_id="E71524")
+            sh_ea2.dataset = sh_ea2.dataset.sortby(sh_ea2.dataset.time) # sometimes the arrives out of order
 
-    # Load Sheerness ERA5 data
-    sh_nemo = AMM7_surge_ERA5(date_start=date_start, date_end=date_end).to_tidegauge()
+            sh_shoot = GAUGE()
+            sh_shoot.dataset = sh_shoot.read_shoothill_to_xarray(station_id="7522", date_start=date_start, date_end=date_end, dataType=4)
+            sh_shoot.plot_timeseries('sea_level')
 
-    # Tide gauge analysis
-    tganalysis = coast.TidegaugeAnalysis()
-
-    # This routine searches for missing values in each dataset and applies them
-    # equally to each corresponding dataset
-    nemo, qc = tganalysis.match_missing_values(sh_nemo.dataset.sea_level, sh_qc.dataset.sea_level)
-
-    # Subtract means from all time series
-    sh_nemo = tganalysis.demean_timeseries(nemo.dataset)
-    sh_qc = tganalysis.demean_timeseries(qc.dataset)
-
-    sh_diff = sh_qc
-    sh_diff.dataset['sea_level'] = sh_qc.dataset['sea_level'] - sh_nemo.dataset['sea_level']
-    sh_diff.dataset = sh_diff.dataset.expand_dims(dim={"id_dim": 1})
-
-    # Harmonic analysis
-
-    ha_diff = tganalysis.harmonic_analysis_utide(sh_diff.dataset.sea_level, min_datapoints=1)
-
-    print(f"Species:   {ha_diff[0]['name'][0:10]}")
-    print(f"Amplitude: {ha_diff[0]['A'][0:10]}")
-    # Treshold statistics. See https://british-oceanographic-data-centre.github.io/COAsT/docs/examples/notebooks/tidegauge/tidegauge_validation_tutorial/
+            # Load Sheerness tide prediction from NOC Innovation api
+            sh_noci = GAUGE()
+            sh_noci.dataset = sh_noci.read_nocinnov_to_xarray(station_id="Sheerness", date_start=date_start, date_end=date_end)
+            sh_noci.plot_timeseries('sea_level')
 
 
 
-    #%% Plot data
-    if(0):
+
+        # Load Sheerness from QC'd data
+        sh_qc = QCdata(date_start=date_start, date_end=date_end).to_tidegauge()
+
+        # Load Sheerness ERA5 data
+        sh_nemo = AMM7_surge_ERA5(date_start=date_start, date_end=date_end).to_tidegauge()
+
+        if(0):
+            # Tide gauge analysis
+            tganalysis = coast.TidegaugeAnalysis()
+
+            # This routine searches for missing values in each dataset and applies them
+            # equally to each corresponding dataset
+            nemo, qc = tganalysis.match_missing_values(sh_nemo.dataset.sea_level, sh_qc.dataset.sea_level)
+
+            # Subtract means from all time series
+            sh_nemo = tganalysis.demean_timeseries(nemo.dataset)
+            sh_qc   = tganalysis.demean_timeseries(qc.dataset)
+
+        sh_diff = sh_qc
+        sh_diff.dataset['sea_level'] = sh_qc.dataset['sea_level'] - sh_nemo.dataset['sea_level']
+        sh_diff.dataset = sh_diff.dataset.expand_dims(dim={"id_dim": 1})
+
+        if(0):
+            # Harmonic analysis
+            ha_diff = tganalysis.harmonic_analysis_utide(sh_diff.dataset.sea_level, min_datapoints=1)
+
+            print(f"Species:   {ha_diff[0]['name'][0:10]}")
+            print(f"Amplitude: {ha_diff[0]['A'][0:10]}")
+
+            # Write to dictionary
+            dict[yyyy] = {}
+            for i in range(10):
+                dict[yyyy][ha_diff[0]['name'][i]] = {"amp": ha_diff[0]['A'][i], "pha": ha_diff[0]['g'][i]}
+
+        # Treshold statistics. See https://british-oceanographic-data-centre.github.io/COAsT/docs/examples/notebooks/tidegauge/tidegauge_validation_tutorial/
+
+
+
+        #%% Plot data
+        if(0):
+            plt.close('all')
+            fig, ax_l = plt.subplots(1, sharex=True)
+
+            ## Only get tides over the weir with 8.75m at Liverpool
+            fig.suptitle('Sheerness water levels')
+
+            ax_l = line_plot(ax_l, sh_qc.dataset.time, sh_qc.dataset.sea_level, 'y', 1, "QC")
+            ax_l = line_plot(ax_l, sh_ea.dataset.time, sh_ea.dataset.ssh, 'm', 1, "EA:1")
+            ax_l = line_plot(ax_l, sh_ea2.dataset.time, sh_ea2.dataset.ssh, 'r', 1, "EA:2")
+            ax_l = line_plot(ax_l, sh_shoot.dataset.time, sh_shoot.dataset.sea_level, 'g', 1, "Shoothill")
+            ax_l = scatter_plot(ax_l, sh_noci.dataset.time, sh_noci.dataset.sea_level, 'k', 1, "NOCi:Harmonic")
+            # Add empty data to ax1 to get RH axis in the legend
+            ax_l = line_plot(ax_l, [], [], 'b', 1, "EA2-EA1")
+            ax_r = ax_l.twinx()
+            ax_r = line_plot(ax_r, sh_ea.dataset.time, sh_ea2.dataset.ssh-sh_ea.dataset.ssh, 'b', 1, "EA diff")
+            # Add dotted harmonic pred
+            #ax_r = scatter_plot(ax_r, sh_noci.dataset.time, sh_noci.dataset.sea_level, 'b', 1, sh_noci.dataset.site_name)
+
+            ax_l.set_ylabel('water level (m)', color='k')
+            ax_r.set_ylabel('Diff (m)', color='b')
+            #ax_r.set_ylim([4.8,8.2])
+            for tl in ax_r.get_yticklabels():
+                tl.set_color('b')
+
+            # plot the legend
+            ax_l.legend(markerscale=6, loc='upper left')
+
+
+            # format the ticks
+            myFmt = mdates.DateFormatter('%d-%a')
+            days = mdates.DayLocator()
+            ax_l.xaxis.set_major_locator(days)
+            ax_l.xaxis.set_minor_locator(mdates.HourLocator([00,6,12,18]))
+            ax_l.xaxis.set_major_formatter(myFmt)
+
+            ax_l.set_xlabel( date_start.astype(datetime.datetime).strftime('%d%b%y') + \
+                           '-' + date_end.astype(datetime.datetime).strftime('%d%b%y') )
+
+            if flag_interactive:
+                plt.show()
+            else:
+                plt.savefig('Sheerness_river_levels_measured.png')
+
+
+        ####################
+
         plt.close('all')
         fig, ax_l = plt.subplots(1, sharex=True)
 
         ## Only get tides over the weir with 8.75m at Liverpool
         fig.suptitle('Sheerness water levels')
 
-        ax_l = line_plot(ax_l, sh_qc.dataset.time, sh_qc.dataset.sea_level, 'y', 1, "QC")
-        ax_l = line_plot(ax_l, sh_ea.dataset.time, sh_ea.dataset.ssh, 'm', 1, "EA:1")
-        ax_l = line_plot(ax_l, sh_ea2.dataset.time, sh_ea2.dataset.ssh, 'r', 1, "EA:2")
-        ax_l = line_plot(ax_l, sh_shoot.dataset.time, sh_shoot.dataset.sea_level, 'g', 1, "Shoothill")
-        ax_l = scatter_plot(ax_l, sh_noci.dataset.time, sh_noci.dataset.sea_level, 'k', 1, "NOCi:Harmonic")
-        # Add empty data to ax1 to get RH axis in the legend
-        ax_l = line_plot(ax_l, [], [], 'b', 1, "EA2-EA1")
-        ax_r = ax_l.twinx()
-        ax_r = line_plot(ax_r, sh_ea.dataset.time, sh_ea2.dataset.ssh-sh_ea.dataset.ssh, 'b', 1, "EA diff")
-        # Add dotted harmonic pred
-        #ax_r = scatter_plot(ax_r, sh_noci.dataset.time, sh_noci.dataset.sea_level, 'b', 1, sh_noci.dataset.site_name)
-
+        ax_l = line_plot(ax_l, sh_qc.dataset.time, sh_nemo.dataset.sea_level.squeeze(), 'y', 1, "nemo")
+        ax_l = line_plot(ax_l, sh_qc.dataset.time,   sh_qc.dataset.sea_level.squeeze(), 'm', 1, "QC")
         ax_l.set_ylabel('water level (m)', color='k')
+
+
+        ax_r = ax_l.twinx()
+        #ax_r = line_plot(ax_r, sh_qc.dataset.time, (sh_qc.dataset.sea_level - sh_nemo.dataset.sea_level).squeeze(), 'b', 1, "QC-NEMO")
+        ax_r = line_plot(ax_r, sh_qc.dataset.time, sh_diff.dataset.sea_level.squeeze(), 'b', 1, "QC-NEMO")
+        # Add dotted harmonic pred
+        # ax_r = scatter_plot(ax_r, sh_noci.dataset.time, sh_noci.dataset.sea_level, 'b', 1, sh_noci.dataset.site_name)
+
         ax_r.set_ylabel('Diff (m)', color='b')
-        #ax_r.set_ylim([4.8,8.2])
+        # ax_r.set_ylim([4.8,8.2])
         for tl in ax_r.get_yticklabels():
             tl.set_color('b')
 
         # plot the legend
         ax_l.legend(markerscale=6, loc='upper left')
 
-
         # format the ticks
-        myFmt = mdates.DateFormatter('%d-%a')
+        myFmt = mdates.DateFormatter('%d-%b')
         days = mdates.DayLocator()
         ax_l.xaxis.set_major_locator(days)
-        ax_l.xaxis.set_minor_locator(mdates.HourLocator([00,6,12,18]))
+        ax_l.xaxis.set_minor_locator(mdates.HourLocator([00, 6, 12, 18]))
         ax_l.xaxis.set_major_formatter(myFmt)
 
-        ax_l.set_xlabel( date_start.astype(datetime.datetime).strftime('%d%b%y') + \
-                       '-' + date_end.astype(datetime.datetime).strftime('%d%b%y') )
+        ax_l.set_xlabel(date_start.astype(datetime.datetime).strftime('%d%b%y') + \
+                        '-' + date_end.astype(datetime.datetime).strftime('%d%b%y'))
 
         if flag_interactive:
             plt.show()
         else:
-            plt.savefig('Sheerness_river_levels_measured.png')
+            plt.savefig('Sheerness_river_levels_'+yyyy+'measured.png')
 
-
-    ####################
-
-    plt.close('all')
-    fig, ax_l = plt.subplots(1, sharex=True)
-
-    ## Only get tides over the weir with 8.75m at Liverpool
-    fig.suptitle('Sheerness water levels')
-
-    ax_l = line_plot(ax_l, sh_qc.dataset.time, sh_nemo.dataset.sea_level, 'y', 1, "nemo")
-    ax_l = line_plot(ax_l, sh_qc.dataset.time,   sh_qc.dataset.sea_level, 'm', 1, "QC")
-    ax_l.set_ylabel('water level (m)', color='k')
-
-
-    ax_r = ax_l.twinx()
-    ax_r = line_plot(ax_r, sh_qc.dataset.time, sh_qc.dataset.sea_level - sh_nemo.dataset.sea_level, 'b', 1, "QC-NEMO")
-    # Add dotted harmonic pred
-    # ax_r = scatter_plot(ax_r, sh_noci.dataset.time, sh_noci.dataset.sea_level, 'b', 1, sh_noci.dataset.site_name)
-
-    ax_r.set_ylabel('Diff (m)', color='b')
-    # ax_r.set_ylim([4.8,8.2])
-    for tl in ax_r.get_yticklabels():
-        tl.set_color('b')
-
-    # plot the legend
-    ax_l.legend(markerscale=6, loc='upper left')
-
-    # format the ticks
-    myFmt = mdates.DateFormatter('%d-%b')
-    days = mdates.DayLocator()
-    ax_l.xaxis.set_major_locator(days)
-    ax_l.xaxis.set_minor_locator(mdates.HourLocator([00, 6, 12, 18]))
-    ax_l.xaxis.set_major_formatter(myFmt)
-
-    ax_l.set_xlabel(date_start.astype(datetime.datetime).strftime('%d%b%y') + \
-                    '-' + date_end.astype(datetime.datetime).strftime('%d%b%y'))
-
-    if flag_interactive:
-        plt.show()
-    else:
-        plt.savefig('Sheerness_river_levels_measured.png')
+    # Save json file of harmonics
+    with open('data.json', 'w', encoding='utf-8') as f:
+        json.dump(dict, f, ensure_ascii=False, indent=4)
