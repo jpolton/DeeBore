@@ -89,73 +89,41 @@ class QCdata:
     tg = QCdata().to_tidegauge()
     """
     def __init__(self, date_start=None, date_end=None):
-        dir = '/Users/jelt/GitHub/DeeBore/data/BODC_processed/'
-        filelist = [
-        'ClassAObsAfterSurgeQC2022jul.nc', # Alternative data to patch July 2022 bad data
-        'ClassAObsAfterSurgeQC2023jan.nc',
-        'ClassAObsAfterSurgeQC2023feb.nc',
-        'ClassAObsAfterSurgeQC2023mar.nc',
-        'ClassAObsAfterSurgeQC2023sep.nc',
-        'ClassAObsAfterSurgeQC2023oct.nc',
-        ]
 
-        dir = '/Users/jelt/DATA/SURGE/observations/2020/'
-        filelist = [
-        'ClassAObsAfterSurgeQC2020jan.nc', # Alternative data to patch July 2022 bad data
-        'ClassAObsAfterSurgeQC2020feb.nc',
-        'ClassAObsAfterSurgeQC2020mar.nc',
-        'ClassAObsAfterSurgeQC2020apr.nc',
-        'ClassAObsAfterSurgeQC2020may.nc',
-        'ClassAObsAfterSurgeQC2020jun.nc',
-        'ClassAObsAfterSurgeQC2020jul.nc',
-        'ClassAObsAfterSurgeQC2020aug.nc',
-        'ClassAObsAfterSurgeQC2020sep.nc',
-        'ClassAObsAfterSurgeQC2020oct.nc',
-        'ClassAObsAfterSurgeQC2020nov.nc',
-        'ClassAObsAfterSurgeQC2020dec.nc',
-        ]
+        dir = '/Users/jelt/DATA/SURGE/observations/'  #2020/ClassAObsAfterSurgeQC*.nc
+
         # Load data from nc file. Hardwired station number and station name
         station_id = 16
         station_name = b'EA-Sheerness'
         tg = coast.Tidegauge()
-        for file in filelist:
-            tg0 = coast.Tidegauge()
-            if file.endswith(".nc"):  # if file ends .nc
-                ds = xr.open_dataset(dir+file).isel(station=[station_id]).rename_dims({'time':'t_dim', 'station':'id_dim'})\
-                                                                .rename_vars({"station_name":"site_name"})
-                if (ds.site_name.values == station_name):
-                    tg0.dataset = ds.rename_vars({"zos_total_observed":"ssh", "timeseries":"time"})
-                    tg0.dataset = tg0.dataset.set_coords(["longitude", "latitude", "site_name", "time"])
-            else:
-                print(f"Did not expect file: {file}")
-            if tg.dataset is None:
-                tg.dataset = tg0.dataset
-            else:
-                # insert new data is time overlaps exist, then merge
-                #tg.dataset = tg.dataset.where( (tg.dataset.time < tg0.dataset.time.min()) | (tg.dataset.time > tg0.dataset.time.max()), drop=True )
-                tg.dataset = xr.concat([ tg.dataset, tg0.dataset], dim='t_dim').sortby("time")
+        ds = (xr.open_mfdataset(dir+"????/ClassAObsAfterSurgeQC*.nc", combine='nested', concat_dim='time')
+                .isel(station=[station_id])
+                .rename_dims({'time': 't_dim', 'station': 'id_dim'})
+                .rename_vars({"station_name": "site_name"}))
 
-        # Use QC to drop null values
-        #tg.dataset['sea_level'] = tg.dataset.sea_level.where( np.logical_or(tg.dataset.qc_flags=='', tg.dataset.qc_flags=='T'), drop=True)
+        tg.dataset = ds.rename_vars({"zos_total_observed": "sea_level", "timeseries": "time"})
+        tg.dataset = tg.dataset.set_coords(["longitude", "latitude", "site_name", "time"])
+
         try:
-            tg.dataset = tg.dataset.rename_vars({'ssh': 'sea_level'})
-        except:
             pass
-        try:
-            tg.dataset = tg.dataset.squeeze(dim='id_dim')
+            #tg.dataset = tg.dataset.squeeze(dim='id_dim')
         except:
             pass
         #tg.dataset = tg.dataset.where( tg.dataset.qc_flags!='N', drop=True)  # BODC flags
-        tg.dataset = tg.dataset.where( tg.dataset.zos_flags!=0, drop=False)
-        tg.dataset['time'] = tg.dataset.time.dt.round('s') # round to the nearest second
+        tg.dataset = tg.dataset.where( tg.dataset.zos_flags != 0, drop=False)
+        tg.dataset['time'] = tg.dataset.time.dt.round('s')  # round to the nearest second
 
 
         # Return only values between stated dates
         if ((date_start == None) | (date_end == None)):
             pass
         else:
-            tg.dataset = tg.dataset.where((tg.dataset.time >= date_start) & (tg.dataset.time <= date_end), drop=True)
-
+            # sortby("time")  was important to include with xr.open_mfdataset()
+            tg.dataset = tg.dataset\
+                            .sortby("time")\
+                            .swap_dims({'t_dim':'time'})\
+                            .sel(time=slice(date_start, date_end))\
+                            .swap_dims({'time': 't_dim'})
 
         # Fix some attributes (others might not be correct for all data)
         try:
