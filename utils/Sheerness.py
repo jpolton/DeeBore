@@ -216,7 +216,7 @@ if __name__ == "__main__":
     dict = {}
 
 
-    for year in range(2020,2020+1):
+    for year in range(2012,2020+1):
         yyyy = str(year)
         date_start = np.datetime64(yyyy + '-01-01')
         date_end = np.datetime64(yyyy + '-12-31')
@@ -264,9 +264,7 @@ if __name__ == "__main__":
             sh_qc   = tganalysis.demean_timeseries(qc.dataset)
 
         try:
-            sh_diff = sh_qc
-            sh_diff.dataset['sea_level'] = sh_qc.dataset['sea_level'] - sh_nemo.dataset['sea_level']
-            #sh_diff.dataset = sh_diff.dataset.expand_dims(dim={"id_dim": 1})
+            sh_qc.dataset['sea_level_diff'] = sh_qc.dataset['sea_level'] - sh_nemo.dataset['sea_level']
 
             if(0):
                 # Harmonic analysis
@@ -345,7 +343,7 @@ if __name__ == "__main__":
 
             ax_r = ax_l.twinx()
             #ax_r = line_plot(ax_r, sh_qc.dataset.time, (sh_qc.dataset.sea_level - sh_nemo.dataset.sea_level).squeeze(), 'b', 1, "QC-NEMO")
-            ax_r = line_plot(ax_r, sh_qc.dataset.time, sh_diff.dataset.sea_level.squeeze(), 'b', 1, "QC-NEMO")
+            ax_r = line_plot(ax_r, sh_qc.dataset.time, sh_qc.dataset.sea_level_diff.squeeze(), 'b', 1, "QC-NEMO")
             # Add dotted harmonic pred
             # ax_r = scatter_plot(ax_r, sh_noci.dataset.time, sh_noci.dataset.sea_level, 'b', 1, sh_noci.dataset.site_name)
 
