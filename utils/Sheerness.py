@@ -232,7 +232,8 @@ if __name__ == "__main__":
     #date_start = sh_qc.dataset.time.min().values.astype('datetime64[s]')  # cast as seconds
     #date_end   = sh_qc.dataset.time.max().values.astype('datetime64[s]')
 
-    dict = {}
+    dict_amp = {}
+    dict_pha = {}
 
 
     for year in range(2012,2020+1):
@@ -299,9 +300,11 @@ if __name__ == "__main__":
                 print(f"Amplitude: {ha_diff[0]['A'][0:10]}")
 
                 # Write to dictionary
-                dict[yyyy] = {}
+                dict_amp[yyyy] = {}
+                dict_pha[yyyy] = {}
                 for i in range(10):
-                    dict[yyyy][ha_diff[0]['name'][i]] = {"amp": ha_diff[0]['A'][i], "pha": ha_diff[0]['g'][i]}
+                    dict_amp[yyyy][ha_diff[0]['name'][i]] =  ha_diff[0]['A'][i]
+                    dict_pha[yyyy][ha_diff[0]['name'][i]] =  ha_diff[0]['g'][i]
 
             # Treshold statistics. See https://british-oceanographic-data-centre.github.io/COAsT/docs/examples/notebooks/tidegauge/tidegauge_validation_tutorial/
 
@@ -398,8 +401,10 @@ if __name__ == "__main__":
         except:
             print(f"Problem with year: {yyyy}")
 
-        print(dict)
+        print(dict_amp)
 
     # Save json file of harmonics
-    with open('data.json', 'w', encoding='utf-8') as f:
-        json.dump(dict, f, ensure_ascii=False, indent=4)
+    with open('data_amp.json', 'w', encoding='utf-8') as f:
+        json.dump(dict_amp, f, ensure_ascii=False, indent=4)
+    with open('data_pha.json', 'w', encoding='utf-8') as f:
+        json.dump(dict_pha, f, ensure_ascii=False, indent=4)
