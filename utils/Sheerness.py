@@ -500,4 +500,4 @@ if __name__ == "__main__":
     if flag_interactive:
         plt.show()
     else:
-        plt.savefig('Sheerness_river_levels_' + yyyy + '_modified.png')
+        plt.savefig('Sheerness_river_levels_modified.png')
