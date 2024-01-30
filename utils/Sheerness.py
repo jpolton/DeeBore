@@ -461,19 +461,19 @@ if __name__ == "__main__":
         #date_start = np.datetime64(yyyy+'-11-04')
         #date_end   = np.datetime64(yyyy+'-11-07')
 
-        try:
+        #try:
 
 
             # reconstruct difference timeseries
-            harmonic_error = tganalysis.reconstruct_tide_utide(sh_qc.dataset.time, dict_ha[yyyy])
-            ax2 = line_plot(ax2, sh_qc.dataset.time,
-                            (sh_qc.dataset.sea_level - sh_nemo.dataset.sea_level + harmonic_error.dataset.reconstructed).squeeze(),
-                        1, label=yyyy)
+        harmonic_error = tganalysis.reconstruct_tide_utide(sh_qc.dataset.time, dict_ha[yyyy])
+        ax2 = line_plot(ax2, sh_qc.dataset.time,
+                        (sh_qc.dataset.sea_level - sh_nemo.dataset.sea_level + harmonic_error.dataset.reconstructed).squeeze(),
+                    1, label=yyyy)
 
 
 
-        except:
-            print(f"Problem with year: {yyyy}")
+        #except:
+        #    print(f"Problem with year: {yyyy}")
 
 
     # Finish plot
