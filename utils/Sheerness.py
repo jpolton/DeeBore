@@ -105,7 +105,7 @@ class QCdata:
 
         # Load data from nc file. Hardwired station number and station name
         station_id = 16
-        station_name = b'EA-Sheerness'
+        site_name = "EA-Sheerness"
         tg = coast.Tidegauge()
         ds = (xr.open_mfdataset(dir+"????/ClassAObsAfterSurgeQC*.nc", combine='nested', concat_dim='time')
                 .isel(station=[station_id])
@@ -114,13 +114,18 @@ class QCdata:
 
         tg.dataset = ds.rename_vars({"zos_total_observed": "sea_level", "timeseries": "time"})
         tg.dataset = tg.dataset.set_coords(["longitude", "latitude", "site_name", "time"])
-
         #tg.dataset = tg.dataset.where( tg.dataset.qc_flags!='N', drop=True)  # BODC flags
         tg.dataset = tg.dataset.where( tg.dataset.zos_flags != 0, drop=False)
         tg.dataset['time'] = tg.dataset.time.dt.round('s')  # round to the nearest second
-        tg.dataset['site_name'] = np.unique(tg.dataset.site_name)  # fix issue with replication over t_dim
-        tg.dataset['latitude'] = np.unique(tg.dataset.latitude)    # fix issue with replication over t_dim
-        tg.dataset['longitude'] = np.unique(tg.dataset.longitude)  # fix issue with replication over t_dim
+        #tg.dataset['site_name'] = "EA-Sheerness"  # fix issue with replication over t_dim
+        #tg.dataset['latitude'] = np.unique(tg.dataset.latitude)    # fix issue with replication over t_dim
+        #tg.dataset['longitude'] = np.unique(tg.dataset.longitude)  # fix issue with replication over t_dim
+
+        # Attributes
+        tg.dataset["longitude"] = ("id_dim", np.unique(tg.dataset.longitude))
+        tg.dataset["latitude"] = ("id_dim", np.unique(tg.dataset.latitude))
+        tg.dataset["site_name"] = ("id_dim", [site_name])
+        tg.dataset = tg.dataset.set_coords(["longitude", "latitude", "site_name"])
 
 
         # Return only values between stated dates
@@ -152,7 +157,14 @@ class AMM7_surge_ERA5:
         tg = AMM7_surge_ERA5().to_tidegauge()
 
     """
-    def __init__(self, date_start=None, date_end=None, dir=None):
+    def __init__(self, date_start=None, date_end=None, dir=None, site_name=None):
+        if (site_name == None) or (site_name == "Sheerness"):
+            site_name = "Sheerness"
+            fname = "SHNS.nc"
+            print(f"Extract ERA5 forced data for {site_name}")
+        else:
+            print(f"Not expecting that station name: {site_name}")
+
         if dir == None:
             if "LJOB" in gethostname().upper():
                 dir = "/projectsa/surge_archive/surge_hindcast/surge_hindcast_NEMOSurge_ERA5/surge_hindcast_ERA5_ClassA_bysite/"
@@ -160,11 +172,18 @@ class AMM7_surge_ERA5:
                 dir = "/Users/jelt/DATA/surge_hindcast_ERA5_ClassA_bysite/"
             print(f"Try dir:{dir}")
 
-        fn_SHNS = dir+"SHNS.nc"
+        fn_SHNS = dir+fname
         tg = GAUGE()
         tg.dataset = xr.open_dataset(fn_SHNS).swap_dims({"time":"t_dim"})
         tg.dataset['time'] = tg.dataset.timeseries.dt.round('s') # round to the nearest second
         tg.dataset['sea_level'] = tg.dataset.tide_ht + tg.dataset.residual_ht
+        tg.dataset = tg.dataset.expand_dims(dim={"id_dim": 1})
+
+        # Attributes
+        tg.dataset["longitude"] = ("id_dim", [-999])
+        tg.dataset["latitude"] = ("id_dim", [-999])
+        tg.dataset["site_name"] = ("id_dim", [site_name])
+        tg.dataset = tg.dataset.set_coords(["longitude", "latitude", "site_name"])
 
 
         # Return only values between stated dates
@@ -250,6 +269,12 @@ if __name__ == "__main__":
 
         # Load Sheerness ERA5 data
         sh_nemo = AMM7_surge_ERA5(date_start=date_start, date_end=date_end).to_tidegauge()
+        # copy lat/lon from obs file
+        #sh_nemo.dataset['latitude'] = sh_qc.dataset.latitude
+        #sh_nemo.dataset['longitude'] = sh_qc.dataset.longitude
+        sh_nemo.dataset["longitude"] = sh_qc.dataset.longitude.values
+        sh_nemo.dataset["latitude"]  = sh_qc.dataset.latitude.values
+
 
         try:
             if(1):
@@ -372,6 +397,8 @@ if __name__ == "__main__":
 
         except:
             print(f"Problem with year: {yyyy}")
+
+        print(dict)
 
     # Save json file of harmonics
     with open('data.json', 'w', encoding='utf-8') as f:
