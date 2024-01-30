@@ -416,8 +416,8 @@ if __name__ == "__main__":
     ####################################################################################
 
     ## last 24 hrs
-    date_start = np.datetime64('2020-11-19')
-    date_end   = np.datetime64('2020-11-25')
+    date_start = np.datetime64('2020-11-16')
+    date_end   = np.datetime64('2020-11-23')
 
     # Load Sheerness from QC'd data
     ref_qc = QCdata(date_start=date_start, date_end=date_end).to_tidegauge()
@@ -483,7 +483,7 @@ if __name__ == "__main__":
 
     # plot the legend
     ax1.legend(markerscale=6, loc='upper left')
-    ax2.legend(markerscale=6, loc='upper left')
+    ax2.legend(markerscale=6, loc='upper right')
 
     # format the ticks
     myFmt = mdates.DateFormatter('%d-%b')
