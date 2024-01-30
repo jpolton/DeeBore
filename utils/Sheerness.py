@@ -263,113 +263,117 @@ if __name__ == "__main__":
             sh_nemo = tganalysis.demean_timeseries(nemo.dataset)
             sh_qc   = tganalysis.demean_timeseries(qc.dataset)
 
-        sh_diff = sh_qc
-        sh_diff.dataset['sea_level'] = sh_qc.dataset['sea_level'] - sh_nemo.dataset['sea_level']
-        #sh_diff.dataset = sh_diff.dataset.expand_dims(dim={"id_dim": 1})
+        try:
+            sh_diff = sh_qc
+            sh_diff.dataset['sea_level'] = sh_qc.dataset['sea_level'] - sh_nemo.dataset['sea_level']
+            #sh_diff.dataset = sh_diff.dataset.expand_dims(dim={"id_dim": 1})
 
-        if(0):
-            # Harmonic analysis
-            ha_diff = tganalysis.harmonic_analysis_utide(sh_diff.dataset.sea_level, min_datapoints=1)
+            if(0):
+                # Harmonic analysis
+                ha_diff = tganalysis.harmonic_analysis_utide(sh_diff.dataset.sea_level, min_datapoints=1)
 
-            print(f"Species:   {ha_diff[0]['name'][0:10]}")
-            print(f"Amplitude: {ha_diff[0]['A'][0:10]}")
+                print(f"Species:   {ha_diff[0]['name'][0:10]}")
+                print(f"Amplitude: {ha_diff[0]['A'][0:10]}")
 
-            # Write to dictionary
-            dict[yyyy] = {}
-            for i in range(10):
-                dict[yyyy][ha_diff[0]['name'][i]] = {"amp": ha_diff[0]['A'][i], "pha": ha_diff[0]['g'][i]}
+                # Write to dictionary
+                dict[yyyy] = {}
+                for i in range(10):
+                    dict[yyyy][ha_diff[0]['name'][i]] = {"amp": ha_diff[0]['A'][i], "pha": ha_diff[0]['g'][i]}
 
-        # Treshold statistics. See https://british-oceanographic-data-centre.github.io/COAsT/docs/examples/notebooks/tidegauge/tidegauge_validation_tutorial/
+            # Treshold statistics. See https://british-oceanographic-data-centre.github.io/COAsT/docs/examples/notebooks/tidegauge/tidegauge_validation_tutorial/
 
 
 
-        #%% Plot data
-        if(0):
+            #%% Plot data
+            if(0):
+                plt.close('all')
+                fig, ax_l = plt.subplots(1, sharex=True)
+
+                ## Only get tides over the weir with 8.75m at Liverpool
+                fig.suptitle('Sheerness water levels')
+
+                ax_l = line_plot(ax_l, sh_qc.dataset.time, sh_qc.dataset.sea_level, 'y', 1, "QC")
+                ax_l = line_plot(ax_l, sh_ea.dataset.time, sh_ea.dataset.ssh, 'm', 1, "EA:1")
+                ax_l = line_plot(ax_l, sh_ea2.dataset.time, sh_ea2.dataset.ssh, 'r', 1, "EA:2")
+                ax_l = line_plot(ax_l, sh_shoot.dataset.time, sh_shoot.dataset.sea_level, 'g', 1, "Shoothill")
+                ax_l = scatter_plot(ax_l, sh_noci.dataset.time, sh_noci.dataset.sea_level, 'k', 1, "NOCi:Harmonic")
+                # Add empty data to ax1 to get RH axis in the legend
+                ax_l = line_plot(ax_l, [], [], 'b', 1, "EA2-EA1")
+                ax_r = ax_l.twinx()
+                ax_r = line_plot(ax_r, sh_ea.dataset.time, sh_ea2.dataset.ssh-sh_ea.dataset.ssh, 'b', 1, "EA diff")
+                # Add dotted harmonic pred
+                #ax_r = scatter_plot(ax_r, sh_noci.dataset.time, sh_noci.dataset.sea_level, 'b', 1, sh_noci.dataset.site_name)
+
+                ax_l.set_ylabel('water level (m)', color='k')
+                ax_r.set_ylabel('Diff (m)', color='b')
+                #ax_r.set_ylim([4.8,8.2])
+                for tl in ax_r.get_yticklabels():
+                    tl.set_color('b')
+
+                # plot the legend
+                ax_l.legend(markerscale=6, loc='upper left')
+
+
+                # format the ticks
+                myFmt = mdates.DateFormatter('%d-%a')
+                days = mdates.DayLocator()
+                ax_l.xaxis.set_major_locator(days)
+                ax_l.xaxis.set_minor_locator(mdates.HourLocator([00,6,12,18]))
+                ax_l.xaxis.set_major_formatter(myFmt)
+
+                ax_l.set_xlabel( date_start.astype(datetime.datetime).strftime('%d%b%y') + \
+                               '-' + date_end.astype(datetime.datetime).strftime('%d%b%y') )
+
+                if flag_interactive:
+                    plt.show()
+                else:
+                    plt.savefig('Sheerness_river_levels_measured.png')
+
+
+            ####################
+
             plt.close('all')
             fig, ax_l = plt.subplots(1, sharex=True)
 
             ## Only get tides over the weir with 8.75m at Liverpool
             fig.suptitle('Sheerness water levels')
 
-            ax_l = line_plot(ax_l, sh_qc.dataset.time, sh_qc.dataset.sea_level, 'y', 1, "QC")
-            ax_l = line_plot(ax_l, sh_ea.dataset.time, sh_ea.dataset.ssh, 'm', 1, "EA:1")
-            ax_l = line_plot(ax_l, sh_ea2.dataset.time, sh_ea2.dataset.ssh, 'r', 1, "EA:2")
-            ax_l = line_plot(ax_l, sh_shoot.dataset.time, sh_shoot.dataset.sea_level, 'g', 1, "Shoothill")
-            ax_l = scatter_plot(ax_l, sh_noci.dataset.time, sh_noci.dataset.sea_level, 'k', 1, "NOCi:Harmonic")
-            # Add empty data to ax1 to get RH axis in the legend
-            ax_l = line_plot(ax_l, [], [], 'b', 1, "EA2-EA1")
-            ax_r = ax_l.twinx()
-            ax_r = line_plot(ax_r, sh_ea.dataset.time, sh_ea2.dataset.ssh-sh_ea.dataset.ssh, 'b', 1, "EA diff")
-            # Add dotted harmonic pred
-            #ax_r = scatter_plot(ax_r, sh_noci.dataset.time, sh_noci.dataset.sea_level, 'b', 1, sh_noci.dataset.site_name)
-
+            ax_l = line_plot(ax_l, sh_qc.dataset.time, sh_nemo.dataset.sea_level.squeeze(), 'y', 1, "nemo")
+            ax_l = line_plot(ax_l, sh_qc.dataset.time,   sh_qc.dataset.sea_level.squeeze(), 'm', 1, "QC")
             ax_l.set_ylabel('water level (m)', color='k')
+
+
+            ax_r = ax_l.twinx()
+            #ax_r = line_plot(ax_r, sh_qc.dataset.time, (sh_qc.dataset.sea_level - sh_nemo.dataset.sea_level).squeeze(), 'b', 1, "QC-NEMO")
+            ax_r = line_plot(ax_r, sh_qc.dataset.time, sh_diff.dataset.sea_level.squeeze(), 'b', 1, "QC-NEMO")
+            # Add dotted harmonic pred
+            # ax_r = scatter_plot(ax_r, sh_noci.dataset.time, sh_noci.dataset.sea_level, 'b', 1, sh_noci.dataset.site_name)
+
             ax_r.set_ylabel('Diff (m)', color='b')
-            #ax_r.set_ylim([4.8,8.2])
+            # ax_r.set_ylim([4.8,8.2])
             for tl in ax_r.get_yticklabels():
                 tl.set_color('b')
 
             # plot the legend
             ax_l.legend(markerscale=6, loc='upper left')
 
-
             # format the ticks
-            myFmt = mdates.DateFormatter('%d-%a')
+            myFmt = mdates.DateFormatter('%d-%b')
             days = mdates.DayLocator()
             ax_l.xaxis.set_major_locator(days)
-            ax_l.xaxis.set_minor_locator(mdates.HourLocator([00,6,12,18]))
+            ax_l.xaxis.set_minor_locator(mdates.HourLocator([00, 6, 12, 18]))
             ax_l.xaxis.set_major_formatter(myFmt)
 
-            ax_l.set_xlabel( date_start.astype(datetime.datetime).strftime('%d%b%y') + \
-                           '-' + date_end.astype(datetime.datetime).strftime('%d%b%y') )
+            ax_l.set_xlabel(date_start.astype(datetime.datetime).strftime('%d%b%y') + \
+                            '-' + date_end.astype(datetime.datetime).strftime('%d%b%y'))
 
             if flag_interactive:
                 plt.show()
             else:
-                plt.savefig('Sheerness_river_levels_measured.png')
+                plt.savefig('Sheerness_river_levels_'+yyyy+'_measured.png')
 
-
-        ####################
-
-        plt.close('all')
-        fig, ax_l = plt.subplots(1, sharex=True)
-
-        ## Only get tides over the weir with 8.75m at Liverpool
-        fig.suptitle('Sheerness water levels')
-
-        ax_l = line_plot(ax_l, sh_qc.dataset.time, sh_nemo.dataset.sea_level.squeeze(), 'y', 1, "nemo")
-        ax_l = line_plot(ax_l, sh_qc.dataset.time,   sh_qc.dataset.sea_level.squeeze(), 'm', 1, "QC")
-        ax_l.set_ylabel('water level (m)', color='k')
-
-
-        ax_r = ax_l.twinx()
-        #ax_r = line_plot(ax_r, sh_qc.dataset.time, (sh_qc.dataset.sea_level - sh_nemo.dataset.sea_level).squeeze(), 'b', 1, "QC-NEMO")
-        ax_r = line_plot(ax_r, sh_qc.dataset.time, sh_diff.dataset.sea_level.squeeze(), 'b', 1, "QC-NEMO")
-        # Add dotted harmonic pred
-        # ax_r = scatter_plot(ax_r, sh_noci.dataset.time, sh_noci.dataset.sea_level, 'b', 1, sh_noci.dataset.site_name)
-
-        ax_r.set_ylabel('Diff (m)', color='b')
-        # ax_r.set_ylim([4.8,8.2])
-        for tl in ax_r.get_yticklabels():
-            tl.set_color('b')
-
-        # plot the legend
-        ax_l.legend(markerscale=6, loc='upper left')
-
-        # format the ticks
-        myFmt = mdates.DateFormatter('%d-%b')
-        days = mdates.DayLocator()
-        ax_l.xaxis.set_major_locator(days)
-        ax_l.xaxis.set_minor_locator(mdates.HourLocator([00, 6, 12, 18]))
-        ax_l.xaxis.set_major_formatter(myFmt)
-
-        ax_l.set_xlabel(date_start.astype(datetime.datetime).strftime('%d%b%y') + \
-                        '-' + date_end.astype(datetime.datetime).strftime('%d%b%y'))
-
-        if flag_interactive:
-            plt.show()
-        else:
-            plt.savefig('Sheerness_river_levels_'+yyyy+'_measured.png')
+        except:
+            print(f"Problem with year: {yyyy}")
 
     # Save json file of harmonics
     with open('data.json', 'w', encoding='utf-8') as f:
