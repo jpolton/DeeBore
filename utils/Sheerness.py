@@ -465,7 +465,7 @@ if __name__ == "__main__":
         dict_cmap = {0: 'k', 1: 'm', 2: 'y', 3: 'g', 4: 'r'}
         harmonic_error = tganalysis.reconstruct_tide_utide(sh_qc.dataset.time, dict_ha[yyyy])
         ax2 = line_plot(ax2, sh_qc.dataset.time,
-                        (sh_qc.dataset.sea_level - sh_nemo.dataset.sea_level + harmonic_error.dataset.reconstructed).squeeze(),
+                        (sh_qc.dataset.sea_level - sh_nemo.dataset.sea_level - harmonic_error.dataset.reconstructed).squeeze(),
                     size=1, color=dict_cmap[year % 5], label=yyyy)
 
 
