@@ -251,24 +251,24 @@ if __name__ == "__main__":
         # Load Sheerness ERA5 data
         sh_nemo = AMM7_surge_ERA5(date_start=date_start, date_end=date_end).to_tidegauge()
 
-        if(0):
-            # Tide gauge analysis
-            tganalysis = coast.TidegaugeAnalysis()
-
-            # This routine searches for missing values in each dataset and applies them
-            # equally to each corresponding dataset
-            nemo, qc = tganalysis.match_missing_values(sh_nemo.dataset.sea_level, sh_qc.dataset.sea_level)
-
-            # Subtract means from all time series
-            sh_nemo = tganalysis.demean_timeseries(nemo.dataset)
-            sh_qc   = tganalysis.demean_timeseries(qc.dataset)
-
         try:
+            if(1):
+                # Tide gauge analysis
+                tganalysis = coast.TidegaugeAnalysis()
+
+                # This routine searches for missing values in each dataset and applies them
+                # equally to each corresponding dataset
+                nemo, qc = tganalysis.match_missing_values(sh_nemo.dataset.sea_level, sh_qc.dataset.sea_level)
+
+                # Subtract means from all time series
+                sh_nemo = tganalysis.demean_timeseries(nemo.dataset)
+                sh_qc   = tganalysis.demean_timeseries(qc.dataset)
+
             sh_qc.dataset['sea_level_diff'] = sh_qc.dataset['sea_level'] - sh_nemo.dataset['sea_level']
 
-            if(0):
+            if(1):
                 # Harmonic analysis
-                ha_diff = tganalysis.harmonic_analysis_utide(sh_diff.dataset.sea_level, min_datapoints=1)
+                ha_diff = tganalysis.harmonic_analysis_utide(sh_qc.dataset.sea_level_diff, min_datapoints=1)
 
                 print(f"Species:   {ha_diff[0]['name'][0:10]}")
                 print(f"Amplitude: {ha_diff[0]['A'][0:10]}")
