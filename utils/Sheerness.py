@@ -303,8 +303,8 @@ if __name__ == "__main__":
                 dict_amp[yyyy] = {}
                 dict_pha[yyyy] = {}
                 for i in range(10):
-                    dict_amp[yyyy][ha_diff[0]['name'][i]] =  ha_diff[0]['A'][i]
-                    dict_pha[yyyy][ha_diff[0]['name'][i]] =  ha_diff[0]['g'][i]
+                    dict_amp[yyyy][ha_diff[0]['name'][i]] =  round(ha_diff[0]['A'][i], 3)
+                    dict_pha[yyyy][ha_diff[0]['name'][i]] =  round(ha_diff[0]['g'][i])
 
             # Treshold statistics. See https://british-oceanographic-data-centre.github.io/COAsT/docs/examples/notebooks/tidegauge/tidegauge_validation_tutorial/
 
@@ -405,6 +405,6 @@ if __name__ == "__main__":
 
     # Save json file of harmonics
     with open('data_amp.json', 'w', encoding='utf-8') as f:
-        json.dump(round(dict_amp, 3), f, ensure_ascii=False, indent=4)
-    with open('round(data_pha.json)', 'w', encoding='utf-8') as f:
+        json.dump(dict_amp, f, ensure_ascii=False, indent=4)
+    with open('data_pha.json', 'w', encoding='utf-8') as f:
         json.dump(dict_pha, f, ensure_ascii=False, indent=4)
