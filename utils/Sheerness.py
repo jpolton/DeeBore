@@ -234,6 +234,7 @@ if __name__ == "__main__":
 
     dict_amp = {}
     dict_pha = {}
+    dict_ha = {}
 
 
     for year in range(2012,2020+1):
@@ -295,6 +296,7 @@ if __name__ == "__main__":
             if(1):
                 # Harmonic analysis
                 ha_diff = tganalysis.harmonic_analysis_utide(sh_qc.dataset.sea_level_diff, min_datapoints=1)
+                dict_ha[yyyy] = ha_diff  # store complete harmonic analysis object for later
 
                 print(f"Species:   {ha_diff[0]['name'][0:10]}")
                 print(f"Amplitude: {ha_diff[0]['A'][0:10]}")
@@ -408,3 +410,94 @@ if __name__ == "__main__":
         json.dump(dict_amp, f, ensure_ascii=False, indent=4)
     with open('data_pha.json', 'w', encoding='utf-8') as f:
         json.dump(dict_pha, f, ensure_ascii=False, indent=4)
+
+
+    ### Just take 2020 obs. Add harmonic corrections from year 2012 - 2019 to the modelled 2020. Compare against obs
+    ####################################################################################
+
+    ## last 24 hrs
+    date_start = np.datetime64('2020-11-01')
+    date_end   = np.datetime64('2020-11-30')
+
+    # Load Sheerness from QC'd data
+    ref_qc = QCdata(date_start=date_start, date_end=date_end).to_tidegauge()
+
+    # Load Sheerness ERA5 data
+    ref_nemo = AMM7_surge_ERA5(date_start=date_start, date_end=date_end).to_tidegauge()
+    ref_nemo.dataset["longitude"] = ref_qc.dataset.longitude.values
+    ref_nemo.dataset["latitude"] = ref_qc.dataset.latitude.values
+
+    # This routine searches for missing values in each dataset and applies them
+    # equally to each corresponding dataset
+    nemo, qc = tganalysis.match_missing_values(ref_nemo.dataset.sea_level, ref_qc.dataset.sea_level)
+
+    # Subtract means from all time series
+    sh_nemo = tganalysis.demean_timeseries(nemo.dataset)
+    sh_qc = tganalysis.demean_timeseries(qc.dataset)
+
+    ## Plot the times series without any harmonic error correction. Then overlay lines with different corrections
+    fig, [ax1, ax2] = plt.subplots(2, sharex=True)
+
+    fig.suptitle('Sheerness water levels: modified simulation')
+
+    ax1 = line_plot(ax1, sh_qc.dataset.time, sh_nemo.dataset.sea_level.squeeze(), 'y', 1, "nemo")
+    ax1 = line_plot(ax1, sh_qc.dataset.time, sh_qc.dataset.sea_level.squeeze(), 'm', 1, "QC")
+    ax1.set_ylabel('water level (m)', color='k')
+
+    ax2 = line_plot(ax2, sh_qc.dataset.time, (sh_qc.dataset.sea_level-sh_nemo.dataset.sea_level).squeeze(), 'b', 1, "QC-NEMO")
+    # Add dotted harmonic pred
+    # ax_r = scatter_plot(ax_r, sh_noci.dataset.time, sh_noci.dataset.sea_level, 'b', 1, sh_noci.dataset.site_name)
+
+
+
+
+
+    # Now reconstruct possible errors from other years
+    for year in range(2012,2019+1):
+        yyyy = str(year)
+
+        date_start = np.datetime64(yyyy + '-11-01')
+        date_end = np.datetime64(yyyy + '-11-30')
+        #date_start = np.datetime64(yyyy+'-11-04')
+        #date_end   = np.datetime64(yyyy+'-11-07')
+
+        try:
+
+
+            # reconstruct difference timeseries
+            harmonic_error = tganalysis.reconstruct_tide_utide(sh_qc.dataset.time, dict_ha[yyyy])
+            ax2 = line_plot(ax2, sh_qc.dataset.time,
+                            (sh_qc.dataset.sea_level - sh_nemo.dataset.sea_level + harmonic_error.dataset.reconstucted).squeeze(),
+                        1, label=yyyy)
+
+
+
+        except:
+            print(f"Problem with year: {yyyy}")
+
+
+    # Finish plot
+    #############
+    ax2.set_ylabel('Diff (m)', color='b')
+    # ax_r.set_ylim([4.8,8.2])
+    for tl in ax2.get_yticklabels():
+        tl.set_color('b')
+
+    # plot the legend
+    ax1.legend(markerscale=6, loc='upper left')
+    ax2.legend(markerscale=6, loc='upper left')
+
+    # format the ticks
+    myFmt = mdates.DateFormatter('%d-%b')
+    days = mdates.DayLocator()
+    ax1.xaxis.set_major_locator(days)
+    ax1.xaxis.set_minor_locator(mdates.HourLocator([00, 6, 12, 18]))
+    ax1.xaxis.set_major_formatter(myFmt)
+
+    ax1.set_xlabel(date_start.astype(datetime.datetime).strftime('%d%b%y') + \
+                    '-' + date_end.astype(datetime.datetime).strftime('%d%b%y'))
+
+    if flag_interactive:
+        plt.show()
+    else:
+        plt.savefig('Sheerness_river_levels_' + yyyy + '_modified.png')
