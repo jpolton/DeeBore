@@ -416,8 +416,8 @@ if __name__ == "__main__":
     ####################################################################################
 
     ## last 24 hrs
-    date_start = np.datetime64('2020-11-01')
-    date_end   = np.datetime64('2020-11-30')
+    date_start = np.datetime64('2020-11-19')
+    date_end   = np.datetime64('2020-11-25')
 
     # Load Sheerness from QC'd data
     ref_qc = QCdata(date_start=date_start, date_end=date_end).to_tidegauge()
@@ -456,10 +456,7 @@ if __name__ == "__main__":
     for year in range(2012,2019+1):
         yyyy = str(year)
 
-        date_start = np.datetime64(yyyy + '-11-01')
-        date_end = np.datetime64(yyyy + '-11-30')
-        #date_start = np.datetime64(yyyy+'-11-04')
-        #date_end   = np.datetime64(yyyy+'-11-07')
+
 
         #try:
 
