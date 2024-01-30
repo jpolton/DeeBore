@@ -405,6 +405,6 @@ if __name__ == "__main__":
 
     # Save json file of harmonics
     with open('data_amp.json', 'w', encoding='utf-8') as f:
-        json.dump(dict_amp, f, ensure_ascii=False, indent=4)
-    with open('data_pha.json', 'w', encoding='utf-8') as f:
+        json.dump(round(dict_amp, 3), f, ensure_ascii=False, indent=4)
+    with open('round(data_pha.json)', 'w', encoding='utf-8') as f:
         json.dump(dict_pha, f, ensure_ascii=False, indent=4)
