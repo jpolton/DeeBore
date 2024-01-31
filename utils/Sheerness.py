@@ -1,6 +1,14 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
+Analyse timeseries at Sheerness water levels.
+* Load timeseries from observational data and ERA5 forced AMM7_surge simulations.
+* Remove annual means and compare the difference.
+* Compute harmonics analysis of the difference (representing a combined description of the difference between the
+observational and simulated tide)
+* Plot the stationarity of the harmonic coefficients with (plot_harmonic.py)
+* Reconstruct a sealevel timeseries using the model and the correction. Compare with observed sealevel timeseries.
+
 Created on Sat Jan 30 15:55:23 2021
 
 @author: jeff
@@ -10,8 +18,6 @@ Created on Sat Jan 30 15:55:23 2021
 Check the surge at Sheerness
 
 Uses shoothill_api package to augment COAsT
-
-
 
 Env: workshop_env with coast and requests installed,
 E.g.
@@ -51,16 +57,9 @@ try: # command line
 except: # pycharm
     from shoothill_api.shoothill_api import GAUGE
 
-#if "LJOB" in gethostname().upper():
 coastdir = os.path.dirname(os.environ["HOME"]+'/GitHub/COAsT/coast')
-#elif "LIVMAZ" in gethostname().upper():  # Debugging on local machine
-#    coastdir = os.path.dirname('/Users/jelt/GitHub/COAsT/coast')
-#else:
-#    print(f"Unfamiliar machine: {gethostname()}")
-
 sys.path.insert(0, coastdir)
 import coast
-from coast._utils.general_utils import day_of_week
 
 # For interactive plotting / else save to .png
 flag_interactive = False
@@ -157,9 +156,10 @@ class ErrorHarmonics:
     ErrorHarmonics().load_harmonics()  --> self.ha
     """
     def __init__(self):
+        pass
 
 
-    def pickle_harmonics(self, ha=Hone):
+    def pickle_harmonics(self, ha=None):
         """ save copy of ha into pickle file, if requested """
         if ha == None:
             print(f"No harmonics file specified")
@@ -291,8 +291,6 @@ if __name__ == "__main__":
             sh_noci.plot_timeseries('sea_level')
 
 
-
-
         # Load Sheerness from QC'd data
         sh_qc = QCdata(date_start=date_start, date_end=date_end).to_tidegauge()
 
@@ -301,7 +299,6 @@ if __name__ == "__main__":
         # copy lat/lon from obs file
         sh_nemo.dataset["longitude"] = sh_qc.dataset.longitude.values
         sh_nemo.dataset["latitude"]  = sh_qc.dataset.latitude.values
-
 
         try:
             if(1):
@@ -439,9 +436,13 @@ if __name__ == "__main__":
     ### Just take 2020 obs. Add harmonic corrections from year 2012 - 2019 to the modelled 2020. Compare against obs
     ####################################################################################
 
-    ## last 24 hrs
+    ##  analysis period for timeseries reconstruction
     date_start = np.datetime64('2019-12-05')
     date_end   = np.datetime64('2019-12-07')
+
+    ##  analysis period for timeseries reconstruction
+    date_start = np.datetime64('2020-12-05')
+    date_end   = np.datetime64('2020-12-07')
 
     # Load Sheerness from QC'd data
     ref_qc = QCdata(date_start=date_start, date_end=date_end).to_tidegauge()
@@ -459,6 +460,14 @@ if __name__ == "__main__":
     sh_nemo = tganalysis.demean_timeseries(nemo.dataset)
     sh_qc = tganalysis.demean_timeseries(qc.dataset)
 
+    # load harmonic data from pickle file
+    ds = ErrorHarmonics()
+    if(ds.load_harmonics()):
+        stored_ha = ds.ha
+    else:
+        print(f"Cannot reload harmonics")
+
+
     ## Plot the times series without any harmonic error correction. Then overlay lines with different corrections
     fig, [ax1, ax2] = plt.subplots(2, sharex=True)
 
@@ -472,15 +481,19 @@ if __name__ == "__main__":
 
 
     # Now reconstruct possible errors from other years
+    dict_cmap = {0: 'k', 1: 'm', 2: 'y', 3: 'g', 4: 'r'}
     for year in range(2012,2019+1):
         yyyy = str(year)
 
-        # reconstruct error timeseries from given year
-        dict_cmap = {0: 'k', 1: 'm', 2: 'y', 3: 'g', 4: 'r'}
-        harmonic_error = tganalysis.reconstruct_tide_utide(sh_qc.dataset.time, dict_ha[yyyy])
-        ax2 = line_plot(ax2, sh_qc.dataset.time,
-                        (sh_qc.dataset.sea_level - sh_nemo.dataset.sea_level - harmonic_error.dataset.reconstructed).squeeze(),
-                    size=1, color=dict_cmap[year % 5], label=yyyy)
+        try:
+            # reconstruct error timeseries from given year
+            #harmonic_error = tganalysis.reconstruct_tide_utide(sh_qc.dataset.time, dict_ha[yyyy])
+            harmonic_error = tganalysis.reconstruct_tide_utide(sh_qc.dataset.time, stored_ha[yyyy])
+            ax2 = line_plot(ax2, sh_qc.dataset.time,
+                            (sh_qc.dataset.sea_level - sh_nemo.dataset.sea_level - harmonic_error.dataset.reconstructed).squeeze(),
+                        size=1, color=dict_cmap[year % 5], label=yyyy)
+        except:
+            print(f"Problem reconstructing {yyyy}")
 
     # Finish plot
     #############
