@@ -331,8 +331,29 @@ if __name__ == "__main__":
                     dict_pha[yyyy][ha_diff[0]['name'][i]] =  round(ha_diff[0]['g'][i])
 
             # Treshold statistics. See https://british-oceanographic-data-centre.github.io/COAsT/docs/examples/notebooks/tidegauge/tidegauge_validation_tutorial/
+            thresh_diff = tganalysis.threshold_statistics(sh_qc.dataset, thresholds=np.arange(-1, 1, 0.1))
 
+            plt.close('all')
+            plt.plot(thresh_diff.threshold, thresh_diff.time_over_threshold_sea_level_diff.mean(dim='id_dim'))
+            # plt.ylim([0,15])
+            plt.title(f"Error time over threshold: {yyyy}")
+            plt.xlabel('Analysis threshold (m)')
+            plt.ylabel('occurrence count')
+            if flag_interactive:
+                plt.show()
+            else:
+                plt.savefig('Sheerness_diff_threshold_time_'+yyyy+'.png')
 
+            plt.close('all')
+            plt.plot(thresh_diff.threshold, thresh_diff.peak_count_sea_level_diff.mean(dim='id_dim'))
+            # plt.ylim([0,15])
+            plt.title(f"Error peak count over threshold: {yyyy}")
+            plt.xlabel('Analysis threshold (m)')
+            plt.ylabel('event count')
+            if flag_interactive:
+                plt.show()
+            else:
+                plt.savefig('Sheerness_diff_threshold_peakcount_'+yyyy+'.png')
 
             #%% Plot data
             if(0):
