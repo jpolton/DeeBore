@@ -42,6 +42,7 @@ import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 import json
 from socket import gethostname
+import pickle
 
 import sys, os
 sys.path.append(os.path.dirname(os.path.abspath("shoothill_api/shoothill_api.py")))
@@ -149,7 +150,44 @@ class QCdata:
     def to_tidegauge(self):
         return self.tg
 
+class ErrorHarmonics:
+    """
+    class to handle management of harmonic analysis for the difference between obs and modelled sealevel
+    ErrorHarmonics().pickle_harmonics(ha)
+    ErrorHarmonics().load_harmonics()  --> self.ha
+    """
+    def __init__(self):
 
+
+    def pickle_harmonics(self, ha=Hone):
+        """ save copy of ha into pickle file, if requested """
+        if ha == None:
+            print(f"No harmonics file specified")
+            return
+        else:
+            self.ha = ha
+        print('Pickle harmonic data.')
+        os.system('rm -f '+DATABUCKET_FILE)
+        if(1):
+            with open(DATABUCKET_FILE, 'wb') as file_object:
+                pickle.dump(self.ha, file_object)
+            return True
+        else:
+            print("Don't save as pickle file")
+        return False
+
+    def load_harmonics(self):
+        """ load harmonics from pickle file. Save to self.ha """
+        print('Load pickled harmonics.')
+        if os.path.exists(DATABUCKET_FILE):
+            template = "...Loading (%s)"
+            print(template % DATABUCKET_FILE)
+            with open(DATABUCKET_FILE, 'rb') as file_object:
+                self.ha = pickle.load(file_object)
+            return True
+        else:
+            print(f"Pickle file does not exist: {DATABUCKET_FILE}")
+        return False
 
 class AMM7_surge_ERA5:
     """
@@ -203,12 +241,10 @@ class AMM7_surge_ERA5:
 ################################################################################
 #%%  plot functions
 def line_plot(ax, time, y, color, size, label=None ):
-    #ax1.scatter(liv.dataset.time, liv.dataset.sea_level, color='k', s=1, label=liv.dataset.site_name)
     ax.plot(time, y, color=color, linewidth=size, label=label)
     return ax
 
 def scatter_plot(ax, time, y, color, size, label=None ):
-    #ax1.scatter(liv.dataset.time, liv.dataset.sea_level, color='k', s=1, label=liv.dataset.site_name)
     ax.scatter(time, y, color=color, s=size, label=label)
     return ax
 #%%
@@ -221,17 +257,10 @@ def scatter_plot(ax, time, y, color, size, label=None ):
 ################################################################################
 if __name__ == "__main__":
 
+    #### Constants
+    DATABUCKET_FILE = "sealevel_difference_harmonics.pkl"
 
-
-
-    ## last 24 hrs
-    date_end = np.datetime64('now')
-    date_start = np.datetime64('now') - np.timedelta64(24,'h')
-
-
-    #date_start = sh_qc.dataset.time.min().values.astype('datetime64[s]')  # cast as seconds
-    #date_end   = sh_qc.dataset.time.max().values.astype('datetime64[s]')
-
+    ## initialise dictionaries
     dict_amp = {}
     dict_pha = {}
     dict_ha = {}
@@ -241,8 +270,6 @@ if __name__ == "__main__":
         yyyy = str(year)
         date_start = np.datetime64(yyyy + '-01-01')
         date_end = np.datetime64(yyyy + '-12-31')
-        #date_start = np.datetime64(yyyy+'-11-04')
-        #date_end   = np.datetime64(yyyy+'-11-07')
 
         #%% Load data
         if(0):
@@ -272,8 +299,6 @@ if __name__ == "__main__":
         # Load Sheerness ERA5 data
         sh_nemo = AMM7_surge_ERA5(date_start=date_start, date_end=date_end).to_tidegauge()
         # copy lat/lon from obs file
-        #sh_nemo.dataset['latitude'] = sh_qc.dataset.latitude
-        #sh_nemo.dataset['longitude'] = sh_qc.dataset.longitude
         sh_nemo.dataset["longitude"] = sh_qc.dataset.longitude.values
         sh_nemo.dataset["latitude"]  = sh_qc.dataset.latitude.values
 
@@ -362,8 +387,7 @@ if __name__ == "__main__":
 
             plt.close('all')
             fig, ax_l = plt.subplots(1, sharex=True)
-
-            ## Only get tides over the weir with 8.75m at Liverpool
+            # Plot the two timeseries on LH axis and the difference on the RH axis
             fig.suptitle('Sheerness water levels')
 
             ax_l = line_plot(ax_l, sh_qc.dataset.time, sh_nemo.dataset.sea_level.squeeze(), 'y', 1, "nemo")
@@ -372,13 +396,9 @@ if __name__ == "__main__":
 
 
             ax_r = ax_l.twinx()
-            #ax_r = line_plot(ax_r, sh_qc.dataset.time, (sh_qc.dataset.sea_level - sh_nemo.dataset.sea_level).squeeze(), 'b', 1, "QC-NEMO")
             ax_r = line_plot(ax_r, sh_qc.dataset.time, sh_qc.dataset.sea_level_diff.squeeze(), 'b', 1, "QC-NEMO")
-            # Add dotted harmonic pred
-            # ax_r = scatter_plot(ax_r, sh_noci.dataset.time, sh_noci.dataset.sea_level, 'b', 1, sh_noci.dataset.site_name)
 
             ax_r.set_ylabel('Diff (m)', color='b')
-            # ax_r.set_ylim([4.8,8.2])
             for tl in ax_r.get_yticklabels():
                 tl.set_color('b')
 
@@ -410,6 +430,10 @@ if __name__ == "__main__":
         json.dump(dict_amp, f, ensure_ascii=False, indent=4)
     with open('data_pha.json', 'w', encoding='utf-8') as f:
         json.dump(dict_pha, f, ensure_ascii=False, indent=4)
+
+    # pickle the harmonic data
+    flag = ErrorHarmonics().pickle_harmonics(dict_ha)
+
 
 
     ### Just take 2020 obs. Add harmonic corrections from year 2012 - 2019 to the modelled 2020. Compare against obs
@@ -445,34 +469,18 @@ if __name__ == "__main__":
     ax1.set_ylabel('water level (m)', color='k')
 
     ax2 = line_plot(ax2, sh_qc.dataset.time, (sh_qc.dataset.sea_level-sh_nemo.dataset.sea_level).squeeze(), 'b', 1, "QC-NEMO")
-    # Add dotted harmonic pred
-    # ax_r = scatter_plot(ax_r, sh_noci.dataset.time, sh_noci.dataset.sea_level, 'b', 1, sh_noci.dataset.site_name)
-
-
-
 
 
     # Now reconstruct possible errors from other years
     for year in range(2012,2019+1):
         yyyy = str(year)
 
-
-
-        #try:
-
-
-            # reconstruct difference timeseries
+        # reconstruct error timeseries from given year
         dict_cmap = {0: 'k', 1: 'm', 2: 'y', 3: 'g', 4: 'r'}
         harmonic_error = tganalysis.reconstruct_tide_utide(sh_qc.dataset.time, dict_ha[yyyy])
         ax2 = line_plot(ax2, sh_qc.dataset.time,
                         (sh_qc.dataset.sea_level - sh_nemo.dataset.sea_level - harmonic_error.dataset.reconstructed).squeeze(),
                     size=1, color=dict_cmap[year % 5], label=yyyy)
-
-
-
-        #except:
-        #    print(f"Problem with year: {yyyy}")
-
 
     # Finish plot
     #############
