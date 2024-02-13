@@ -502,7 +502,12 @@ class marine_gauge():
                                                             target_times=tg_tmp.dataset.time, method='comp',
                                                             extrema="max")
                 elif HLW == 'LW':
-                    tg_HLW = tg.find_nearby_high_and_low_water(var_str='ssh', winsize=winsize,
+                    try:  # var_str='ssh'
+                        tg_HLW = tg.find_nearby_high_and_low_water(var_str='ssh', winsize=winsize,
+                                                            target_times=tg_tmp.dataset.time, method='comp',
+                                                            extrema="min")
+                    except:  # var_str='sea_level'
+                        tg_HLW = tg.find_nearby_high_and_low_water(var_str='sea_level', winsize=winsize,
                                                             target_times=tg_tmp.dataset.time, method='comp',
                                                             extrema="min")
                 else:
