@@ -179,8 +179,8 @@ class GAUGE(coast.Tidegauge):
                         time_max[i] = HLW.time.where(HLW == np.max(HLW.values), drop=True).values[0]
                         values_max[i] = HLW.where(HLW == np.max(HLW.values), drop=True).values[0]
                     except: # catch exception if no values found in range
-                        time_min[i] = target_times[i].values
-                        values_min[i] = np.NaN
+                        time_max[i] = target_times[i].values
+                        values_max[i] = np.NaN
 
             new_dataset = xr.Dataset()
             new_dataset.attrs = self.dataset.attrs
