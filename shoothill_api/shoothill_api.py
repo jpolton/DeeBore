@@ -47,7 +47,14 @@ To do:
 """
 # Either local use of COAsT: pip install .
 import os, sys
-coastdir = os.path.dirname('/Users/jelt/GitHub/COAsT/coast')
+from socket import gethostname
+
+#if "LJOB" in gethostname().upper():
+coastdir = os.path.dirname(os.environ["HOME"]+'/GitHub/COAsT/coast')
+#elif "LIVMAZ" in gethostname().upper():  # Debugging on local machine
+#    coastdir = os.path.dirname('/Users/jelt/GitHub/COAsT/coast')
+#else:
+#    print(f"Unfamiliar machine: {gethostname()}")
 sys.path.insert(0, coastdir)
 # Or a just pre-built
 import coast
@@ -480,6 +487,8 @@ class GAUGE(coast.Tidegauge):
             id_ref = "Farndon"
         elif cls.station_id == "968":
             id_ref = "Ironbridge (Dee)"
+        elif cls.station_id == "7522":
+            id_ref = "Sheerness"
         else:
             id_ref = "No label"
             logging.debug(f"Not ready for that station id. {cls.station_id}")
@@ -590,7 +599,7 @@ class GAUGE(coast.Tidegauge):
         """
         import os, sys
 
-        anytidedir = os.path.dirname('/Users/jelt/GitHub/anyTide/')
+        anytidedir = os.path.dirname(os.environ["HOME"]+'/GitHub/anyTide/')
         sys.path.insert(0, anytidedir)
 
         from NOCtidepred import get_port
@@ -728,7 +737,10 @@ class GAUGE(coast.Tidegauge):
 
         if cls.station_id == "Liverpool%20(Gladstone%20Dock)":
             id_ref = "Gladstone Dock"
-            datum_shift = 5.272
+            datum_shift = 5.272  # taken from harm_class_A.txt
+        elif cls.station_id == "Sheerness":
+            id_ref = "Sheerness"
+            datum_shift = 3.047 # taken from harm_class_A.txt
         else:
             id_ref = "No label"
             logging.debug(f"Not ready for that station id. {cls.station_id}")
