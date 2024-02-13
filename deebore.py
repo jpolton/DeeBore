@@ -495,21 +495,21 @@ class marine_gauge():
         else:  # I.e. source != "bodc" and source != "api". Includes "ctr"
             if(1): # try:
                 tg_tmp = GAUGE()  # make a dataarray to hold time estimate
-                tg_tmp.dataset = xr.Dataset({'sea_level': ('time', [np.NaN])},
+                tg_tmp.dataset = xr.Dataset({'ssh': ('time', [np.NaN])},
                                             coords={'time': [obs_time]})
                 if HLW == 'HW':
                     tg_HLW = tg.find_nearby_high_and_low_water(var_str='sea_level', winsize=winsize,
                                                             target_times=tg_tmp.dataset.time, method='comp',
                                                             extrema="max")
                 elif HLW == 'LW':
-                    tg_HLW = tg.find_nearby_high_and_low_water(var_str='sea_level', winsize=winsize,
+                    tg_HLW = tg.find_nearby_high_and_low_water(var_str='ssh', winsize=winsize,
                                                             target_times=tg_tmp.dataset.time, method='comp',
                                                             extrema="min")
                 else:
                     print(f"Not expecting this scenario: {HLW}")
             else: # except:
                 tg.dataset = tg.dataset.swap_dims({'time': 't_dim'})
-                tg_HLW = tg.find_nearby_high_and_low_water(var_str='sea_level')
+                tg_HLW = tg.find_nearby_high_and_low_water(var_str='ssh')
 
         #tg_HLW.dataset = tg_HLW.dataset.swap_dims({'time': 't_dim'})
         #tg_HLW.dataset = tg_HLW.dataset.swap_dims({'t_dim': 'time'})
