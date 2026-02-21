@@ -35,6 +35,9 @@ To do:
 ---
     Dec'23
     env: coast-3.10, pip install ics
+---
+    Mar'25. (M4 pro)
+    env: coast-3.10, pip install ics
 
 
 """
@@ -61,6 +64,7 @@ except:
 coastdir = os.path.dirname('/Users/jelt/GitHub/COAsT/coast')
 sys.path.insert(0, coastdir)
 
+
 import coast
 from coast._utils.general_utils import day_of_week
 #from coast.stats_util import find_maxima
@@ -85,14 +89,16 @@ class GladstoneTideTable:
         filnam2 = '/Users/jelt/GitHub/DeeBore/data/Liverpool_2015_2020_HLW.txt'
         filnam3 = '/Users/jelt/GitHub/DeeBore/data/Liverpool_2021_2022_HLW.txt'
         filnam4 = '/Users/jelt/GitHub/DeeBore/data/Liverpool_2023_2025_HLW.txt'
+        filnam5 = '/Users/jelt/GitHub/DeeBore/data/Liverpool_2026_2027_HLW.txt'
         tg  = GAUGE()
         tg1 = coast.Tidegauge()
         tg2 = coast.Tidegauge()
         tg3 = coast.Tidegauge()
         tg4 = coast.Tidegauge()
+        tg5 = coast.Tidegauge()
 
         datasets = []
-        for filnam in [filnam1, filnam2, filnam3, filnam4]:
+        for filnam in [filnam1, filnam2, filnam3, filnam4, filnam5]:
             del tg1
             #tg1 = GAUGE()
             tg1 = coast.Tidegauge()
@@ -131,11 +137,11 @@ class BODC:
         '2020LIV.txt', '2021LIV.txt',
         '2022LIV.txt',  # event on 14th July 2022 was obviously incorrect.
         'ClassAObsAfterSurgeQC2022jul.nc', # Alternative data to patch July 2022 bad data
-        'ClassAObsAfterSurgeQC2023jan.nc',
-        'ClassAObsAfterSurgeQC2023feb.nc',
-        'ClassAObsAfterSurgeQC2023mar.nc',
-        'ClassAObsAfterSurgeQC2023sep.nc',
-        'ClassAObsAfterSurgeQC2023oct.nc',
+        '2023LIV.txt', '2024LIV.txt',
+        'ClassAObsAfterSurgeQC2025jan.nc',
+        'ClassAObsAfterSurgeQC2025feb.nc',
+        'ClassAObsAfterSurgeQC2025mar.nc',
+        'ClassAObsAfterSurgeQC2025apr.nc',
         ]
         #'LIV2201.txt', 'LIV2202.txt']
         tg = coast.Tidegauge()
@@ -203,12 +209,21 @@ class GladstoneAPI:
             if (tg1.dataset.time[-1].values < date_end):
                 tg2 = GAUGE()
                 tg2.dataset = tg2.read_shoothill_to_xarray(date_start=tg1.dataset.time[-1].values, date_end=date_end)
+                #print(f"Using EA api for Liverpool")
+                #tg2.dataset = tg2.dataset.sortby(tg2.dataset.time)  # sometimes the arrives out of order
+                #tg2.dataset = tg2.read_ea_api_to_xarray(date_start=tg1.dataset.time[-1].values, date_end=date_end, station_id="E70124")
+                #tg2.dataset = tg2.dataset.rename_vars({"ssh": "sea_level"})
+
                 tg.dataset = xr.concat([ tg1.dataset, tg2.dataset], dim='time')
                 print(f"{len(tg2.dataset.time)} pts loaded from API")
             else:
                 tg = tg1
         except:
             tg.dataset = tg.read_shoothill_to_xarray(date_start=date_start, date_end=date_end)
+            #print(f"Using EA api for Liverpool")
+            #tg.dataset = tg.read_ea_api_to_xarray(date_start=date_start, date_end=date_end, station_id="E70124")
+            #tg.dataset = tg.dataset.sortby(tg.dataset.time)  # sometimes the arrives out of order
+            #tg.dataset = tg.dataset.rename_vars({"ssh": "sea_level"})
 
         self.tg = tg
 
@@ -1303,9 +1318,9 @@ class Controller():
                 'api' - load recent, un processed data from shoothill API
         HLW: [LW/HW] - the data is either processed for High or Low water events
         """
+        logging.info('calc_Glad_Saltney_time_diff')
+        nt = len(self.bore.time)
         for HLW in HLW_list:
-            logging.info('calc_Glad_Saltney_time_diff')
-            nt = len(self.bore.time)
             lag = (self.bore['time'].values - self.bore['liv_time_'+HLW+'_'+source].values).astype('timedelta64[m]')
             # convert to integers so nans can be applied
             lag = [ lag[i].astype('int') if np.isfinite(self.bore['liv_height_'+HLW+'_'+source].values)[i]  else np.NaN for i in range(nt) ]
@@ -1421,14 +1436,14 @@ class Controller():
             lab = self.bore.time.where( np.isfinite(Xsalt), drop=True)[0].values.astype('datetime64[D]').astype(object).strftime('%d%b%y')
 
             # Highlight recent data
-            Yliv_new = self.bore['liv_height_'+HLW+'_'+source].where( self.bore.time > np.datetime64('2021-01-01') )
-            Xsalt_new = self.bore['Saltney_lag_'+HLW+'_'+source].where( self.bore.time > np.datetime64('2021-01-01') )
-            Xblue_new = self.bore['bluebridge_lag_'+HLW+'_'+source].where( self.bore.time > np.datetime64('2021-01-01') )
+            Yliv_new = self.bore['liv_height_'+HLW+'_'+source].where( self.bore.time > np.datetime64('2026-01-01') )
+            Xsalt_new = self.bore['Saltney_lag_'+HLW+'_'+source].where( self.bore.time > np.datetime64('2026-01-01') )
+            Xblue_new = self.bore['bluebridge_lag_'+HLW+'_'+source].where( self.bore.time > np.datetime64('2026-01-01') )
             #Yliv = self.bore['liv_height_'+HLW+'_'+source].where( np.isnan(self.bore['liv_height_'+HLW+'_bodc']))
             #Xsalt = self.bore['Saltney_lag_'+HLW+'_'+source].where( np.isnan(self.bore['liv_height_'+HLW+'_bodc']))
             #Xblue = self.bore['bluebridge_lag_'+HLW+'_'+source].where( np.isnan(self.bore['liv_height_'+HLW+'_bodc']))
-            plt.plot( Xsalt_new,Yliv_new, 'ro', label='Saltney 2021+')
-            plt.plot( Xblue_new,Yliv_new, 'bo', label='Bluebridge 2021+')
+            plt.plot( Xsalt_new,Yliv_new, 'ro', label='Saltney 2026+')
+            plt.plot( Xblue_new,Yliv_new, 'bo', label='Bluebridge 2026+')
             plt.plot( Xsalt_latest,Yliv_latest, 'go', label='Saltney latest: '+lab)
             plt.plot( Xsalt_new[I],Yliv_new[I], 'k+')
             #plt.plot( Xblue[0],Yliv[0], 'b+', label='Bluebridge recent')
@@ -1679,7 +1694,7 @@ class Controller():
 
         """
         print('Predict bore event for date')
-        filnam = '/Users/jelt/GitHub/DeeBore/data/Liverpool_2023_2025_HLW.txt'
+        filnam = '/Users/jelt/GitHub/DeeBore/data/Liverpool_2026_2027_HLW.txt'
 
         looper = True
         while looper:
