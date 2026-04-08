@@ -1326,8 +1326,8 @@ class Controller():
             # convert to integers so nans can be applied
             lag = [ lag[i].astype('int') if np.isfinite(self.bore['liv_height_'+HLW+'_'+source].values)[i]  else np.NaN for i in range(nt) ]
             # Pick out FB and Blue bridge
-            Saltney_lag    = [ lag[i] if self.bore.location.values[i] == 'bridge' else np.NaN for i in range(nt) ]
-            bluebridge_lag = [ lag[i] if self.bore.location.values[i] == 'blue bridge' else np.NaN for i in range(nt) ]
+            Saltney_lag    = [ lag[i] if self.bore.location.values[i].lower() == 'bridge' else np.NaN for i in range(nt) ]
+            bluebridge_lag = [ lag[i] if self.bore.location.values[i].lower() == 'blue bridge' else np.NaN for i in range(nt) ]
             #Saltney_lag    = [ lag[i].astype('int') if self.bore.location.values[i] == 'bridge' else np.NaN for i in range(nt) ]
             #bluebridge_lag = [ lag[i].astype('int') if self.bore.location.values[i] == 'blue bridge' else np.NaN for i in range(nt) ]
 
