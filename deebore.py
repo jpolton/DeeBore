@@ -1542,7 +1542,13 @@ class Controller():
         #segs_h[:,1,1] = self.bore.Saltney_lag_harmonic[:nval]
 
         fig, ax = plt.subplots()
-        ax.set_ylim(np.nanmin(segs_h[:,:,1]), np.nanmax(segs_h[:,:,1]))
+        y_min = np.nanmin(segs_h[:,:,1])
+        y_max = np.nanmax(segs_h[:,:,1])
+        if np.isfinite(y_min) and np.isfinite(y_max) and np.isclose(y_min, y_max):
+            buffer = max(0.01, abs(y_min) * 0.01)
+            y_min -= buffer
+            y_max += buffer
+        ax.set_ylim(y_min, y_max)
         line_segments_HW = LineCollection(segs_h, cmap='plasma', linewidth=1)
         ax.add_collection(line_segments_HW)
         ax.scatter(segs_h[:,1,0],segs_h[:,1,1], c='red', s=4, label='predicted') # harmonic predictions
