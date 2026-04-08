@@ -142,6 +142,7 @@ class BODC:
         'ClassAObsAfterSurgeQC2025feb.nc',
         'ClassAObsAfterSurgeQC2025mar.nc',
         'ClassAObsAfterSurgeQC2025apr.nc',
+        'ClassAObsAfterSurgeQC2026feb.nc',
         ]
         #'LIV2201.txt', 'LIV2202.txt']
         tg = coast.Tidegauge()
@@ -210,8 +211,8 @@ class GladstoneAPI:
                 tg2 = GAUGE()
                 tg2.dataset = tg2.read_shoothill_to_xarray(date_start=tg1.dataset.time[-1].values, date_end=date_end)
                 #print(f"Using EA api for Liverpool")
-                #tg2.dataset = tg2.dataset.sortby(tg2.dataset.time)  # sometimes the arrives out of order
                 #tg2.dataset = tg2.read_ea_api_to_xarray(date_start=tg1.dataset.time[-1].values, date_end=date_end, station_id="E70124")
+                #tg2.dataset = tg2.dataset.sortby(tg2.dataset.time)  # sometimes the arrives out of order
                 #tg2.dataset = tg2.dataset.rename_vars({"ssh": "sea_level"})
 
                 tg.dataset = xr.concat([ tg1.dataset, tg2.dataset], dim='time')
@@ -490,9 +491,9 @@ class marine_gauge():
                             tg_HLW.dataset = tg_HLW.dataset.swap_dims({time_var: 't_dim'})
                         else:
                             if HLW == "LW":
-                                ind = tg_HLW.dataset[measure_var].argmin().values
+                                ind = int(np.argmin(tg_HLW.dataset[measure_var].values))
                             elif HLW == "HW":
-                                ind = tg_HLW.dataset[measure_var].argmax().values
+                                ind = int(np.argmax(tg_HLW.dataset[measure_var].values))
 
                             tmp = tg_HLW
                             tg_HLW = GAUGE()
@@ -1400,9 +1401,18 @@ class Controller():
             Xblue_api = self.bore['bluebridge_lag_'+HLW+'_api'].where( np.isnan(self.bore['liv_height_'+HLW+'_bodc']))
             Xfit = self.bore['linfit_lag_'+HLW+'_bodc']
             try:
-                Xsalt_api_latest = Xsalt_api.where( np.isfinite(Xsalt_api), drop=True)[0] # NB obs are in reverse time order
-                Yliv_api_latest  = Yliv_api.where( np.isfinite(Xsalt_api), drop=True)[0] # NB obs are in reverse time order
-                lab = self.bore.time.where( np.isfinite(Xsalt_api), drop=True)[0].values.astype('datetime64[D]').astype(object).strftime('%d%b%y')
+                finite_mask = np.isfinite(Xsalt_api) & np.isfinite(Yliv_api)
+                valid_times = self.bore.time.where(finite_mask, drop=True)
+                valid_Xsalt = Xsalt_api.where(finite_mask, drop=True)
+                valid_Yliv  = Yliv_api.where(finite_mask, drop=True)
+                
+                if len(valid_times) > 0:
+                    latest_idx = int(np.argmax(valid_times.values))
+                    Xsalt_api_latest = valid_Xsalt[latest_idx]
+                    Yliv_api_latest  = valid_Yliv[latest_idx]
+                    lab = valid_times[latest_idx].values.astype('datetime64[D]').astype(object).strftime('%d%b%y')
+                else:
+                    raise Exception("No valid data points")
             except: # if all nans cannot select a non-nan value
                 Xsalt_api_latest = Xsalt_api[0]
                 Yliv_api_latest = Yliv_api[0]
@@ -1431,9 +1441,20 @@ class Controller():
             plt.plot( Xsalt[I],Yliv[I], 'k+', label='Class A')
             plt.plot( Xblue,Yliv, 'b.', label='Bluebridge')
             plt.plot( Xfit,Yliv, 'k-', label=source+': rmse '+'{:4.1f}'.format(self.stats(source,HLW))+'mins')
-            Xsalt_latest = Xsalt.where( np.isfinite(Xsalt), drop=True)[0]
-            Yliv_latest  = Yliv.where( np.isfinite(Xsalt), drop=True)[0]
-            lab = self.bore.time.where( np.isfinite(Xsalt), drop=True)[0].values.astype('datetime64[D]').astype(object).strftime('%d%b%y')
+            finite_mask = np.isfinite(Xsalt) & np.isfinite(Yliv)
+            valid_times = self.bore.time.where(finite_mask, drop=True)
+            valid_Xsalt = Xsalt.where(finite_mask, drop=True)
+            valid_Yliv  = Yliv.where(finite_mask, drop=True)
+            
+            if len(valid_times) > 0:
+                latest_idx = int(np.argmax(valid_times.values))
+                Xsalt_latest = valid_Xsalt[latest_idx]
+                Yliv_latest = valid_Yliv[latest_idx]
+                lab = valid_times[latest_idx].values.astype('datetime64[D]').astype(object).strftime('%d%b%y')
+            else:
+                Xsalt_latest = Xsalt[0]
+                Yliv_latest = Yliv[0]
+                lab = ""
 
             # Highlight recent data
             Yliv_new = self.bore['liv_height_'+HLW+'_'+source].where( self.bore.time > np.datetime64('2026-01-01') )
