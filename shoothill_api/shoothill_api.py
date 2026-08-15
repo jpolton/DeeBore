@@ -798,3 +798,98 @@ class GAUGE(coast.Tidegauge):
         # Assign local dataset to object-scope dataset
         return dataset
 
+
+############ Environment Agency gauge methods ##############################################
+    @classmethod
+    def read_ea_to_xarray(cls,
+                          ndays: int=5,
+                          date_start: np.datetime64=None,
+                          date_end: np.datetime64=None,
+                          station_id="E70124",
+                          ):
+        """
+        load gauge data via Environment Agency API
+        Either loads last ndays, or from date_start:date_end
+
+        INPUTS:
+            ndays : int
+            date_start : datetime. UTC format string "yyyy-MM-ddThh:mm:ssZ" E.g 2023-12-08T23:59:59Z
+            date_end : datetime
+            station_id : str (station id)
+        OUTPUT:
+            sea_level, time : xr.Dataset
+        """
+        import requests,json
+
+        cls.ndays=ndays
+        cls.date_start=date_start
+        cls.date_end=date_end
+        cls.station_id=station_id # EA id
+
+        logging.info("load gauge")
+
+        if (type(cls.date_start) is np.datetime64) & (type(cls.date_end) is np.datetime64):
+            logging.info(f"GETting data from {cls.date_start} to {cls.date_end}")
+            since = cls.date_start.item().strftime('%Y-%m-%d')
+            endTime = cls.date_end.item().strftime('%Y-%m-%d')
+        else:
+            # since = str(cls.date_start)
+            # endTime = str(cls.date_end)
+            # Default to last ndays if precise dates aren't provided
+            now = datetime.datetime.utcnow()
+            start = now - datetime.timedelta(days=cls.ndays)
+            since = start.strftime('%Y-%m-%d')
+            endTime = now.strftime('%Y-%m-%d')
+
+        headers = {'content-type': 'application/json'}
+
+        #%% Construct API request
+        logging.info("load station info")
+        #url = f"https://environment.data.gov.uk/flood-monitoring/id/stations/{cls.station_id}/readings?startdate={since}&enddate={endTime}&_sorted"
+        url = f"https://environment.data.gov.uk/flood-monitoring/id/stations/{station_id}/readings"
+
+        params = {"startdate": since, "enddate": endTime, "_sorted": True}
+        try:
+            response = requests.get(url, params=params, timeout=10)
+            response.raise_for_status()
+            request = response.json()
+        except Exception as e:
+            print(f"Error fetching EA data: {e}")
+            request = {"items": []}
+
+
+
+        #%% Get the data
+        #request_raw = requests.get(url, headers=headers)
+        #request = json.loads(request_raw.content)
+        #logging.debug(f"EA API request: {request_raw.text}")
+        
+        # Check the output
+        try:
+            logging.info(f"timestamp and value of the zero index is {[ request['items'][0]['dateTime'], request['items'][0]['value'] ]}")
+        except:
+            logging.info(f"timestamp and value of the zero index: problem")
+
+        header_dict = {}
+        header_dict['site_name'] = cls.station_id
+
+        #%% Process timeseries data
+        dataset = xr.Dataset()
+        time = []
+        sea_level = []
+        nvals = len(request['items'])
+        time = np.array([np.datetime64( request['items'][i]['dateTime'] ) for i in range(nvals)])
+        sea_level = np.array([ request['items'][i]['value'] for i in range(nvals)])
+
+        #%% Assign arrays to Dataset
+        dataset['sea_level'] = xr.DataArray(sea_level, dims=['time'])
+        dataset = dataset.assign_coords(time = ('time', time))
+
+        dataset.attrs = header_dict
+        logging.debug(f"EA API request headers: {header_dict}")
+        try:
+            logging.debug(f"EA API request 1st time: {time[0]} and value: {sea_level[0]}")
+        except:
+            logging.debug(f"EA API request 1st time: problem")
+        # Assign local dataset to object-scope dataset
+        return dataset
