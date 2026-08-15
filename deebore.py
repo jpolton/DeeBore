@@ -143,6 +143,7 @@ class BODC:
         'ClassAObsAfterSurgeQC2025mar.nc',
         'ClassAObsAfterSurgeQC2025apr.nc',
         'ClassAObsAfterSurgeQC2026feb.nc',
+        'ClassAObsAfterSurgeQC2026mar.nc',
         ]
         #'LIV2201.txt', 'LIV2202.txt']
         tg = coast.Tidegauge()
@@ -220,11 +221,11 @@ class GladstoneAPI:
             else:
                 tg = tg1
         except:
-            tg.dataset = tg.read_shoothill_to_xarray(date_start=date_start, date_end=date_end)
-            #print(f"Using EA api for Liverpool")
-            #tg.dataset = tg.read_ea_api_to_xarray(date_start=date_start, date_end=date_end, station_id="E70124")
-            #tg.dataset = tg.dataset.sortby(tg.dataset.time)  # sometimes the arrives out of order
-            #tg.dataset = tg.dataset.rename_vars({"ssh": "sea_level"})
+            #tg.dataset = tg.read_shoothill_to_xarray(date_start=date_start, date_end=date_end)
+            print(f"Using EA api for Liverpool")
+            tg.dataset = tg.read_ea_api_to_xarray(date_start=date_start, date_end=date_end, station_id="E70124")
+            tg.dataset = tg.dataset.sortby(tg.dataset.time)  # sometimes the arrives out of order
+            tg.dataset = tg.dataset.rename_vars({"ssh": "sea_level"})
 
         self.tg = tg
 
@@ -457,11 +458,18 @@ class marine_gauge():
             #if HLW == "LW":
             #    print(f"win.dataset {win.dataset}")
             #print(i," win.dataset.time.size", win.dataset.time.size)
-            if win.dataset.time.size == 0:
+            # Also treat all-NaN windows as empty (e.g. when BODC file doesn't
+            # yet exist for this period, sea_level is NaN throughout the window)
+            # The primary time dimension name differs by source:
+            #   bodc / (fallback path): 't_dim'   api (try-path): 'time'
+            _tdim = 't_dim' if 't_dim' in win.dataset.dims else 'time'
+            win_no_nan = win.dataset.dropna(_tdim, subset=['sea_level'])
+            if win.dataset.time.size == 0 or win_no_nan.sizes.get(_tdim, 0) == 0:
                 tg_HLW = GAUGE()
                 tg_HLW.dataset = xr.Dataset({measure_var: (time_var, [np.NaN])}, coords={time_var: [obs_time]})
                 tg_HLW.dataset = tg_HLW.dataset.swap_dims({time_var: 't_dim'})
             else:
+                win.dataset = win_no_nan  # use the NaN-free window for finding extrema
                 if HLW == "FW" or HLW == "EW":
                     tg_HLW = win.find_flood_and_ebb_water(var_str='sea_level',method='cubic')
                     #print(f"inflection point time: {tg_HLW.dataset[time_var]}")
@@ -1754,7 +1762,7 @@ class Controller():
             tg.dataset = tg.dataset.rename_vars({"ssh": "sea_level"})
 
             HT = tg.dataset['sea_level'].where(tg.dataset['sea_level']\
-                                    .values > 9.5).dropna('t_dim') #, drop=True)
+                                    .values > 9.4).dropna('t_dim') #, drop=True)
         else: # year 2021 (no tide table data)
             source = 'harmonic_rec'
             print('source=',source)
@@ -1806,7 +1814,7 @@ class Controller():
             #c.events
 
         with open('SurfSaltney.ics', 'w') as my_file:
-            my_file.writelines(c)
+            my_file.writelines(c.serialize_iter())
 
         #plt.scatter( Saltney_time_pred, HT ,'.');plt.show()
         # problem with time stamp
